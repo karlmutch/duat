@@ -198,7 +198,7 @@ func apply(semVer semver.Version, files []string) (result semver.Version, err er
 	result = semVer
 
 	if len(files) == 0 {
-		return "", errors.Wrap("the apply command requires that files are specified with the -t option").With("stack", stack.Trace().TrimRuntime())
+		return result, errors.New("the apply command requires that files are specified with the -t option").With("stack", stack.Trace().TrimRuntime())
 	}
 
 	checkedFiles := make([]string, 0, len(files))
@@ -216,7 +216,7 @@ func apply(semVer semver.Version, files []string) (result semver.Version, err er
 
 	// Process the files but stop on any errors
 	for _, file := range checkedFiles {
-		if _, err = replace(semVer, file); err != nil {
+		if err = replace(semVer, file); err != nil {
 			return result, err
 		}
 	}
