@@ -25,6 +25,6 @@ WORKDIR /home/${USER}
 
 ENV GOPATH=/project
 VOLUME /project
-WORKDIR /project/src/github.com/karlmutch/bump-md-ver
+WORKDIR /project/src/github.com/karlmutch/bump-ver
 
 CMD /bin/bash -C ./all-build.sh
