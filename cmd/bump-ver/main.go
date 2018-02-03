@@ -48,7 +48,7 @@ var (
 
 func usage() {
 	fmt.Fprintln(os.Stderr, path.Base(os.Args[0]))
-	fmt.Fprintln(os.Stderr, "usage: ", os.Args[0], "[arguments]      Bump HTML Version Tag tool (bump-ver)      ", version.GitHash, "    ", version.BuildTime)
+	fmt.Fprintln(os.Stderr, "usage: ", os.Args[0], "[options] [arguments]      Bump HTML Version Tag tool (bump-ver)      ", version.GitHash, "    ", version.BuildTime)
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Arguments:")
 	fmt.Fprintln(os.Stderr, "")
@@ -61,6 +61,8 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "When using dev the branch name will be injected into the pre-release data along with the commit sequence number for that branch and then the commit-id.")
 	fmt.Fprintln(os.Stderr, "It is possible that when using 'dev' the precedence between different developers might not be in commit strict order, but in the order that the files were processed.")
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "Options:")
 	fmt.Fprintln(os.Stderr, "")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "")
@@ -119,9 +121,9 @@ func main() {
 
 	logger.Debug(fmt.Sprintf("%s built at %s, against commit id %s\n", os.Args[0], version.BuildTime, version.GitHash))
 
-	if len(os.Args) != 2 || len(os.Args[1]) == 0 {
+	if len(flag.Args()) > 1 || len(flag.Arg(0)) == 0 {
 		usage()
-		fmt.Fprintf(os.Stderr, "missing command, you must specify one of the commands [major|minor|patch|dev|extract]")
+		fmt.Fprintf(os.Stderr, "missing, or too many (%d - %v), command(s). you must specify only one of the commands [major|minor|patch|dev|extract]\n", len(flag.Args()), flag.Args())
 		os.Exit(-1)
 	}
 
@@ -142,7 +144,7 @@ func main() {
 		os.Exit(-2)
 	}
 
-	switch os.Args[1] {
+	switch flag.Arg(0) {
 	case "major":
 		*semVer = semVer.IncMajor()
 	case "minor":
@@ -203,14 +205,17 @@ func apply(semVer semver.Version, files []string) (result semver.Version, err er
 
 	checkedFiles := make([]string, 0, len(files))
 	for _, file := range files {
-		if _, err := os.Stat(file); err != nil {
-			fmt.Fprintf(os.Stderr, "a user specified target file was not found '%s'", file)
-			continue
+		if len(file) != 0 {
+			if _, err := os.Stat(file); err != nil {
+				fmt.Fprintf(os.Stderr, "a user specified target file was not found '%s'\n", file)
+				continue
+			}
+			checkedFiles = append(checkedFiles, file)
 		}
-		checkedFiles = append(checkedFiles, file)
 	}
 
 	if len(checkedFiles) != len(files) {
+		fmt.Fprintln(os.Stderr, "no usable targets were found to apply the version to")
 		os.Exit(-4)
 	}
 
