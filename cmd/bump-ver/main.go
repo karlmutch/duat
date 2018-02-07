@@ -58,6 +58,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    dev      Updates the pre-release version inside the input file")
 	fmt.Fprintln(os.Stderr, "    apply    Propogate the version from the input file to the target files")
 	fmt.Fprintln(os.Stderr, "    extract  Retrives the version tag string from the file")
+	fmt.Fprintln(os.Stderr, "    inject   Retrives the version tag string, then injects it into the target (-t file producing output on stdout)")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "When using dev the branch name will be injected into the pre-release data along with the commit sequence number for that branch and then the commit-id.")
 	fmt.Fprintln(os.Stderr, "It is possible that when using 'dev' the precedence between different developers might not be in commit strict order, but in the order that the files were processed.")
@@ -157,6 +158,8 @@ func main() {
 		*semVer, err = apply(*semVer, strings.Split(*applyFn, ","))
 	case "extract":
 		break
+	case "inject":
+		*semVer, err = inject(*semVer, strings.Split(*applyFn, ","))
 	default:
 		fmt.Fprintf(os.Stderr, "invalid command, you must specify one of the commands [major|minor|patch|dev|extract], '%s' is not a valid command", os.Args[1])
 		os.Exit(-2)
@@ -169,13 +172,15 @@ func main() {
 	// Having generated or extracted a version string if it is different as a result of processing we need
 	// to update the original file
 	if ver != semVer.String() {
-		if err = replace(*semVer, *verFn); err != nil {
+		if err = replace(*semVer, *verFn, *verFn, false); err != nil {
 			fmt.Fprintf(os.Stderr, "the attempt to write the bumped version back failed due to %v", err)
 			os.Exit(-4)
 		}
 	}
 
-	fmt.Fprintf(os.Stdout, "%s\n", semVer.String())
+	if flag.Arg(0) != "inject" {
+		fmt.Fprintf(os.Stdout, "%s\n", semVer.String())
+	}
 }
 
 func getGitBranch(gitDir string) (branch string, err errors.Error) {
@@ -221,9 +226,29 @@ func apply(semVer semver.Version, files []string) (result semver.Version, err er
 
 	// Process the files but stop on any errors
 	for _, file := range checkedFiles {
-		if err = replace(semVer, file); err != nil {
+		if err = replace(semVer, file, file, false); err != nil {
 			return result, err
 		}
+	}
+
+	return result, nil
+}
+
+func inject(semVer semver.Version, files []string) (result semver.Version, err errors.Error) {
+
+	result = semVer
+
+	if len(files) != 1 || len(files[0]) == 0 {
+		return result, errors.New("the inject command requires that only a single target file is specified with the -t option").With("stack", stack.Trace().TrimRuntime())
+	}
+
+	if _, err := os.Stat(files[0]); err != nil {
+		return result, errors.New(fmt.Sprintf("a user specified target file was not found '%s'\n", files[0])).With("stack", stack.Trace().TrimRuntime())
+	}
+
+	// Process the files but stop on any errors
+	if err = replace(semVer, files[0], "-", true); err != nil {
+		return result, err
 	}
 
 	return result, nil
@@ -269,7 +294,7 @@ func extract(fn string) (ver string, err errors.Error) {
 	return ver, nil
 }
 
-func replace(semVer semver.Version, fn string) (err errors.Error) {
+func replace(semVer semver.Version, fn string, dest string, substitute bool) (err errors.Error) {
 
 	// To prevent destructive replacements first copy the file then modify the copy
 	// and in an atomic operation copy the copy back over the original file, then
@@ -294,6 +319,9 @@ func replace(semVer semver.Version, fn string) (err errors.Error) {
 	}
 
 	newVer := fmt.Sprintf("<repo-version>%s</repo-version>", semVer.String())
+	if substitute {
+		newVer = fmt.Sprintf("%s", semVer.String())
+	}
 
 	scan := bufio.NewScanner(file)
 	for scan.Scan() {
@@ -301,10 +329,26 @@ func replace(semVer semver.Version, fn string) (err errors.Error) {
 	}
 
 	tmp.Sync()
-	defer file.Close()
+	if fn == dest {
+		defer file.Close()
+	} else {
+		file.Close()
 
-	if _, errGo = file.Seek(0, io.SeekStart); errGo != nil {
-		return errors.Wrap(errGo, "failed to rewind the input file").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+		if dest == "-" {
+			file = os.Stdout
+		} else {
+			file, errGo = os.OpenFile(dest, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0600)
+			if errGo != nil {
+				return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+			}
+			defer file.Close()
+		}
+	}
+
+	if dest != "-" {
+		if _, errGo = file.Seek(0, io.SeekStart); errGo != nil {
+			return errors.Wrap(errGo, "failed to rewind the input file").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+		}
 	}
 	if _, errGo = tmp.Seek(0, io.SeekStart); errGo != nil {
 		return errors.Wrap(errGo, "failed to rewind a temporary file").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
