@@ -1,9 +1,15 @@
-# bump-ver
+# Developer tools for version software artifacts
+
+This repository contains several tools for handling meta data and artifacts produced by software development activities.
+
+The general idea is to produce both libraries for development artifact handling and also tools that can be invoked to perform administrative functions related to software release and build activities.
+
+## bump-ver
 A version bumping tool for storing and manipuating the semantic version within files that contain a HTML formatted version tag.
 
-This tool also has the ability to generate version string using git branch names when the dev command is used.
+This tool also has the ability to generate version string using git branch names when the pre command is used.
 
-This tool applies the Semantic Versioning 2.0 spec to version strings in files, https://semver.org/.  When the dev command is used the version bumping will append to the version string an increasing pre-release string that can be used to sort the versions creating precedence for versions when they are used with containers or other assets.
+This tool applies the Semantic Versioning 2.0 spec to version strings in files, https://semver.org/.  When the pre command is used the version bumping will append to the version string an increasing pre-release string that can be used to sort the versions creating precedence for versions when they are used with containers or other assets.
 
 Version : <repo-version>0.0.1</repo-version>
 
@@ -30,7 +36,7 @@ Bump Version Tag
 
 Usage:
 
-  bump-ver [major | major | minor | dev | extract | apply] [-f=<input-file>] [-t=[<target-file>,...]]
+  bump-ver [major | major | minor | pre | extract | apply] [-f=<input-file>] [-t=[<target-file>,...]]
 
 Options:
   -h --help              Show this message.
