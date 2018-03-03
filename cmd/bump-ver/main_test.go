@@ -17,7 +17,3 @@ func TestMain(m *testing.M) {
 		os.Exit(resultCode)
 	}
 }
-
-func TestNone(t *testing.T) {
-	logger.Info("No tests currently implemented")
-}

@@ -14,3 +14,4 @@
 .glide/
 cmd/bump-md-ver/bin/
 cmd/bump-ver/bin/
+.envrc
