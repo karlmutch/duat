@@ -74,9 +74,13 @@ func (md *MetaData) LoadVer(fn string) (ver *semver.Version, err errors.Error) {
 		}
 		for _, version := range versions {
 			if ver == nil {
-				ver, errGo = semver.NewVersion(html.UnescapeString(rHTML.ReplaceAllString(versions[0], "")))
+				extracted := html.UnescapeString(rHTML.ReplaceAllString(version, ""))
+				if len(extracted) == 0 {
+					continue
+				}
+				ver, errGo = semver.NewVersion(extracted)
 				if errGo != nil {
-					return nil, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+					return nil, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn).With("extracted", extracted).With("version", version)
 				}
 				continue
 			}
@@ -85,6 +89,10 @@ func (md *MetaData) LoadVer(fn string) (ver *semver.Version, err errors.Error) {
 				return nil, errors.New("all repo-version HTML tags must have the same value").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 			}
 		}
+	}
+
+	if ver == nil {
+		return nil, errors.New("version not found").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}
 
 	md.SemVer, errGo = semver.NewVersion(ver.String())
@@ -188,7 +196,8 @@ func (md *MetaData) Replace(fn string, dest string, substitute bool) (err errors
 		if dest == "-" {
 			file = os.Stdout
 		} else {
-			file, errGo = os.OpenFile(dest, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0600)
+			// Overwrite the output file if it is present
+			file, errGo = os.OpenFile(dest, os.O_CREATE|os.O_RDWR, 0600)
 			if errGo != nil {
 				return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 			}
@@ -208,7 +217,7 @@ func (md *MetaData) Replace(fn string, dest string, substitute bool) (err errors
 	// Copy the output file on top of the original file
 	written, errGo := io.Copy(file, tmp)
 	if errGo != nil {
-		return errors.Wrap(errGo, "failed to update the input file").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+		return errors.Wrap(errGo, "failed to update the output file").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}
 	// Because we overwrote the file we need to trim off the end of the file if it shrank in size
 	file.Truncate(written)

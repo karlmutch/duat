@@ -116,7 +116,11 @@ func TestVersionReplace(t *testing.T) {
 		return
 	}
 
-	defer os.Remove(srcFn)
+	defer func() {
+		if !t.Failed() {
+			os.Remove(srcFn)
+		}
+	}()
 
 	patch := ver.IncPatch()
 	md := &MetaData{
@@ -128,17 +132,66 @@ func TestVersionReplace(t *testing.T) {
 		t.Error(fmt.Errorf("unable to create test file for replace test due to %v", err))
 		return
 	}
-	defer os.Remove(emptyDestFn)
+
+	defer func() {
+		if !t.Failed() {
+			os.Remove(emptyDestFn)
+		}
+	}()
 
 	// Replace versions
-	if err := md.Replace(srcFn, emptyDestFn, false); err != nil {
+	if err = md.Replace(srcFn, emptyDestFn, false); err != nil {
 		t.Error(fmt.Errorf("unable to replace test file %s into %s due to %v", srcFn, emptyDestFn, err))
 		return
 	}
 
 	// From the src we should be able to get the original version
+	originalMD := &MetaData{}
+	if _, err = originalMD.LoadVer(srcFn); err != nil {
+		t.Error(errors.Wrap(err, "failed to read the version from the original file").With("stack", stack.Trace().TrimRuntime()))
+		return
+	}
+	if ver.String() != originalMD.SemVer.String() {
+		t.Error(errors.Wrap(err, "the original file was modified unexpectly").With("stack", stack.Trace().TrimRuntime()))
+		return
+	}
 
 	// From the dest we must get the new version
+	replacedMD := &MetaData{}
+	if _, err = replacedMD.LoadVer(emptyDestFn); err != nil {
+		t.Error(errors.Wrap(err, "failed to read the version from the processed file").With("stack", stack.Trace().TrimRuntime()).With("srcFn", srcFn))
+		return
+	}
+	if md.SemVer.String() != replacedMD.SemVer.String() {
+		t.Error(errors.Wrap(err, "the processed file was not correctly modified").With("stack", stack.Trace().TrimRuntime()))
+		return
+	}
 
 	// Now use a destination that already has a version and make sure it gets replaced
+	minor := ver.IncMinor()
+	mdMinor := &MetaData{
+		SemVer: &minor,
+	}
+
+	minorDestFn, err := createTestFile(&minor)
+	if err != nil {
+		t.Error(fmt.Errorf("unable to create test file for replace test due to %v", err))
+		return
+	}
+
+	defer func() {
+		if !t.Failed() {
+			os.Remove(minorDestFn)
+		}
+	}()
+
+	minorReplacedMD := &MetaData{}
+	if _, err = minorReplacedMD.LoadVer(minorDestFn); err != nil {
+		t.Error(errors.Wrap(err, "failed to read the minor version from the minor version change populated file").With("stack", stack.Trace().TrimRuntime()).With("srcFn", srcFn))
+		return
+	}
+	if mdMinor.SemVer.String() != minorReplacedMD.SemVer.String() {
+		t.Error(errors.Wrap(err, "the already populated file was not correctly modified").With("stack", stack.Trace().TrimRuntime()))
+		return
+	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/karlmutch/stack"  // Forked copy of https://github.com/go-stack/stack
 
 	"gopkg.in/src-d/go-git.v4" // Not forked due to depency tree being too complex, src-d however are a serious org so I dont expect the repo to disappear
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 // This file contains some utility functions for extracting and using git information
@@ -51,5 +52,21 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 	splits := strings.Split(ref.Name().String(), "/")
 
 	md.Git.Branch = splits[len(splits)-1]
+	md.Git.Repo = repo
+	refs, _ := repo.Remotes()
+	md.Git.URL = refs[0].Config().URLs[0]
+
+	// Now try to find the first tag that matches the current HEAD
+	head, _ := md.Git.Repo.Head()
+
+	tags, _ := md.Git.Repo.Tags()
+	_ = tags.ForEach(func(t *plumbing.Reference) error {
+		if head.Hash() == t.Hash() {
+			splits := strings.Split(t.Name().String(), "/")
+			md.Git.Tag = splits[len(splits)-1]
+		}
+		return nil
+	})
+
 	return nil
 }

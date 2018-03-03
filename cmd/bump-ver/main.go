@@ -48,13 +48,13 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Arguments:")
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "    major    Increments the major version inside the input file")
-	fmt.Fprintln(os.Stderr, "    minor    Increments the minor version inside the input file")
-	fmt.Fprintln(os.Stderr, "    patch    Increments the patch version inside the input file")
-	fmt.Fprintln(os.Stderr, "    pre      Updates the pre-release version inside the input file")
-	fmt.Fprintln(os.Stderr, "    apply    Propogate the version from the input file to the target files")
-	fmt.Fprintln(os.Stderr, "    extract  Retrives the version tag string from the file")
-	fmt.Fprintln(os.Stderr, "    inject   Retrives the version tag string, then injects it into the target (-t file producing output on stdout)")
+	fmt.Fprintln(os.Stderr, "    major                Increments the major version inside the input file")
+	fmt.Fprintln(os.Stderr, "    minor                Increments the minor version inside the input file")
+	fmt.Fprintln(os.Stderr, "    patch                Increments the patch version inside the input file")
+	fmt.Fprintln(os.Stderr, "    pre, prerelease      Updates the pre-release version inside the input file")
+	fmt.Fprintln(os.Stderr, "    apply                Propogate the version from the input file to the target files")
+	fmt.Fprintln(os.Stderr, "    extract              Retrives the version tag string from the file")
+	fmt.Fprintln(os.Stderr, "    inject               Retrives the version tag string, then injects it into the target (-t file producing output on stdout)")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "When using pre the branch name will be injected into the pre-release data along with the commit sequence number for that branch and then the commit-id.")
 	fmt.Fprintln(os.Stderr, "It is possible that when using 'pre' the precedence between different developers might not be in commit strict order, but in the order that the files were processed.")
@@ -138,7 +138,7 @@ func main() {
 		*md.SemVer = md.SemVer.IncMinor()
 	case "patch":
 		*md.SemVer = md.SemVer.IncPatch()
-	case "pre":
+	case "pre", "dev":
 		if gitErr != nil {
 			fmt.Fprintf(os.Stderr, "an operation that required git failed due to %v", gitErr)
 			os.Exit(-5)
