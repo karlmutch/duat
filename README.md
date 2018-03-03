@@ -11,7 +11,7 @@ This tool also has the ability to generate version string using git branch names
 
 This tool applies the Semantic Versioning 2.0 spec to version strings in files, https://semver.org/.  When the pre command is used the version bumping will append to the version string an increasing pre-release string that can be used to sort the versions creating precedence for versions when they are used with containers or other assets.
 
-Version : <repo-version>0.0.1</repo-version>
+Version : <repo-version>0.0.1-master-1esDFY</repo-version>
 
 # Installation
 
