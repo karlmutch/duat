@@ -138,7 +138,7 @@ func main() {
 		*md.SemVer = md.SemVer.IncMinor()
 	case "patch":
 		*md.SemVer = md.SemVer.IncPatch()
-	case "pre", "dev":
+	case "pre", "dev", "prerelease":
 		if gitErr != nil {
 			fmt.Fprintf(os.Stderr, "an operation that required git failed due to %v", gitErr)
 			os.Exit(-5)
@@ -205,6 +205,7 @@ func prerelease(md *devtools.MetaData) (result *semver.Version, err errors.Error
 			cleanBranch += string(aChar)
 		}
 	}
+	result = md.SemVer
 	newVer, errGo := result.SetPrerelease(fmt.Sprintf("%s-%s", cleanBranch, build))
 	if errGo != nil {
 		return nil, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
