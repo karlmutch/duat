@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/karlmutch/bump-ver/version"
+	"github.com/karlmutch/duat/version"
 
 	// The following packages are forked to retain copies in the event github accounts are shutdown
 	//
