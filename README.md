@@ -4,6 +4,8 @@ This repository contains several tools for handling meta data and artifacts prod
 
 The general idea is to produce both libraries for development artifact handling and also tools that can be invoked to perform administrative functions related to software release and build activities.
 
+With the advent of the new github.com/karlmutch/duat (developer utilities and tools) project the dump-ver tool is being replaced with facilicities offered within the duat project.
+
 ## bump-ver
 A version bumping tool for storing and manipuating the semantic version within files that contain a HTML formatted version tag.
 
@@ -31,7 +33,7 @@ bump-ver will output to stdout the new version number, except for the apply comm
 
 The command has the following usage:
 
-<doc-opt>```
+<doc-opt><code>
 Bump Version Tag
 
 Usage:
@@ -43,4 +45,4 @@ Options:
   -version               Show the version of this software.
   -f=<input-file>        A file containing an HTML repo-version tag to be morped or queried [default: README.md]
   -t=<target-file>,...   A comma seperated list of files that will be examined for version tags and modified based upon the input-file version
-```</doc-opt>
+</code></doc-opt>
