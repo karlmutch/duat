@@ -1,7 +1,7 @@
 #!/bin/bash -x
 set -e
-./cmd/bump-ver/build.sh
+./cmd/semver/build.sh
 if [ $? -ne 0 ]; then
-    echo "bump-ver build failed"
+    echo "semver build failed"
     exit $?
 fi
