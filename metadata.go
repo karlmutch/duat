@@ -1,4 +1,4 @@
-package devtools
+package duat
 
 import (
 	// The following packages are forked to retain copies in the event github accounts are shutdown

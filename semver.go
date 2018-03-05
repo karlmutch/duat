@@ -1,4 +1,4 @@
-package devtools
+package duat
 
 import (
 	"bufio"
