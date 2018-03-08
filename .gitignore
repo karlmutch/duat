@@ -12,3 +12,5 @@
 
 .envrc
 cmd/semver/bin/
+bin
+example/artifact/bin

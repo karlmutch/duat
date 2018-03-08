@@ -58,6 +58,7 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 
 	// Now try to find the first tag that matches the current HEAD
 	head, _ := md.Git.Repo.Head()
+	md.Git.Hash = head.Hash().String()
 
 	tags, _ := md.Git.Repo.Tags()
 	_ = tags.ForEach(func(t *plumbing.Reference) error {

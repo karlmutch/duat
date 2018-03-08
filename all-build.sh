@@ -1,7 +1,14 @@
 #!/bin/bash -x
 set -e
 ./cmd/semver/build.sh
-if [ $? -ne 0 ]; then
+result=$?
+if [ $result -ne 0 ]; then
     echo "semver build failed"
-    exit $?
+    exit $result
+fi
+example/artifact/build.go
+result=$?
+if [ $result -ne 0 ]; then
+    echo "example artifact build failed"
+    exit $result
 fi

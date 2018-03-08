@@ -68,6 +68,12 @@
   version = "v1.0"
 
 [[projects]]
+  name = "github.com/karlmutch/amicontained"
+  packages = ["container"]
+  revision = "72c60c0768004eb97c5f5c1d625fe6ed3b3b8561"
+  version = "v0.3.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/karlmutch/base62"
   packages = ["."]
@@ -161,6 +167,12 @@
   ]
   revision = "f187355171c936ac84a82793659ebb4936bc1c23"
   version = "v1.3.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/syndtr/gocapability"
+  packages = ["capability"]
+  revision = "33e07d32887e1e06b7c025f27ce52f62c7990bc0"
 
 [[projects]]
   branch = "master"
@@ -290,6 +302,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "fcba015329c062145a5e204983224b86e2abb6b10c7b8531fad20ce34a70720d"
+  inputs-digest = "9ea14aa1c65eb4462eccb92b0e35ebdc5ddd5bbdaa1dc7e4633dd63d15f611c7"
   solver-name = "gps-cdcl"
   solver-version = 1

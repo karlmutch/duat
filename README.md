@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat)
 
-Version : <repo-version>0.1.1-03-scripting-example-1esd8j</repo-version>
+Version : <repo-version>0.1.1-03-scripting-example-1etqI9</repo-version>
 
 duat is intended for use by developers implementing workflows operating on common software artifacts such as git branches and tags, semantic versioning, and container delivery.
 
@@ -20,13 +20,23 @@ Using Go to automate CI/CD style activities is an attempt to address the followi
 
 1. hosted CI/CD solutions create a needless separation with new styles of cloud based development and containers
 
-2. using bash and CI/CD DSLs to automate is disruptive and costly to do
+2. using bash and CI/CD DSLs to automate is disruptive and hard to debug
 
 The invdividual tools this projects provides can be run as standalone utilities to do very discret actions when invoked by bash scripts for the command line.
 
 The go packages this project implements are intended to be employed when using Go as a scripting language, as an alternative to bash scripts.  Information about using Go as a shell scripting language can be found at, https://blog.cloudflare.com/using-go-as-a-scripting-language-in-linux/.
 
 The general idea is to produce both libraries for development artifact handling and also tools that can be invoked to perform administrative functions related to software release and build activities.
+
+# Prerequisites
+
+## Installation
+
+```
+go get github.com/erning/gorun
+sudo mv ~/go/bin/gorun /usr/local/bin/
+echo ':golang:E::go::/usr/local/bin/gorun:OC' | sudo tee /proc/sys/fs/binfmt_misc/register
+```
 
 # The name duat
 
