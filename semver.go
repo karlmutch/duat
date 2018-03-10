@@ -1,4 +1,4 @@
-package devtools
+package duat
 
 import (
 	"bufio"
@@ -145,8 +145,8 @@ func (md *MetaData) Inject(file string) (err errors.Error) {
 		return errors.New(fmt.Sprintf("a user specified target file was not found '%s'\n", file)).With("stack", stack.Trace().TrimRuntime())
 	}
 
-	// Process the file sto stdout but stop on any errors
-	if err = md.Replace(file, "-", true); err != nil {
+	// Process the file to stdout but stop on any errors
+	if err = md.Replace(file, "/dev/stdout", true); err != nil {
 		return err
 	}
 
@@ -193,23 +193,17 @@ func (md *MetaData) Replace(fn string, dest string, substitute bool) (err errors
 	} else {
 		file.Close()
 
-		if dest == "-" {
-			file = os.Stdout
-		} else {
-			// Overwrite the output file if it is present
-			file, errGo = os.OpenFile(dest, os.O_CREATE|os.O_RDWR, 0600)
-			if errGo != nil {
-				return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
-			}
-			defer file.Close()
+		// Overwrite the output file if it is present
+		file, errGo = os.OpenFile(dest, os.O_CREATE|os.O_RDWR, 0600)
+		if errGo != nil {
+			return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 		}
+		defer file.Close()
 	}
 
-	if dest != "-" {
-		if _, errGo = file.Seek(0, io.SeekStart); errGo != nil {
-			return errors.Wrap(errGo, "failed to rewind the input file").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
-		}
-	}
+	// Ignore errors if the rewind fails as this could be a stdout style file
+	_, _ = file.Seek(0, io.SeekStart)
+
 	if _, errGo = tmp.Seek(0, io.SeekStart); errGo != nil {
 		return errors.Wrap(errGo, "failed to rewind a temporary file").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}

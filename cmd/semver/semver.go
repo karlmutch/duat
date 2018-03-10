@@ -121,7 +121,7 @@ func main() {
 		os.Exit(-2)
 	}
 
-	md := &devtools.MetaData{}
+	md := &duat.MetaData{}
 	_, err := md.LoadVer(*verFn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "the input file version string that is currently in the file is not valid due to '%v'", err)
@@ -178,7 +178,7 @@ func main() {
 	}
 }
 
-func prerelease(md *devtools.MetaData) (result *semver.Version, err errors.Error) {
+func prerelease(md *duat.MetaData) (result *semver.Version, err errors.Error) {
 
 	if md.Git == nil || md.Git.Err != nil {
 		if md.Git.Err != nil {

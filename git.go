@@ -1,4 +1,4 @@
-package devtools
+package duat
 
 import (
 	"os"
@@ -15,11 +15,17 @@ import (
 // This file contains some utility functions for extracting and using git information
 
 func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
+
 	if md.Git != nil {
 		return errors.New("git info already loaded, set Git member to nil if new information desired").With("stack", stack.Trace().TrimRuntime())
 	}
 
-	gitDir := dir
+	gitDir, errGo := filepath.Abs(dir)
+	if errGo != nil {
+		md.Git.Err = errors.Wrap(errGo, "directory could not be resolved").With("dir", dir).With("stack", stack.Trace().TrimRuntime()).With("git", gitDir)
+		return md.Git.Err
+	}
+
 	for {
 		_, errGo := os.Stat(filepath.Join(gitDir, ".git"))
 		if errGo == nil {
@@ -29,7 +35,7 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 			return errors.Wrap(errGo, "does not appear to be the top directory of a git repo").With("stack", stack.Trace().TrimRuntime()).With("git", gitDir)
 		}
 		gitDir = filepath.Dir(gitDir)
-		if len(gitDir) == 0 {
+		if len(gitDir) < 2 {
 			return errors.Wrap(errGo, "could not locate a git repo in the directory heirarchy").With("stack", stack.Trace().TrimRuntime()).With("dir", dir)
 		}
 	}
@@ -58,6 +64,7 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 
 	// Now try to find the first tag that matches the current HEAD
 	head, _ := md.Git.Repo.Head()
+	md.Git.Hash = head.Hash().String()
 
 	tags, _ := md.Git.Repo.Tags()
 	_ = tags.ForEach(func(t *plumbing.Reference) error {
