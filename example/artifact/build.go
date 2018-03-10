@@ -110,6 +110,8 @@ func main() {
 				os.Exit(-10)
 			}
 		}
+		if err := md.ImagePrune(false); err != nil {
+		}
 	} else {
 		if *imageOnly {
 			fmt.Fprintln(os.Stderr, errors.New("-image-only used but there is no Dockerfile present").With("stack", stack.Trace().TrimRuntime()).Error())

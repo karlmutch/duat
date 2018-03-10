@@ -112,23 +112,43 @@ func (md *MetaData) ImagePrune(all bool) (err errors.Error) {
 		}
 	}
 
-	sort.Strings(knownTags)
-
-	if len(knownTags) != 0 {
+	switch len(knownTags) {
+	case 0:
+		return nil
+	case 1:
 		if !all {
-			knownTags = knownTags[:len(knownTags)-1]
+			return nil
+		}
+	default:
+		// We have more than one image so save the latest image, and its associated tags
+		sort.Strings(knownTags)
+
+		if !all {
+			// When keep an image find all repos that have that image and remove then
+			// from the manifest so that we dont destroy what we wish to keep
+			repo := knownTags[len(knownTags)-1]
+			keepID := knownIDs[repo]
+			for k, v := range knownIDs {
+				if v == keepID {
+					delete(knownIDs, k)
+				}
+			}
 		}
 	}
 
-	// Now we have a list of the known tags that are for images we wish to remove
-	for _, tag := range knownTags {
-		image, isPresent := knownIDs[tag]
-		if isPresent {
-			if _, errGo = dock.ImageRemove(context.Background(), image, types.ImageRemoveOptions{}); errGo != nil {
-				return errors.Wrap(errGo).With("imageID").With("stack", stack.Trace().TrimRuntime())
-			}
-			delete(knownIDs, tag)
+	// Now we have a list of the images we wish to remove, while deleting them there
+	// could well be duplicates so keep a record of anything removed and dont repeat
+	// operations that would result in errors
+	//
+	removed := make(map[string]bool, len(knownIDs))
+	for _, image := range knownIDs {
+		if _, isPresent := removed[image]; isPresent {
+			continue
 		}
+		if _, errGo = dock.ImageRemove(context.Background(), image, types.ImageRemoveOptions{Force: true}); errGo != nil {
+			return errors.Wrap(errGo).With("imageID").With("stack", stack.Trace().TrimRuntime())
+		}
+		removed[image] = true
 	}
 	return nil
 }
@@ -219,10 +239,5 @@ func (md *MetaData) ImageCreate() (err errors.Error) {
 		return errors.Wrap(errGo, "unable to run the compiler").With("stack", stack.Trace().TrimRuntime())
 	}
 
-	// Cull out any older dangling images left from previous runs, the false
-	// is to indicate that at least one image should remain
-	if err = md.ImagePrune(false); err != nil {
-		return err
-	}
 	return nil
 }

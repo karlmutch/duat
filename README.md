@@ -1,28 +1,34 @@
 # Developer utilities and tools (duat)
 
-Version : <repo-version>0.1.1-03-scripting-example-1etqI9</repo-version>
+Version : <repo-version>0.1.1-03-scripting-example-1eu4IY</repo-version>
 
-duat is intended for use by developers implementing workflows operating on common software artifacts such as git branches and tags, semantic versioning, and container delivery.
+duat is intended for use by developers implementing workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.
 
-This repository delivers tools and go import packages for handling meta data and artifacts produced by software development activities.
+This repository delivers tools, and go import packages for handling meta data and artifacts produced by software development activities.
 
 duat is a work in progress experiment in using Go across the entire software lifecycle removing scripting and other DSLs typically used for building and releasing software.
 
+duat is highly opinionated about naming of artifacts and semantic versioning.
+
 # Motivating use-case
 
-A developer wishes to develop and build software producing distinct docker artifacts for every build and, using duat to do so, cleaning up built docker images as development progresses.
+A developer wishes to develop and build software producing distinct tagged docker images for every build and, cleaning up built docker images of previous development versions as development progresses.
 
 # Introduction
 
-The motivation for this project is to supply reusable software that can be employed when automating build and delivery activities using Go based software.
+The motivation for this project is to supply software that can be employed when automating build and delivery activities using Go based projects.
 
 Using Go to automate CI/CD style activities is an attempt to address the following:
 
-1. hosted CI/CD solutions create a needless separation with new styles of cloud based development and containers
+1. hosted CI/CD solutions create a needless separation with new styles of cloud based development and containerization
 
-2. using bash and CI/CD DSLs to automate is disruptive and hard to debug
+2. using bash and vendor specific CI/CD DSLs to automate is disruptive and hard to debug
 
-The invdividual tools this projects provides can be run as standalone utilities to do very discret actions when invoked by bash scripts for the command line.
+The individual tools this projects provides can be run in multiple ways:
+
+1. as standalone utilities to do very discret actions when invoked by bash scripts for the command line.
+
+2. as packages inside go source files, the source files being executed in the same manner as shell scripts.
 
 The go packages this project implements are intended to be employed when using Go as a scripting language, as an alternative to bash scripts.  Information about using Go as a shell scripting language can be found at, https://blog.cloudflare.com/using-go-as-a-scripting-language-in-linux/.
 

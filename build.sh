@@ -7,4 +7,4 @@ if [ $result -ne 0 ]; then
     echo "failed with code $result"
     exit $result
 fi
-example/artifact/build.go -image-only
+example/artifact/build.go -image-only -module example/artifact
