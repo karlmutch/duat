@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 
 	"github.com/mgutz/logxi" // Using a forked copy of this package results in build issues
 

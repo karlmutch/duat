@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat)
 
-Version : <repo-version>0.1.1-03-scripting-example-1eu4IY</repo-version>
+Version : <repo-version>0.1.2-04-docker-and-semver-tests-1ev6Ak</repo-version>
 
 duat is intended for use by developers implementing workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.
 
@@ -103,7 +103,7 @@ This tool also has the ability to generate semver compliant version strings usin
 
 This tool applies the Semantic Versioning 2.0 spec to version strings in files, https://semver.org/.  When the pre command is used the version bumping will append to the version string an increasing pre-release string that can be used to sort the versions creating precedence for versions when they are used with containers or other assets.
 
-# Installation
+#### Installation
 
 semver can installed using the following command:
 
@@ -111,7 +111,7 @@ semver can installed using the following command:
 $ go get -u karlmutch/duat/cmd/semver
 ```
 
-# Basic usage
+#### Basic usage
 
 semver by default will read your README.md file and will examine it for HTML markup embeeded in the file `&lt;repo-version&gt;[semver]&lt;/repo-version&gt;`.  The text within the tag will be parsed and validated as being valid semver, if this fails the command will exit.  Once parsed the options specified on the semver command line will be used to morph the version and written back into the file.
 
@@ -129,8 +129,29 @@ Usage:
   semver [major | major | minor | pre | extract | apply] [-f=<input-file>] [-t=[&lt;target-file&gt;,...]]
 
 Options:
-  -h --help              Show this message.
-  -version               Show the version of this software.
-  -f=&lt;input-file&gt;        A file containing an HTML repo-version tag to be morped or queried [default: README.md]
-  -t=&lt;target-file&gt;,...   A comma seperated list of files that will be examined for version tags and modified based upon the input-file version
+  -h --help              Show this message.<p>
+  -version               Show the version of this software.<p>
+  -f=&lt;input-file&gt;        A file containing an HTML repo-version tag to be morped or queried [default: README.md]<p>
+  -t=&lt;target-file&gt;,...   A comma seperated list of files that will be examined for version tags and modified based upon the input-file version<p>
 </code></doc-opt>
+
+### image-exists
+A tool for testing if an image exists for the given module, and version.  This tool would typically be run within a source directory for a cmd.  It extracts the module name from the directory name, along with the git information, and version and then tests to determine if a local docker image is present that matches the code version.
+
+Output for this command is exit code 1 for when there is not matching image, and exit code 0 for when an image exists.
+
+<pre><code>
+usage:  ../../cmd/image-exists/image-exists.go [options]       image exists test tool (image-exists)       unknown      unknown
+
+Options:
+
+  -module string
+          The name of the component that is being used to identify the container image, this will default to the current working directory (default ".")
+            -v    When enabled will print internal logging for this tool
+
+            Environment Variables:
+
+            options can also be extracted from environment variables by changing dashes '-' to underscores and using upper case.
+
+            log levels are handled by the LOGXI env variables, these are documented at https://github.com/mgutz/logxi
+</code></pre>
