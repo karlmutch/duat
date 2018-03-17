@@ -1,8 +1,9 @@
 package main
 
-// This file is used to expose a CLI command for testing if an image exists or not for the current build tree
+// This file is used to expose a CLI command for promoting docker images
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -17,15 +18,16 @@ import (
 )
 
 var (
-	logger = logxi.New("image-exists")
+	logger = logxi.New("image-release")
 
-	verbose = flag.Bool("v", false, "When enabled will print internal logging for this tool")
-	module  = flag.String("module", ".", "The name of the component that is being used to identify the container image, this will default to the current working directory")
+	verbose      = flag.Bool("v", false, "When enabled will print internal logging for this tool")
+	module       = flag.String("module", ".", "The name of the component that is being used to identify the container image, this will default to the current working directory")
+	externalRepo = flag.String("release-repo", "", "The name of a remote image repository, this will default to no remote repo")
 )
 
 func usage() {
 	fmt.Fprintln(os.Stderr, path.Base(os.Args[0]))
-	fmt.Fprintln(os.Stderr, "usage: ", os.Args[0], "[options]       image exists test tool (image-exists)      ", version.GitHash, "    ", version.BuildTime)
+	fmt.Fprintln(os.Stderr, "usage: ", os.Args[0], "[options]       docker image release tool (image-release)      ", version.GitHash, "    ", version.BuildTime)
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Options:")
 	fmt.Fprintln(os.Stderr, "")
@@ -74,13 +76,15 @@ func main() {
 		logger.Debug(fmt.Sprintf("%s:%s", repo, ver))
 	}
 
-	exists, _, err := md.ImageExists()
+	images, err := md.ImageRelease(*externalRepo)
 	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(-2)
+	}
+	b, errGo := json.Marshal(images)
+	if errGo != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(-3)
 	}
-
-	if !exists {
-		os.Exit(1)
-	}
+	fmt.Fprintf(os.Stderr, string(b))
 }

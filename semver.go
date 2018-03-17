@@ -86,7 +86,7 @@ func (md *MetaData) LoadVer(fn string) (ver *semver.Version, err errors.Error) {
 			}
 			newVer := html.UnescapeString(rHTML.ReplaceAllString(version, ""))
 			if newVer != ver.String() {
-				return nil, errors.New("all repo-version HTML tags must have the same value").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+				return nil, errors.New("all repo-version HTML tags must have the same version string").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 			}
 		}
 	}

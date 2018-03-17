@@ -7,4 +7,3 @@ CMD bin/artifact
 
 LABEL karlmutch.duat.module.version=<repo-version></repo-version> \
       karlmutch.duat.module.name=github.com/karlmutch/duat/example/artifact
-

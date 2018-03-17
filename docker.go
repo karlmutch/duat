@@ -12,6 +12,12 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 
+	// The following packages are forked to retain copies in the event github accounts are shutdown
+	//
+	// I am torn between this and just letting dep ensure with a checkedin vendor directory
+	// to do this.  In any event I ended up doing both with my own forks
+	"github.com/karlmutch/semver" // Forked copy of https://github.com/Masterminds/semver
+
 	"github.com/karlmutch/amicontained/container" // Forked from https://github.com/jessfraz/amicontained.git
 
 	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
@@ -54,17 +60,97 @@ func (*MetaData) ContainerRuntime() (containerType string, err errors.Error) {
 	return name, nil
 }
 
-func (md *MetaData) GenerateImageName() (repo string, version string, prerelease bool, err errors.Error) {
+// ReleaseImage(repo string)
+//
+// Strip pre-release
+// Use GenerateImageName
+// See if an existing release is locally present, which is OK but make sure the id is the same.
+// Tag the pre-release with the clean release.
+// Prepend and push
+func (md *MetaData) ImageRelease(remote string) (images []string, err errors.Error) {
 
+	images = []string{}
+
+	// Make sure the original image exists for the current version before processing
+	// a release version
+	exists, id, err := md.ImageExists()
+	if err != nil {
+		return images, err
+	}
+	if !exists {
+		return images, errors.Wrap(err, "a image for the current pre-release must exist before calling release").With("stack", stack.Trace().TrimRuntime())
+	}
+
+	curRepo, curVersion, _, err := md.GenerateImageName()
+	if err != nil {
+		return images, err
+	}
+	curTag := fmt.Sprintf("%s:%s", curRepo, curVersion)
+
+	semVer, errGo := md.SemVer.SetPrerelease("")
+	if errGo != nil {
+		return images, errors.Wrap(errGo, "could not clear the prerelease").With("stack", stack.Trace().TrimRuntime())
+	}
+
+	repo, version, _, err := md.generateImageName(&semVer)
+	if err != nil {
+		return images, err
+	}
+	newVersion, errGo := semver.NewVersion(version)
+	if errGo != nil {
+		return images, errors.Wrap(errGo, "could not parse the new release").With("version", version).With("stack", stack.Trace().TrimRuntime())
+	}
+	exists, relID, err := md.imageExists(newVersion)
+	if err != nil {
+		return images, err
+	}
+	if exists && (relID != id) {
+		return images, errors.New("the released image already exists, with a different image ID").With("stack", stack.Trace().TrimRuntime())
+	}
+
+	dock, errGo := client.NewEnvClient()
+	if errGo != nil {
+		return images, errors.Wrap(errGo, "docker unavailable").With("stack", stack.Trace().TrimRuntime())
+	}
+	if !exists {
+		// Tag the pre-released version
+		// Now get our local docker images
+
+		tag := fmt.Sprintf("%s:%s", repo, version)
+		errGo = dock.ImageTag(context.Background(), curTag, tag)
+		if errGo != nil {
+			return images, errors.Wrap(errGo).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
+		}
+		images = append(images, tag)
+	}
+
+	if len(remote) != 0 {
+		tag := fmt.Sprintf("%s/%s:%s", remote, repo, version)
+		if errGo := dock.ImageTag(context.Background(), curTag, tag); errGo != nil {
+			return images, errors.Wrap(errGo).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
+		}
+		images = append(images, tag)
+	}
+	return images, nil
+}
+
+func (md *MetaData) generateImageName(semVer *semver.Version) (repo string, version string, prerelease bool, err errors.Error) {
 	// Get the git repo name and the parent which will have been used to name the
 	// containers being created during our build process
 	gitParts := strings.Split(md.Git.URL, "/")
 	label := strings.TrimSuffix(gitParts[len(gitParts)-1], ".git")
 
 	// Look for pre-release components within the version string
-	preParts := strings.Split(md.SemVer.Prerelease(), "-")
+	preParts := strings.Split(semVer.Prerelease(), "-")
 
-	return fmt.Sprintf("%s/%s/%s", gitParts[len(gitParts)-2], label, md.Module), md.SemVer.String(), len(preParts) >= 2, nil
+	return fmt.Sprintf("%s/%s/%s", gitParts[len(gitParts)-2], label, md.Module), semVer.String(), len(preParts) >= 2, nil
+}
+
+// caller should
+// Clean the semver and save the new one after the push
+
+func (md *MetaData) GenerateImageName() (repo string, version string, prerelease bool, err errors.Error) {
+	return md.generateImageName(md.SemVer)
 }
 
 // ImagePrune will wipe the images from the local registry, the all option can be used to leave the latest image present
@@ -153,40 +239,44 @@ func (md *MetaData) ImagePrune(all bool) (err errors.Error) {
 	return nil
 }
 
-func (md *MetaData) ImageExists() (exists bool, err errors.Error) {
+func (md *MetaData) imageExists(ver *semver.Version) (exists bool, id string, err errors.Error) {
 	runtime, err := md.ContainerRuntime()
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 	if len(runtime) > 0 {
-		return false, errors.Wrap(ErrInContainer).With("stack", stack.Trace().TrimRuntime())
+		return false, "", errors.Wrap(ErrInContainer).With("stack", stack.Trace().TrimRuntime())
 	}
 
-	repoName, tag, _, err := md.GenerateImageName()
+	repoName, tag, _, err := md.generateImageName(ver)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 	fullTag := fmt.Sprintf("%s:%s", repoName, tag)
 
 	// Now get our local docker images
 	dock, errGo := client.NewEnvClient()
 	if errGo != nil {
-		return false, errors.Wrap(errGo, "docker unavailable").With("stack", stack.Trace().TrimRuntime())
+		return false, "", errors.Wrap(errGo, "docker unavailable").With("stack", stack.Trace().TrimRuntime())
 	}
 
 	images, errGo := dock.ImageList(context.Background(), types.ImageListOptions{})
 	if errGo != nil {
-		return false, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+		return false, "", errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 	for _, image := range images {
 		for _, repo := range image.RepoTags {
 			if repo == fullTag {
-				return true, nil
+				return true, image.ID, nil
 			}
 		}
 	}
 
-	return false, nil
+	return false, "", nil
+}
+
+func (md *MetaData) ImageExists() (exists bool, id string, err errors.Error) {
+	return md.imageExists(md.SemVer)
 }
 
 func (md *MetaData) ImageCreate() (err errors.Error) {

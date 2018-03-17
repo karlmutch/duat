@@ -6,8 +6,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
+
+	"go/ast"
+	"go/parser"
+	"go/token"
 
 	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
 	"github.com/karlmutch/stack"  // Forked copy of https://github.com/go-stack/stack
@@ -16,6 +21,83 @@ import (
 var (
 	goPath = os.Getenv("GOPATH")
 )
+
+func FindGoFiles(dir string) (files []string, err errors.Error) {
+	files = []string{}
+
+	if stat, errGo := os.Stat(dir); errGo != nil {
+		return files, errors.Wrap(errGo).With("dir", dir).With("stack", stack.Trace().TrimRuntime())
+	} else {
+		if !stat.IsDir() {
+			if filepath.Ext(stat.Name()) == ".go" {
+				files = append(files, dir)
+			} else {
+				filepath.Walk(dir, func(path string, f os.FileInfo, errGo error) error {
+					if !f.IsDir() {
+						if filepath.Ext(f.Name()) == ".go" {
+							files = append(files, f.Name())
+						}
+					}
+					return nil
+				})
+			}
+		}
+		return files, nil
+	}
+}
+
+// FindFunc will locate a function or method within a directory of source files.
+// Use "receiever.func" for methods, a function name without the dot for functions.
+//
+func FindFuncIn(funcName string, dir string) (file string, err errors.Error) {
+	fs := token.NewFileSet()
+	pkgs, errGo := parser.ParseDir(fs, dir, nil, 0)
+	if errGo != nil {
+		return "", errors.Wrap(errGo).With("dir", dir).With("stack", stack.Trace().TrimRuntime())
+	}
+
+	for _, pkg := range pkgs {
+		ast.Inspect(pkg, func(n ast.Node) bool {
+			if fun, ok := n.(*ast.FuncDecl); ok {
+				name := fun.Name.Name
+				if fun.Recv != nil {
+					for _, v := range fun.Recv.List {
+						switch xv := v.Type.(type) {
+						case *ast.StarExpr:
+							if si, ok := xv.X.(*ast.Ident); ok {
+								name = fmt.Sprintf("%s.%s", si.Name, fun.Name)
+							}
+						case *ast.Ident:
+							name = fmt.Sprintf("%s.%s", xv.Name, fun.Name)
+						}
+					}
+				}
+				if name == funcName {
+					file = fs.Position(fun.Name.NamePos).Filename
+					return false
+				}
+			}
+			return true
+		})
+	}
+	return file, nil
+}
+
+// FindPossibleFunc can be used to hunt down directories where there was a function found
+// that matches the specification of the user, or if as a result of an error during
+// checking we might not be sure that the function does not exist
+//
+func FindPossibleFunc(name string, dirs []string) (possibles []string, err errors.Error) {
+	possibles = []string{}
+	for _, dir := range dirs {
+		file, err := FindFuncIn(name, dir)
+		if err == nil && len(file) == 0 {
+			continue
+		}
+		possibles = append(possibles, file)
+	}
+	return possibles, nil
+}
 
 func (md *MetaData) GoCompile() (err errors.Error) {
 	if errGo := os.Mkdir("bin", os.ModePerm); errGo != nil {
