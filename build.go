@@ -49,6 +49,8 @@ func init() {
 	flag.Usage = usage
 }
 
+// Look for directories inside the root 'dir' and return their paths
+//
 func findDirs(dir string) (dirs []string, err errors.Error) {
 	dirs = []string{}
 
@@ -77,8 +79,12 @@ func main() {
 		logger.SetLevel(logxi.LevelDebug)
 	}
 
+	// First assume that the directory supplied is a code directory
 	dirs := []string{*module}
 
+	// If this is a recursive build scan all inner directories looking for go code
+	// and build it if there is code found
+	//
 	if *recursive {
 		found, err := findDirs(*module)
 		if err != nil {
@@ -98,6 +104,8 @@ func main() {
 
 	logger.Debug(fmt.Sprintf("%v", dirs))
 
+	// Take the discovered directories and build them
+	//
 	for _, dir := range dirs {
 		if err := runBuild(dir); err != nil {
 			fmt.Fprintf(os.Stderr, err.Error())
@@ -106,6 +114,9 @@ func main() {
 	}
 }
 
+// runBuild is used to restore the current working directory after the build itself
+// has switch directories
+//
 func runBuild(dir string) (err errors.Error) {
 
 	logger.Info(fmt.Sprintf("building in %s", dir))
@@ -127,6 +138,8 @@ func runBuild(dir string) (err errors.Error) {
 	return err
 }
 
+// build performs the default build for the component within the directory specified
+//
 func build(dir string) (err errors.Error) {
 	// Gather information about the current environment. also changes directory to the working area
 	md, err := duat.NewMetaData(dir)
@@ -149,45 +162,9 @@ func build(dir string) (err errors.Error) {
 	}
 
 	if !*imageOnly {
-		// Copy the compiled file into the GOPATH bin directory
-		if len(goPath) == 0 {
-			return errors.New("unable to determine the compiler bin output dir, env var GOPATH might be missing or empty").With("stack", stack.Trace().TrimRuntime())
-		}
-
-		if err = md.GoCompile(); err != nil {
+		if err = md.GoBuild(); err != nil {
 			return err
 		}
-
-		if errGo := os.MkdirAll(filepath.Join(goPath, "bin"), os.ModePerm); errGo != nil {
-			if !os.IsExist(errGo) {
-				return errors.Wrap(errGo, "unable to create the $GOPATH/bin directory").With("stack", stack.Trace().TrimRuntime())
-			}
-		}
-
-		// Find any executables we have and copy them to the gopath bin directory as well
-		binPath, errGo := filepath.Abs(filepath.Join(".", "bin"))
-		if errGo != nil {
-			return errors.Wrap(errGo, "unable to copy binary files from the ./bin directory").With("stack", stack.Trace().TrimRuntime())
-		}
-
-		filepath.Walk(binPath, func(path string, f os.FileInfo, errGo error) error {
-			if f.IsDir() {
-				return nil
-			}
-			// Is the file executable at all ?
-			if f.Mode()&0111 != 0 {
-				src := filepath.Join("bin", f.Name())
-				dst := filepath.Join(goPath, "bin", filepath.Base(f.Name()))
-
-				logger.Debug(fmt.Sprintf("copy bin artifact %s %s", src, dst))
-
-				if err = duat.CopyFile(src, dst); err != nil {
-					fmt.Fprintf(os.Stderr, err.Error())
-					os.Exit(-6)
-				}
-			}
-			return nil
-		})
 	}
 
 	// If we have a Dockerfile in our target directory build it

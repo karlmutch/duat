@@ -99,6 +99,50 @@ func FindPossibleFunc(name string, dirs []string) (possibles []string, err error
 	return possibles, nil
 }
 
+func (md *MetaData) GoBuild() (err errors.Error) {
+	// Copy the compiled file into the GOPATH bin directory
+	if len(goPath) == 0 {
+		return errors.New("unable to determine the compiler bin output dir, env var GOPATH might be missing or empty").With("stack", stack.Trace().TrimRuntime())
+	}
+
+	if err = md.GoCompile(); err != nil {
+		return err
+	}
+
+	if errGo := os.MkdirAll(filepath.Join(goPath, "bin"), os.ModePerm); errGo != nil {
+		if !os.IsExist(errGo) {
+			return errors.Wrap(errGo, "unable to create the $GOPATH/bin directory").With("stack", stack.Trace().TrimRuntime())
+		}
+	}
+
+	// Find any executables we have and copy them to the gopath bin directory as well
+	binPath, errGo := filepath.Abs(filepath.Join(".", "bin"))
+	if errGo != nil {
+		return errors.Wrap(errGo, "unable to copy binary files from the ./bin directory").With("stack", stack.Trace().TrimRuntime())
+	}
+
+	errGo = filepath.Walk(binPath, func(path string, f os.FileInfo, err error) error {
+		if f.IsDir() {
+			return nil
+		}
+		// Is the file executable at all ?
+		if f.Mode()&0111 != 0 {
+			src := filepath.Join("bin", f.Name())
+			dst := filepath.Join(goPath, "bin", filepath.Base(f.Name()))
+
+			if err = CopyFile(src, dst); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if errGo == nil {
+		return nil
+	}
+
+	return errGo.(errors.Error)
+}
+
 func (md *MetaData) GoCompile() (err errors.Error) {
 	if errGo := os.Mkdir("bin", os.ModePerm); errGo != nil {
 		if !os.IsExist(errGo) {
