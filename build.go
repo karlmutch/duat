@@ -49,6 +49,21 @@ func init() {
 	flag.Usage = usage
 }
 
+func findDirs(dir string) (dirs []string, err errors.Error) {
+	dirs = []string{}
+
+	errGo := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			dirs = append(dirs, path)
+		}
+		return nil
+	})
+	if errGo != nil {
+		return nil, errors.Wrap(errGo).With("dir", dir).With("stack", stack.Trace().TrimRuntime())
+	}
+	return dirs, err
+}
+
 func main() {
 	// This code is run in the same fashion as a script and should be co-located
 	// with the component that is being built
@@ -62,25 +77,61 @@ func main() {
 		logger.SetLevel(logxi.LevelDebug)
 	}
 
-	dirs, err := duat.FindPossibleFunc("main", []string{*module})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
-		os.Exit(-11)
+	dirs := []string{*module}
+
+	if *recursive {
+		found, err := findDirs(*module)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, err.Error())
+			os.Exit(-2)
+		}
+
+		if found, err = duat.FindPossibleFunc("main", found); err != nil {
+			fmt.Fprintf(os.Stderr, err.Error())
+			os.Exit(-2)
+		}
+		dirs = nil
+		for _, dir := range found {
+			dirs = append(dirs, filepath.Dir(dir))
+		}
 	}
+
 	logger.Debug(fmt.Sprintf("%v", dirs))
 
-	// Gather information about the current environment
-	md, err := duat.NewMetaData(*module)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
-		os.Exit(-1)
+	for _, dir := range dirs {
+		if err := runBuild(dir); err != nil {
+			fmt.Fprintf(os.Stderr, err.Error())
+			os.Exit(-1)
+		}
+	}
+}
+
+func runBuild(dir string) (err errors.Error) {
+
+	logger.Info(fmt.Sprintf("building in %s", dir))
+
+	cwd, errGo := os.Getwd()
+	if errGo != nil {
+		return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
-	if cwd, errGo := os.Getwd(); err != nil {
-		fmt.Fprintf(os.Stderr, errGo.Error())
-		os.Exit(-1)
-	} else {
-		logger.Debug(fmt.Sprintf("in %s", cwd))
+	err = build(dir)
+
+	if errGo = os.Chdir(cwd); errGo != nil {
+		logger.Warn("The original directory could not be restored after the build completed")
+		if err == nil {
+			err = errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+		}
+	}
+
+	return err
+}
+
+func build(dir string) (err errors.Error) {
+	// Gather information about the current environment. also changes directory to the working area
+	md, err := duat.NewMetaData(dir)
+	if err != nil {
+		return err
 	}
 
 	// If there is a Dockerfile for this module then check the images etc
@@ -88,12 +139,10 @@ func main() {
 		if runtime, _ := md.ContainerRuntime(); len(runtime) == 0 {
 			exists, _, err := md.ImageExists()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, err.Error())
-				os.Exit(-7)
+				return err
 			}
 			if exists {
-				fmt.Fprintf(os.Stderr, "an image already exists at the current software version, using 'semver pre' to bump your pre-release version will correct this\n")
-				os.Exit(-8)
+				return errors.New("an image already exists at the current software version, using 'semver pre' to bump your pre-release version will correct this").With("stack", stack.Trace().TrimRuntime())
 			}
 		}
 		logger.Debug("Dockerfile found and validated")
@@ -102,27 +151,23 @@ func main() {
 	if !*imageOnly {
 		// Copy the compiled file into the GOPATH bin directory
 		if len(goPath) == 0 {
-			fmt.Fprintln(os.Stderr, errors.New("unable to determine the compiler bin output dir, env var GOPATH might be missing or empty").With("stack", stack.Trace().TrimRuntime()).Error())
-			os.Exit(-5)
+			return errors.New("unable to determine the compiler bin output dir, env var GOPATH might be missing or empty").With("stack", stack.Trace().TrimRuntime())
 		}
 
 		if err = md.GoCompile(); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(-4)
+			return err
 		}
 
 		if errGo := os.MkdirAll(filepath.Join(goPath, "bin"), os.ModePerm); errGo != nil {
 			if !os.IsExist(errGo) {
-				fmt.Fprintln(os.Stderr, errors.Wrap(errGo, "unable to create the $GOPATH/bin directory").With("stack", stack.Trace().TrimRuntime()).Error())
-				os.Exit(-2)
+				return errors.Wrap(errGo, "unable to create the $GOPATH/bin directory").With("stack", stack.Trace().TrimRuntime())
 			}
 		}
 
 		// Find any executables we have and copy them to the gopath bin directory as well
 		binPath, errGo := filepath.Abs(filepath.Join(".", "bin"))
 		if errGo != nil {
-			fmt.Fprintln(os.Stderr, errors.Wrap(errGo, "unable to copy binary files from the ./bin directory").With("stack", stack.Trace().TrimRuntime()).Error())
-			os.Exit(-2)
+			return errors.Wrap(errGo, "unable to copy binary files from the ./bin directory").With("stack", stack.Trace().TrimRuntime())
 		}
 
 		filepath.Walk(binPath, func(path string, f os.FileInfo, errGo error) error {
@@ -152,12 +197,10 @@ func main() {
 			if errors.Cause(err) == duat.ErrInContainer {
 				// This only a real error if the user explicitly asked for the image to be produced
 				if *imageOnly {
-					fmt.Fprintln(os.Stderr, errors.New("-image-only used but we were running inside a container which is not supported").With("stack", stack.Trace().TrimRuntime()).Error())
-					os.Exit(-9)
+					return errors.New("-image-only used but we were running inside a container which is not supported").With("stack", stack.Trace().TrimRuntime())
 				}
 			} else {
-				fmt.Fprintf(os.Stderr, err.Error())
-				os.Exit(-10)
+				return err
 			}
 		}
 		if err := md.ImagePrune(false); err != nil {
@@ -165,9 +208,9 @@ func main() {
 		}
 	} else {
 		if *imageOnly {
-			fmt.Fprintln(os.Stderr, errors.New("-image-only used however there is no Dockerfile present").With("stack", stack.Trace().TrimRuntime()).Error())
-			os.Exit(-11)
+			return errors.New("-image-only used however there is no Dockerfile present").With("stack", stack.Trace().TrimRuntime())
 		}
 		logger.Debug(fmt.Sprintf("no Dockerfile found, image build step skipped"))
 	}
+	return nil
 }
