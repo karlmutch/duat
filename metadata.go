@@ -8,7 +8,6 @@ import (
 	//
 	// I am torn between this and just letting dep ensure with a checkedin vendor directory
 	// to do this.  In any event I ended up doing both with my own forks
-
 	"github.com/karlmutch/semver" // Forked copy of https://github.com/Masterminds/semver
 
 	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
@@ -33,6 +32,7 @@ type MetaData struct {
 	Dockers map[string]docker.Client
 	SemVer  *semver.Version
 	Module  string // A string name for the software component that is being handled
+	VerFile string // The file that is being used as the reference for version data
 	Git     *GitInfo
 }
 
@@ -40,6 +40,7 @@ func (md *MetaData) Clear() {
 	md.Dockers = map[string]docker.Client{}
 	md.SemVer = nil
 	md.Module = ""
+	md.VerFile = ""
 	md.Git = nil
 }
 
@@ -47,7 +48,7 @@ func (md *MetaData) Clear() {
 // appropriate project information into the meta-data structure returned to
 // the caller
 //
-func NewMetaData(dir string) (md *MetaData, err errors.Error) {
+func NewMetaData(dir string, verFile string) (md *MetaData, err errors.Error) {
 
 	md = &MetaData{}
 
@@ -83,14 +84,13 @@ func NewMetaData(dir string) (md *MetaData, err errors.Error) {
 	}
 
 	// The main README.md will be at the git repos top directory
-	readme := filepath.Join(md.Git.Dir, "README.md")
-	if _, err = md.LoadVer(readme); err != nil {
+	md.VerFile = filepath.Join(md.Git.Dir, verFile)
+	if _, err = md.LoadVer(md.VerFile); err != nil {
 		return nil, err
 	}
 
 	// Ensure that the module name is made docker compatible
-	md.Module, err = md.ScrubDockerRepo(md.Module)
-	if err != nil {
+	if md.Module, err = md.ScrubDockerRepo(md.Module); err != nil {
 		return nil, err
 	}
 	return md, nil

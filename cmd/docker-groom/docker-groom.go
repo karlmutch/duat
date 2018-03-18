@@ -20,6 +20,7 @@ import (
 var (
 	logger = logxi.New("docker-groom")
 
+	verFn    = flag.String("f", "README.md", "The file to be used as the source of truth for the existing, and future, version")
 	groomAll = flag.Bool("all", false, "Do not leave any images, default is false to leave the latest image for the component")
 	verbose  = flag.Bool("v", false, "When enabled will print internal logging for this tool")
 	module   = flag.String("module", ".", "The directory of the module that is being used to identify the container image, this will default to current working directory")
@@ -62,7 +63,7 @@ func main() {
 
 	logger.Debug(fmt.Sprintf("%s built at %s, against commit id %s\n", os.Args[0], version.BuildTime, version.GitHash))
 
-	md, err := duat.NewMetaData(*module)
+	md, err := duat.NewMetaData(*module, *verFn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(-1)

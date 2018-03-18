@@ -9,7 +9,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
+	"github.com/karlmutch/base62" // Fork of https://github.com/mattheath/base62
 	"github.com/karlmutch/duat/version"
 
 	// The following packages are forked to retain copies in the event github accounts are shutdown
@@ -86,7 +88,7 @@ func (md *MetaData) LoadVer(fn string) (ver *semver.Version, err errors.Error) {
 			}
 			newVer := html.UnescapeString(rHTML.ReplaceAllString(version, ""))
 			if newVer != ver.String() {
-				return nil, errors.New("all repo-version HTML tags must have the same value").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+				return nil, errors.New("all repo-version HTML tags must have the same version string").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 			}
 		}
 	}
@@ -151,6 +153,44 @@ func (md *MetaData) Inject(file string) (err errors.Error) {
 	}
 
 	return nil
+}
+
+func (md *MetaData) Prerelease() (result *semver.Version, err errors.Error) {
+
+	if md.Git == nil || md.Git.Err != nil {
+		if md.Git.Err != nil {
+			fmt.Fprintf(os.Stderr, "an operation that required git failed due to %v", md.Git.Err)
+			os.Exit(-5)
+		} else {
+			fmt.Fprintf(os.Stderr, "an operation that required git could not locate git information")
+			os.Exit(-6)
+		}
+	}
+
+	// Generate a pre-release suffix for semver that uses a mixture of the branch name
+	// with nothing but hyphens and alpha numerics, followed by a teimstamp encoded using
+	// semver compatible Base62 in a way that preserves sort ordering
+	//
+	build := base62.EncodeInt64(time.Now().Unix())
+
+	// Git branch names can contain characters that would confuse semver including the
+	// _ (underscore), and + (plus) characters, https://www.kernel.org/pub/software/scm/git/docs/git-check-ref-format.html
+	cleanBranch := ""
+	for _, aChar := range md.Git.Branch {
+		if aChar < '0' || aChar > 'z' || (aChar > '9' && aChar < 'A') || (aChar > 'Z' && aChar < 'a') {
+			cleanBranch += "-"
+		} else {
+			cleanBranch += string(aChar)
+		}
+	}
+	result = md.SemVer
+	newVer, errGo := result.SetPrerelease(fmt.Sprintf("%s-%s", cleanBranch, build))
+	if errGo != nil {
+		return nil, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+	}
+	md.SemVer = &newVer
+
+	return md.SemVer, nil
 }
 
 func (md *MetaData) Replace(fn string, dest string, substitute bool) (err errors.Error) {
