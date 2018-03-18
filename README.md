@@ -1,26 +1,26 @@
-# Developer utilities and tools (duat)
+# Developer utilities and tools (duat)   Alpha
 
-Version : <repo-version>0.1.4</repo-version>
+Version : <repo-version>0.2.0-09-image-promotion-1exdHI</repo-version>
 
-duat is intended for use by developers implementing workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go across the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and finally deploying software.
+duat is a set of tools useful for automating workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go to manage the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and finally deploying software.
 
-This repository delivers tools, and go import packages for handling meta data and artifacts associated with software development activities.
+This repository also delivers go import packages for handling meta data and artifacts associated with software development activities.
 
-duat is highly opinionated about naming of docker images, and semantic versioning.  duat provides tools and assistance but intentionally does not impose and end-to-end automation solution for CI/CD.
+duat make assumptions about naming of docker images, and semantic versioning.  duat provides tools and assistance, but intentionally does not impose and end-to-end automation solution, for CI/CD.
+
+# The name duat
+
+Duat is the name given by the egyptians to the underworld.  As the sun set each day and travelled through the underworld being regenerated it would cast light on to the souls nearby bringing them to life for a period of time as it passed by.  While passing through the duat I hope these tools shine some light on your travels.
 
 # Motivating use-cases
 
 A user of duat wishes to develop and build software producing distinct tagged docker images for every build and, clean up built docker images of previous development versions as development progresses.
 
-A user wishes to deliver software packaged using docker images to a public repository.
+A user wishes to deliver software packaged using docker images to an AWS ECR image repository.
 
-A user wishes to deploy software into an Istio or other k8s based service mesh.
+A user wishes to deploy containerized software into an Istio, or other k8s based service mesh.
 
-Many existing cloud based platforms exist today to help with activities such as these.  This has led to divided islands of functionality, such as Travis, that require integration so that credentials and other artifacts released to workflows can be shared between these platform.  This integration falls to the developer and users and is time consuming and complex.  duat builds upon the observation that many developers are already operating in a cloud based environment and what is needed is a simple set of tools and making a set of simplifing assumptions for addressing the above use cases, especially if you already have containerized builds, and tests.
-
-# The name duat
-
-Duat is the name given by the egyptians to the underworld.  As the sun set each day and travelled through the underworld being regenerated it would cast light on to the souls nearby bringing them to life for a period of time as it passed by.  While passing through the duat I hope these tools shine some light on your travels.
+Many existing cloud based platforms exist today to address requirements such as the above.  This has led to divided islands of functionality, such as Travis, that require integration with each other so that credentials and other artifacts required by workflow automation is shared between these platform. Costly and fragile integration falls to the developer and users which is time consuming and complex.  duat builds upon the observation that many developers are already operating in a cloud based environment and what is needed is a simple set of tools, if a set of simplifing assumptions is made for addressing the above use cases, especially if you already have containerized builds, and tests.
 
 # Conventions assumptions
 
@@ -99,7 +99,7 @@ $ github-release
 
 # Go environments
 
-The motivation for this project is to supply software that can be employed when automating build and delivery activities using Go based projects.
+The motivation for this project is a requirement to supply software that can be employed when automating build and delivery activities using Go based projects.
 
 Using Go to automate CI/CD style activities is an attempt to address the following:
 
@@ -117,9 +117,11 @@ The go packages this project implements are intended to be employed when using G
 
 The general idea is to produce both libraries for development artifact handling and also tools that can be invoked to perform administrative functions related to software release and build activities.
 
-## Prerequisites
+# Installation using Github binaries
 
-### Installation
+# Building duat from source
+
+## Prerequisites
 
 ```
 go get github.com/erning/gorun
@@ -127,6 +129,13 @@ sudo mv ~/go/bin/gorun /usr/local/bin/
 echo ':golang:E::go::/usr/local/bin/gorun:OC' | sudo tee /proc/sys/fs/binfmt_misc/register
 ```
 
+### Docker based Release builds
+
+Using build.sh
+
+### Development builds
+
+Using build.go
 
 # duat utilities and tools
 
@@ -147,7 +156,7 @@ $ go get -u karlmutch/duat/cmd/semver
 
 ### Basic usage
 
-semver by default will read your README.md file and will examine it for HTML markup embeeded in the file <doc-opt><code>&lt;repo-version&gt;[semver]&lt;/repo-version&gt;`.  The text within the tag will be parsed and validated as being valid semver, if this fails the command will exit.  Once parsed the options specified on the semver command line will be used to morph the version and written back into the file.
+semver by default will read your README.md file and will examine it for HTML markup embeeded in the file <doc-opt><code>&lt;repo-version&gt;[semver]&lt;/repo-version&gt;</code></doc-opt>.  The text within the tag will be parsed and validated as being valid semver, if this fails the command will exit.  Once parsed the options specified on the semver command line will be used to morph the version and written back into the file.
 
 semver can also be used with the apply option to modify files based upon the version within an authorative file.  When this option is used not changes are made to the existing input file.  This command is only for propagating an existing version to other files.
 
@@ -195,7 +204,28 @@ Options:
 
 ## image-release
 
-image-release is used to tag an pre-release version as a released semantic version, and then optionally push the resulting image to an AWS ECR repository.  The pre-release version will also be cleared, if no pushes failed, within the README.md file resulting in an offical release.
+image-release is used to tag a pre-release image version, as a released semantic version, and then optionally push the resulting image to an AWS ECR repository.  The pre-release version will also be cleared, if no pushes failed, from the README.md file resulting in an offical release.  Exit codes are used to denote success or failure of this command to tag then push an image.
+
+<code><pre>
+usage:  image-release [options]       docker image release tool (image-release)       c05904764f71824bbaed171b52c18b99b3082746      2018-03-17_23:47:47-0700
+
+Options:
+
+  -f string
+        The file to be used as the source of truth for the existing, and future, version (default "README.md")
+  -module string
+        The name of the component that is being used to identify the container image, this will default to the current working directory (default ".")
+  -release-repo string
+        The name of a remote image repository, this will default to no remote repo
+  -v    When enabled will print internal logging for this tool
+
+Environment Variables:
+
+options can also be extracted from environment variables by changing dashes '-' to underscores and using upper case.
+
+log levels are handled by the LOGXI env variables, these are documented at https://github.com/mgutz/logxi
+
+</pre></code>
 
 ## github-release
 

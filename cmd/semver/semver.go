@@ -11,12 +11,9 @@ import (
 	"path"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/karlmutch/duat"
 	"github.com/karlmutch/duat/version"
-
-	"github.com/karlmutch/base62" // Fork of https://github.com/mattheath/base62
 
 	// The following packages are forked to retain copies in the event github accounts are shutdown
 	//
@@ -143,7 +140,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "an operation that required git failed due to %v", gitErr)
 			os.Exit(-5)
 		}
-		md.SemVer, err = prerelease(md)
+		md.SemVer, err = md.Prerelease()
 	case "apply":
 		err = md.Apply(strings.Split(*applyFn, ","))
 	case "extract":
@@ -176,42 +173,4 @@ func main() {
 	if flag.Arg(0) != "inject" {
 		fmt.Fprintf(os.Stdout, "%s\n", md.SemVer.String())
 	}
-}
-
-func prerelease(md *duat.MetaData) (result *semver.Version, err errors.Error) {
-
-	if md.Git == nil || md.Git.Err != nil {
-		if md.Git.Err != nil {
-			fmt.Fprintf(os.Stderr, "an operation that required git failed due to %v", md.Git.Err)
-			os.Exit(-5)
-		} else {
-			fmt.Fprintf(os.Stderr, "an operation that required git could not locate git information")
-			os.Exit(-6)
-		}
-	}
-
-	// Generate a pre-release suffix for semver that uses a mixture of the branch name
-	// with nothing but hyphens and alpha numerics, followed by a teimstamp encoded using
-	// semver compatible Base62 in a way that preserves sort ordering
-	//
-	build := base62.EncodeInt64(time.Now().Unix())
-
-	// Git branch names can contain characters that would confuse semver including the
-	// _ (underscore), and + (plus) characters, https://www.kernel.org/pub/software/scm/git/docs/git-check-ref-format.html
-	cleanBranch := ""
-	for _, aChar := range md.Git.Branch {
-		if aChar < '0' || aChar > 'z' || (aChar > '9' && aChar < 'A') || (aChar > 'Z' && aChar < 'a') {
-			cleanBranch += "-"
-		} else {
-			cleanBranch += string(aChar)
-		}
-	}
-	result = md.SemVer
-	newVer, errGo := result.SetPrerelease(fmt.Sprintf("%s-%s", cleanBranch, build))
-	if errGo != nil {
-		return nil, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
-	}
-	md.SemVer = &newVer
-
-	return md.SemVer, nil
 }
