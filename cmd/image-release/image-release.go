@@ -86,5 +86,5 @@ func main() {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(-3)
 	}
-	fmt.Fprintf(os.Stderr, string(b))
+	fmt.Fprintln(os.Stderr, string(b))
 }

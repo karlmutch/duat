@@ -2,6 +2,8 @@ package duat
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,6 +13,9 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/ecr"
 
 	// The following packages are forked to retain copies in the event github accounts are shutdown
 	//
@@ -71,6 +76,9 @@ func (md *MetaData) ImageRelease(remote string) (images []string, err errors.Err
 
 	images = []string{}
 
+	if len(remote) != 0 && !strings.HasSuffix(remote, ".amazonaws.com") {
+		return images, errors.New("an external repo was specified but was not recognized as being from AWS").With("repo", remote).With("stack", stack.Trace().TrimRuntime())
+	}
 	// Make sure the original image exists for the current version before processing
 	// a release version
 	exists, id, err := md.ImageExists()
@@ -78,7 +86,7 @@ func (md *MetaData) ImageRelease(remote string) (images []string, err errors.Err
 		return images, err
 	}
 	if !exists {
-		return images, errors.Wrap(err, "a image for the current pre-release must exist before calling release").With("stack", stack.Trace().TrimRuntime())
+		return images, errors.New("a pre-release image must exist before calling release").With("stack", stack.Trace().TrimRuntime())
 	}
 
 	curRepo, curVersion, _, err := md.GenerateImageName()
@@ -104,29 +112,76 @@ func (md *MetaData) ImageRelease(remote string) (images []string, err errors.Err
 	if err != nil {
 		return images, err
 	}
-	if exists && (relID != id) {
-		return images, errors.New("the released image already exists, with a different image ID").With("stack", stack.Trace().TrimRuntime())
+	if exists {
+		if relID != id {
+			return images, errors.New("the released image already exists, with a different image ID").With("stack", stack.Trace().TrimRuntime())
+		}
 	}
 
 	dock, errGo := client.NewEnvClient()
 	if errGo != nil {
 		return images, errors.Wrap(errGo, "docker unavailable").With("stack", stack.Trace().TrimRuntime())
 	}
+	tag := fmt.Sprintf("%s:%s", repo, version)
 	if !exists {
 		// Tag the pre-released version
 		// Now get our local docker images
 
-		tag := fmt.Sprintf("%s:%s", repo, version)
 		errGo = dock.ImageTag(context.Background(), curTag, tag)
 		if errGo != nil {
 			return images, errors.Wrap(errGo).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
 		}
-		images = append(images, tag)
 	}
+	images = append(images, tag)
 
 	if len(remote) != 0 {
-		tag := fmt.Sprintf("%s/%s:%s", remote, repo, version)
+		if err = CreateECRRepo(repo); err != nil {
+
+			if aerr, ok := errors.Cause(err).(awserr.Error); ok {
+				switch aerr.Code() {
+				case ecr.ErrCodeRepositoryAlreadyExistsException:
+					break
+				default:
+					return []string{}, errors.Wrap(err).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
+				}
+			} else {
+				return []string{}, errors.Wrap(err).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
+			}
+		}
+
+		tag = fmt.Sprintf("%s/%s:%s", remote, repo, version)
 		if errGo := dock.ImageTag(context.Background(), curTag, tag); errGo != nil {
+			return images, errors.Wrap(errGo).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
+		}
+
+		token, err := GetECRToken()
+		if err != nil {
+			return images, err.With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
+		}
+		// For a full explanation of the reformating of the auth string please see,
+		// https://github.com/moby/moby/issues/33552
+		authInfoBytes, _ := base64.StdEncoding.DecodeString(token)
+		authInfo := strings.Split(string(authInfoBytes), ":")
+		auth := struct {
+			Username string
+			Password string
+		}{
+			Username: authInfo[0],
+			Password: authInfo[1],
+		}
+
+		authBytes, _ := json.Marshal(auth)
+		token = base64.StdEncoding.EncodeToString(authBytes)
+
+		pushOptions := types.ImagePushOptions{
+			RegistryAuth: token,
+		}
+
+		resp, errGo := dock.ImagePush(context.Background(), tag, pushOptions)
+		if errGo != nil {
+			return images, errors.Wrap(errGo).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
+		}
+		if _, errGo = ioutil.ReadAll(resp); errGo != nil {
 			return images, errors.Wrap(errGo).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
 		}
 		images = append(images, tag)

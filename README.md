@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat)
 
-Version : <repo-version>0.1.3-master-1ewx51</repo-version>
+Version : <repo-version>0.1.4-09-image-promotion-1exOrS</repo-version>
 
 duat is intended for use by developers implementing workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go across the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and finally deploying software.
 
