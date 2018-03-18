@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat)
 
-Version : <repo-version>0.1.4-09-image-promotion-1exOrS</repo-version>
+Version : <repo-version>0.1.4</repo-version>
 
 duat is intended for use by developers implementing workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go across the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and finally deploying software.
 
@@ -194,6 +194,8 @@ Options:
 ## docker-groom
 
 ## image-release
+
+image-release is used to tag an pre-release version as a released semantic version, and then optionally push the resulting image to an AWS ECR repository.  The pre-release version will also be cleared, if no pushes failed, within the README.md file resulting in an offical release.
 
 ## github-release
 

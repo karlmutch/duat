@@ -36,7 +36,7 @@ var (
 	logger = logxi.New("semver")
 
 	verFn   = flag.String("f", "README.md", "The file to be used as the source of truth for the existing, and future, version")
-	applyFn = flag.String("t", "", "The files to which the version data will be propogated")
+	applyFn = flag.String("t", "", "The files to which the version data will be propagated")
 	verbose = flag.Bool("v", false, "When enabled will print internal logging for this tool")
 
 	gitRepo = flag.String("git", ".", "The top level of the git repo to be used for the dev version")
