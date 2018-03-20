@@ -135,7 +135,7 @@ func runBuild(dir string, verFn string) (err errors.Error) {
 		return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
-	err = build(dir, verFn)
+	err = build(dir, verFn, *imageOnly, *prune)
 
 	if errGo = os.Chdir(cwd); errGo != nil {
 		logger.Warn("The original directory could not be restored after the build completed")
@@ -149,7 +149,7 @@ func runBuild(dir string, verFn string) (err errors.Error) {
 
 // build performs the default build for the component within the directory specified
 //
-func build(dir string, verFn string) (err errors.Error) {
+func build(dir string, verFn string, imageOnly bool, prune bool) (err errors.Error) {
 	// Gather information about the current environment. also changes directory to the working area
 	md, err := duat.NewMetaData(dir, verFn)
 	if err != nil {
@@ -177,7 +177,7 @@ func build(dir string, verFn string) (err errors.Error) {
 		logger.Debug("Dockerfile found and validated")
 	}
 
-	if !*imageOnly {
+	if !imageOnly {
 		if err = md.GoBuild(); err != nil {
 			return err
 		}
@@ -190,20 +190,20 @@ func build(dir string, verFn string) (err errors.Error) {
 			if err := md.ImageCreate(); err != nil {
 				if errors.Cause(err) == duat.ErrInContainer {
 					// This only a real error if the user explicitly asked for the image to be produced
-					if *imageOnly {
+					if imageOnly {
 						return errors.New("-image-only used but we were running inside a container which is not supported").With("stack", stack.Trace().TrimRuntime())
 					}
 				} else {
 					return err
 				}
 			}
-			if *prune {
+			if prune {
 				if err := md.ImagePrune(false); err != nil {
 					fmt.Fprintln(os.Stderr, err.With("msg", "prune operation failed, and ignored").Error())
 				}
 			}
 		} else {
-			if *imageOnly {
+			if imageOnly {
 				return errors.New("-image-only used however there is no Dockerfile present").With("stack", stack.Trace().TrimRuntime())
 			}
 			logger.Debug(fmt.Sprintf("no Dockerfile found, image build step skipped"))

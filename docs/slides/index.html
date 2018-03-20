@@ -1,0 +1,167 @@
+<!doctype html>
+<html>
+	<head>
+		<!-- 
+			npm install
+			npm start
+		-->
+		<meta charset="utf-8">
+
+		<title>duat tools - build → package → deploy</title>
+
+		<meta name="description" content="Introduction to developer utilities and tools (duat)">
+		<meta name="author" content="karl Mutch">
+
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/black.css" id="theme">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+	</head>
+
+	<body>
+		<div class="reveal">
+			<div class="slides">
+                <section data-transition="convex">
+                    <h3>Developer Utilities and Tools (duat)</h3>
+                </section>
+                <section data-transition="convex">
+                    <h4>Objective</h4>
+                    <ul style="font-size: 66%">
+                        <li>describe the why of duat</li>
+                        <li>highlight tooling for build (go/python), package (docker), deploy (k8s/Istio)</li>
+                    </ul>
+                    <br>
+                    <br>
+                    <h4>Motivation</h4>
+                    <ul style="font-size: 66%">
+                        <li>CI/CD today is an entire ecosystem</li>
+                        <li>CI/CD for any specific software shop is actually quite simple</li>
+                        <li>but massively varied, leading to over generalized PaaS</li>
+                        <br>
+                        <li>over engineering at its worst</li>
+                    </ul>
+					<br>
+					<br>
+					<br>
+                    <h4 style="font-size: 50%">in our circumstance can we fill the gap with</h4>
+                    <h4 style="font-size: 50%">just one or two small tools</h4>
+                </section>
+                <section data-transition="convex">
+                    <h4>What is it that we need for a very basic CI/CD</h4>
+                    <ul style="font-size: 66%">
+                        <li>minimal build</li>
+                        <li>versioning</li>
+                        <li>packaging and distribution</li>
+                        <li>deployment</li>
+                    </ul>
+                </section>
+                <section data-transition="convex">
+                    <h4>What is it that we need for a very basic CI/CD</h4>
+                    <ul style="font-size: 66%">
+                        <li>pip et al. / go scripting</li>
+                        <li>semantic versioning</li>
+                        <li>docker images as artifacts</li>
+                        <li>kubernetes and Istio</li>
+                    </ul>
+					<br>
+					<br>
+					<br>
+                    <h4 style="font-size: 50%">complex without tooling that is not aware of assumptions</h4>
+                    <h4 style="font-size: 50%">leads to complete ecosystems in the cloud doing hosted CI/CD</h4>
+                    <h4 style="font-size: 50%">and ever widening gaps between tools</h4>
+                </section>
+                <section data-transition="convex">
+                    <h4>Build</h4>
+                    <code style="font-size: 66%">mx
+$ ./build.go -module cmd -r
+18:53:28.919649 INF build.go building in cmd/docker-groom
+18:53:31.009048 INF build.go building in cmd/image-exists
+18:53:33.115016 INF build.go building in cmd/image-release
+18:53:35.244453 INF build.go building in cmd/semver
+18:53:37.419693 INF build.go building in cmd/yaml-template
+					</code>
+                </section>
+                <section data-transition="convex">
+                    <h4>Versioning</h4>
+					<br>
+                    <h4 style="font-size: 50%">bump-ver has been superceeded by semver</h4>
+					<br>
+                    <h4 style="font-size: 50%">Semantic Versioning 2.0</h4>
+					<br>
+                    <code style="font-size: 66%">
+$ semver extract
+0.1.0
+$ semver patch
+0.1.1
+$ semver pre
+0.1.1-09-image-promotion-1exdHI
+$ semver pre
+0.1.1-09-image-promotion-1ey6oW
+$ semver patch
+0.1.1
+					</code>
+					<br>
+                    <h4 style="font-size: 50%">semver does not cater for 'v' prefixes, when using v you are using a label</h4>
+					<br>
+                </section>
+
+                <section data-transition="convex">
+                    <h4>Image management</h4>
+					<br>
+                    <h4 style="font-size: 50%">bump-ver has been superceeded by semver</h4>
+					<br>
+                    <h4 style="font-size: 50%"></h4>
+					<br>
+                    <code style="font-size: 66%">
+$ docker images --format "{{.ID}}: {{.Repository}}:{{.Tag}}" | head
+$ $GOPATH/bin/image-release -module example/artifact -release-repo 613076437200.dkr.ecr.us-west-2.amazonaws.com
+$ docker images --format "{{.ID}}: {{.Repository}}:{{.Tag}}" | head
+					</code>
+                </section>
+                <section data-transition="convex">
+                    <h4>Deployment</h4>
+					<br>
+                    <h4 style="font-size: 50%">templating kubernetes yaml</h4>
+					<br>
+                    <h4 style="font-size: 50%"></h4>
+					<br>
+                    <code style="font-size: 66%">
+yaml-template -input ./mock-service.yaml
+					</code>
+                </section>
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+		</script>
+	</body>
+</html>
