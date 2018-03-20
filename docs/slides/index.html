@@ -141,7 +141,8 @@ $ docker images --format "{{.ID}}: {{.Repository}}:{{.Tag}}" | head
                     <h4 style="font-size: 50%"></h4>
 					<br>
                     <code style="font-size: 66%">
-yaml-template -input ./mock-service.yaml
+echo "{{.fred}} {{base .duat.gitDir}}" | yaml-template -values="fred=test"
+yaml-template -input ./mock-service.yaml | more
 					</code>
                 </section>
 			</div>
