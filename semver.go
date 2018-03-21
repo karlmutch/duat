@@ -155,6 +155,20 @@ func (md *MetaData) Inject(file string) (err errors.Error) {
 	return nil
 }
 
+// BumpPrerelease will first bump the release, adn then write the results into
+// the file nominated as the version file
+//
+func (md *MetaData) BumpPrerelease() (result *semver.Version, err errors.Error) {
+	if _, err := md.Prerelease(); err != nil {
+		return nil, err
+	}
+
+	if err := md.Replace(md.VerFile, md.VerFile, false); err != nil {
+		return nil, err
+	}
+	return md.SemVer, nil
+}
+
 func (md *MetaData) Prerelease() (result *semver.Version, err errors.Error) {
 
 	if md.Git == nil || md.Git.Err != nil {

@@ -1,0 +1,222 @@
+<!doctype html>
+<html>
+	<head>
+		<!-- 
+			npm install
+			npm start
+		-->
+		<meta charset="utf-8">
+
+		<title>duat tools - build → package → deploy</title>
+
+		<meta name="description" content="Introduction to developer utilities and tools (duat)">
+		<meta name="author" content="karl Mutch">
+
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/black.css" id="theme">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+	</head>
+
+	<body>
+		<div class="reveal">
+			<div class="slides">
+                <section data-transition="convex">
+                    <h3>Developer Utilities and Tools (duat)</h3>
+                </section>
+                <section data-transition="convex">
+                    <h4>Objective</h4>
+                    <ul style="font-size: 66%">
+                        <li>describe the why of duat</li>
+                        <li>highlight tooling for build (go/python), package (docker), deploy (k8s/Istio)</li>
+                    </ul>
+                </section>
+                <section data-transition="convex">
+                    <h4>Motivation</h4>
+                    <small>CI/CD grows to encompass an entire ecosystem</small>
+					<br>
+                    <ul style="font-size: 66%">
+                        <li>requirements quite simple</li>
+                        <br>
+                        <li>massively varied, leading to over generalized PaaS<br>
+                            PaaS: [Other] People’s assumptions and Solutions. Kelsey Hightower</li>
+                        <br>
+                        <li>if boring repetative things are not automatted, a manager gets hired (twitter.com/niranjan_p)</li>
+                    </ul>
+					<br>
+					<br>
+					<br>
+                    <h4 style="font-size: 50%">in our circumstance can we fill the gap with</h4>
+                    <h4 style="font-size: 50%">just one or two small tools</h4>
+                </section>
+                <section data-transition="none">
+                    <h4>What is it that we need for a very basic CI/CD</h4>
+                    <ul style="font-size: 66%">
+                        <li>minimal build</li>
+                        <li>versioning</li>
+                        <li>packaging and distribution</li>
+                        <li>deployment</li>
+                    </ul>
+                </section>
+                <section data-transition="none">
+                    <h4>What is it that we need for a very basic CI/CD</h4>
+                    <ul style="font-size: 66%">
+                        <li>pip et al. / go scripting</li>
+                        <li>semantic versioning</li>
+                        <li>docker images as artifacts</li>
+                        <li>kubernetes and Istio</li>
+                    </ul>
+                </section>
+                <section data-transition="convex">
+                    <h4 style="font-size: 40%">using tooling that is not aware of assumptions</h4>
+                    <h4 style="font-size: 40%">leads to complete ecosystems in the cloud doing hosted CI/CD</h4>
+                    <h4 style="font-size: 40%">and ever widening gaps between tools</h4>
+					<br>
+                    <h4 style="font-size: 60%">Our current assumptions</h4>
+					<br>
+                    <h4 style="font-size: 40%">semantic version 2.0</h4>
+                    <h4 style="font-size: 40%">docker images</h4>
+                    <h4 style="font-size: 40%">AWS</h4>
+                    <h4 style="font-size: 40%">Kubernetes (minor influence)</h4>
+					<br>
+                </section>
+                <section data-transition="convex">
+                    <h4>Build</h4>
+                    <pre style="font-size: 33%">
+$ ./build.go -module cmd -r
+18:53:28.919649 INF build.go building in cmd/docker-groom
+18:53:31.009048 INF build.go building in cmd/image-exists
+18:53:33.115016 INF build.go building in cmd/image-release
+18:53:35.244453 INF build.go building in cmd/semver
+18:53:37.419693 INF build.go building in cmd/yaml-template
+                    </pre>
+                </section>
+                <section data-transition="convex">
+                    <h4>Build</h4>
+                    <pre style="font-size: 33%">
+$ ./build.go -module example -r
+11:48:25.514951 INF build.go building in example/artifact
+Sending build context to Docker daemon  2.033MB
+Step 1/5 : From alpine
+ ---&gt; 3fd9065eaf02
+Step 2/5 : MAINTAINER Karl Mutch &lt;karlmutch@gmail.com&gt;
+ ---&gt; Using cache
+ ---&gt; 7371dcf5c2bf
+Step 3/5 : ADD bin/artifact .
+ ---&gt; 856ca1c1a19a
+Step 4/5 : CMD bin/artifact
+ ---&gt; Running in 366cb6940b7f
+Removing intermediate container 366cb6940b7f
+ ---&gt; 724b8d8ada70
+Step 5/5 : LABEL karlmutch.duat.module.version=0.2.0-08-k8s-templates-1eyMJ7       karlmutch.duat.module.name=github.com/karlmutch/duat/example/artifact
+ ---&gt; Running in cdc80b9786e1
+Removing intermediate container cdc80b9786e1
+ ---&gt; 4ce3a1de3dd6
+[Warning] One or more build-args [USER_GROUP_ID USER_ID USER] were not consumed
+Successfully built 4ce3a1de3dd6
+Successfully tagged karlmutch/duat/artifact:0.2.0-08-k8s-templates-1eyMJ7
+					</pre>
+                </section>
+
+                <section data-transition="convex">
+                    <h4>Versioning</h4>
+					<br>
+                    <h4 style="font-size: 50%">bump-ver has been superceeded by semver</h4>
+					<br>
+                    <h4 style="font-size: 50%">Semantic Versioning 2.0</h4>
+					<br>
+                    <pre style="font-size: 33%">
+$ semver extract
+0.1.0
+$ semver patch
+0.1.1
+$ semver pre
+0.1.1-09-image-promotion-1exdHI
+$ semver pre
+0.1.1-09-image-promotion-1ey6oW
+$ semver patch
+0.1.1
+                    </pre>
+					<br>
+                    <h4 style="font-size: 50%">semver does not cater for 'v' prefixes, when using v you are using a label</h4>
+					<br>
+                </section>
+                <section data-transition="convex">
+                    <h4>Image management</h4>
+					<br>
+                    <h4 style="font-size: 50%"></h4>
+					<br>
+                    <pre style="font-size: 33%">
+$ docker images --format "{{.ID}}: {{.Repository}}:{{.Tag}}" | head
+
+$ $GOPATH/bin/image-release -module example/artifact
+$ docker images --format "{{.ID}}: {{.Repository}}:{{.Tag}}" | head
+                    </pre>
+                </section>
+                <section data-transition="convex">
+                    <h4>Deployment</h4>
+					<br>
+                    <h4 style="font-size: 50%">templating services yaml</h4>
+					<br>
+                    <h4 style="font-size: 50%"></h4>
+					<br>
+                    <pre style="font-size: 33%">
+echo "{{.fred}} {{base .duat.gitDir}}" | yaml-template -values="fred=test"
+yaml-template -input example/artifact/mock-istio.yaml
+...
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: myservice-v0.2.0-08-k8s-templates-1eyOfH
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: myservice
+        version: v0.2.0-08-k8s-templates-1eyOfH
+    spec:
+      containers:
+      - name: myservice
+        image: 613076437200.dkr.ecr.us-west-2.amazonaws.com/duat/duat:0.2.0-08-k8s-templates-1eyOfH
+        imagePullPolicy: Always
+...
+kubectl apply -f <(istioctl kube-inject -f <(yaml-template -f example/artifact/mock-istio.yaml))
+                    </pre>
+                </section>
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+		</script>
+	</body>
+</html>

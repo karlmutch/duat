@@ -67,18 +67,18 @@ func (*MetaData) ContainerRuntime() (containerType string, err errors.Error) {
 
 // ReleaseImage(repo string)
 //
-// Strip pre-release
 // Use GenerateImageName
 // See if an existing release is locally present, which is OK but make sure the id is the same.
-// Tag the pre-release with the clean release.
+// Tag the pre-release with the clean release, if requested using erasePrerelease.
 // Prepend and push
-func (md *MetaData) ImageRelease(remote string) (images []string, err errors.Error) {
+func (md *MetaData) ImageRelease(remote string, erasePrerelease bool) (images []string, err errors.Error) {
 
 	images = []string{}
 
 	if len(remote) != 0 && !strings.HasSuffix(remote, ".amazonaws.com") {
 		return images, errors.New("an external repo was specified but was not recognized as being from AWS").With("repo", remote).With("stack", stack.Trace().TrimRuntime())
 	}
+
 	// Make sure the original image exists for the current version before processing
 	// a release version
 	exists, id, err := md.ImageExists()
@@ -95,12 +95,7 @@ func (md *MetaData) ImageRelease(remote string) (images []string, err errors.Err
 	}
 	curTag := fmt.Sprintf("%s:%s", curRepo, curVersion)
 
-	semVer, errGo := md.SemVer.SetPrerelease("")
-	if errGo != nil {
-		return images, errors.Wrap(errGo, "could not clear the prerelease").With("stack", stack.Trace().TrimRuntime())
-	}
-
-	repo, version, _, err := md.generateImageName(&semVer)
+	repo, version, _, err := md.generateImageName(md.SemVer)
 	if err != nil {
 		return images, err
 	}

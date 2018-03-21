@@ -1,0 +1,56 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ingress-exp
+  annotations:
+    kubernetes.io/ingress.class: istio
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /myservice/.*
+        backend:
+          serviceName: myservice
+          servicePort: http-myservice
+      - path: /.*
+        backend:
+          serviceName: myservice
+          servicePort: grpc-myservice
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myservice
+  labels:
+    app: myservice
+spec:
+  ports:
+  - port: 50051
+    name: grpc-myservice
+  ports:
+  - port: 50080
+    name: http-myservice
+  selector:
+    app: myservice
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: myservice-v{{.duat.version}}
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: myservice
+        version: v{{.duat.version}}
+    spec:
+      containers:
+      - name: myservice
+        image: {{.duat.awsecr}}/duat/{{.duat.module}}:{{.duat.version}}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 50080
+          name: http-myservice
+        - containerPort: 50051
+          name: grpc-myservice
