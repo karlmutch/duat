@@ -105,6 +105,10 @@ func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, ov
 		duatVars["runtime"] = runtime
 	}
 
+	if ecrURL, err := GetECRDefaultURL(); err == nil {
+		duatVars["awsecr"] = ecrURL.Hostname()
+	}
+
 	vars["duat"] = duatVars
 
 	if jsonVals != "" {

@@ -156,11 +156,16 @@ func build(dir string, verFn string, imageOnly bool, prune bool) (err errors.Err
 		return err
 	}
 
-	// As we begin the build determine if we are using a pre-released version
-	// and if so automatically bump the pre-release version to reflect a development
-	// step
-	if len(md.SemVer.Prerelease()) != 0 {
-		md.Prerelease()
+	// Dont do any version manipulation if we are just preparing images
+	if !imageOnly {
+		// As we begin the build determine if we are using a pre-released version
+		// and if so automatically bump the pre-release version to reflect a development
+		// step
+		if len(md.SemVer.Prerelease()) != 0 {
+			if _, err = md.BumpPrerelease(); err != nil {
+				return err
+			}
+		}
 	}
 
 	// If there is a Dockerfile for this module then check the images etc

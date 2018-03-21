@@ -24,6 +24,7 @@ var (
 
 	verFn        = flag.String("f", "README.md", "The file to be used as the source of truth for the existing, and future, version")
 	verbose      = flag.Bool("v", false, "When enabled will print internal logging for this tool")
+	production   = flag.Bool("production", false, "When enabled will generate tools etc as production releases by removing pre-release version markers")
 	module       = flag.String("module", ".", "The name of the component that is being used to identify the container image, this will default to the current working directory")
 	externalRepo = flag.String("release-repo", "", "The name of a remote image repository, this will default to no remote repo")
 )
@@ -74,27 +75,38 @@ func main() {
 		os.Exit(-1)
 	}
 
-	if logger.IsDebug() {
-		repo, ver, _, err := md.GenerateImageName()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
+	if *production {
+		semVer, errGo := md.SemVer.SetPrerelease("")
+		if errGo != nil {
+			fmt.Fprintln(os.Stderr, "could not clear the prerelease version", errGo.Error())
 			os.Exit(-2)
 		}
-		logger.Debug(fmt.Sprintf("%s:%s", repo, ver))
+		md.SemVer = &semVer
+		if err = md.Replace(md.VerFile, md.VerFile, false); err != nil {
+			fmt.Fprintln(os.Stderr, "could not save the production version", err.Error())
+			os.Exit(-2)
+		}
 	}
 
-	semVer, errGo := md.SemVer.SetPrerelease("")
-	if errGo != nil {
-		fmt.Fprintln(os.Stderr, errGo.Error())
-		os.Exit(-2)
+	if len(*externalRepo) == 0 {
+		url, err := duat.GetECRDefaultURL()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "could not locate a default AWS ECR to promote the image to", err.Error())
+			os.Exit(-2)
+		}
+		if url == nil {
+			fmt.Fprintln(os.Stderr, "could not locate a default AWS ECR to promote the image to")
+			os.Exit(-2)
+		}
+		*externalRepo = url.Hostname()
 	}
-	md.SemVer = &semVer
 
-	images, err := md.ImageRelease(*externalRepo)
+	images, err := md.ImageRelease(*externalRepo, *production)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(-2)
 	}
+
 	b, errGo := json.Marshal(images)
 	if errGo != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
