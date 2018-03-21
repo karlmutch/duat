@@ -45,15 +45,18 @@
                         <li>describe the why of duat</li>
                         <li>highlight tooling for build (go/python), package (docker), deploy (k8s/Istio)</li>
                     </ul>
-                    <br>
-                    <br>
+                </section>
+                <section data-transition="convex">
                     <h4>Motivation</h4>
+                    <small>CI/CD grows to encompass an entire ecosystem</small>
+					<br>
                     <ul style="font-size: 66%">
-                        <li>CI/CD today is an entire ecosystem</li>
-                        <li>CI/CD for any specific software shop is actually quite simple</li>
-                        <li>but massively varied, leading to over generalized PaaS</li>
+                        <li>requirements quite simple</li>
                         <br>
-                        <li>over engineering at its worst</li>
+                        <li>massively varied, leading to over generalized PaaS<br>
+                            PaaS: [Other] People’s assumptions and Solutions. Kelsey Hightower</li>
+                        <br>
+                        <li>if boring repetative things are not automatted, a manager gets hired (twitter.com/niranjan_p)</li>
                     </ul>
 					<br>
 					<br>
@@ -61,7 +64,7 @@
                     <h4 style="font-size: 50%">in our circumstance can we fill the gap with</h4>
                     <h4 style="font-size: 50%">just one or two small tools</h4>
                 </section>
-                <section data-transition="convex">
+                <section data-transition="none">
                     <h4>What is it that we need for a very basic CI/CD</h4>
                     <ul style="font-size: 66%">
                         <li>minimal build</li>
@@ -70,7 +73,7 @@
                         <li>deployment</li>
                     </ul>
                 </section>
-                <section data-transition="convex">
+                <section data-transition="none">
                     <h4>What is it that we need for a very basic CI/CD</h4>
                     <ul style="font-size: 66%">
                         <li>pip et al. / go scripting</li>
@@ -78,33 +81,40 @@
                         <li>docker images as artifacts</li>
                         <li>kubernetes and Istio</li>
                     </ul>
+                </section>
+                <section data-transition="convex">
+                    <h4 style="font-size: 40%">using tooling that is not aware of assumptions</h4>
+                    <h4 style="font-size: 40%">leads to complete ecosystems in the cloud doing hosted CI/CD</h4>
+                    <h4 style="font-size: 40%">and ever widening gaps between tools</h4>
 					<br>
+                    <h4 style="font-size: 60%">Our current assumptions</h4>
 					<br>
+                    <h4 style="font-size: 40%">semantic version 2.0</h4>
+                    <h4 style="font-size: 40%">docker images</h4>
+                    <h4 style="font-size: 40%">AWS</h4>
+                    <h4 style="font-size: 40%">Kubernetes (minor influence)</h4>
 					<br>
-                    <h4 style="font-size: 50%">complex without tooling that is not aware of assumptions</h4>
-                    <h4 style="font-size: 50%">leads to complete ecosystems in the cloud doing hosted CI/CD</h4>
-                    <h4 style="font-size: 50%">and ever widening gaps between tools</h4>
                 </section>
                 <section data-transition="convex">
                     <h4>Build</h4>
-                    <code style="font-size: 66%">
+                    <pre style="font-size: 33%">
 $ ./build.go -module cmd -r
 18:53:28.919649 INF build.go building in cmd/docker-groom
 18:53:31.009048 INF build.go building in cmd/image-exists
 18:53:33.115016 INF build.go building in cmd/image-release
 18:53:35.244453 INF build.go building in cmd/semver
 18:53:37.419693 INF build.go building in cmd/yaml-template
-					</code>
+                    </pre>
                 </section>
                 <section data-transition="convex">
                     <h4>Build</h4>
-                    <code style="font-size: 66%">
+                    <pre style="font-size: 33%">
 $ ./build.go -module example -r
 11:48:25.514951 INF build.go building in example/artifact
 Sending build context to Docker daemon  2.033MB
 Step 1/5 : From alpine
  ---&gt; 3fd9065eaf02
-Step 2/5 : MAINTAINER Karl Mutch <karlmutch@gmail.com>
+Step 2/5 : MAINTAINER Karl Mutch &lt;karlmutch@gmail.com&gt;
  ---&gt; Using cache
  ---&gt; 7371dcf5c2bf
 Step 3/5 : ADD bin/artifact .
@@ -120,7 +130,7 @@ Removing intermediate container cdc80b9786e1
 [Warning] One or more build-args [USER_GROUP_ID USER_ID USER] were not consumed
 Successfully built 4ce3a1de3dd6
 Successfully tagged karlmutch/duat/artifact:0.2.0-08-k8s-templates-1eyMJ7
-					</code>
+					</pre>
                 </section>
 
                 <section data-transition="convex">
@@ -130,7 +140,7 @@ Successfully tagged karlmutch/duat/artifact:0.2.0-08-k8s-templates-1eyMJ7
 					<br>
                     <h4 style="font-size: 50%">Semantic Versioning 2.0</h4>
 					<br>
-                    <code style="font-size: 66%">
+                    <pre style="font-size: 33%">
 $ semver extract
 0.1.0
 $ semver patch
@@ -141,36 +151,53 @@ $ semver pre
 0.1.1-09-image-promotion-1ey6oW
 $ semver patch
 0.1.1
-					</code>
+                    </pre>
 					<br>
                     <h4 style="font-size: 50%">semver does not cater for 'v' prefixes, when using v you are using a label</h4>
 					<br>
                 </section>
-
                 <section data-transition="convex">
                     <h4>Image management</h4>
 					<br>
-                    <h4 style="font-size: 50%">bump-ver has been superceeded by semver</h4>
-					<br>
                     <h4 style="font-size: 50%"></h4>
 					<br>
-                    <code style="font-size: 66%">
+                    <pre style="font-size: 33%">
 $ docker images --format "{{.ID}}: {{.Repository}}:{{.Tag}}" | head
+
 $ $GOPATH/bin/image-release -module example/artifact
 $ docker images --format "{{.ID}}: {{.Repository}}:{{.Tag}}" | head
-					</code>
+                    </pre>
                 </section>
                 <section data-transition="convex">
                     <h4>Deployment</h4>
 					<br>
-                    <h4 style="font-size: 50%">templating kubernetes yaml</h4>
+                    <h4 style="font-size: 50%">templating services yaml</h4>
 					<br>
                     <h4 style="font-size: 50%"></h4>
 					<br>
-                    <code style="font-size: 66%">
+                    <pre style="font-size: 33%">
 echo "{{.fred}} {{base .duat.gitDir}}" | yaml-template -values="fred=test"
-yaml-template -input ./mock-service.yaml | more
-					</code>
+yaml-template -input example/artifact/mock-istio.yaml
+...
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: myservice-v0.2.0-08-k8s-templates-1eyOfH
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: myservice
+        version: v0.2.0-08-k8s-templates-1eyOfH
+    spec:
+      containers:
+      - name: myservice
+        image: 613076437200.dkr.ecr.us-west-2.amazonaws.com/duat/duat:0.2.0-08-k8s-templates-1eyOfH
+        imagePullPolicy: Always
+...
+kubectl apply -f <(istioctl kube-inject -f <(yaml-template -f example/artifact/mock-istio.yaml))
+                    </pre>
                 </section>
 			</div>
 		</div>
