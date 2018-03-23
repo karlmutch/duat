@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -187,8 +188,12 @@ func (md *MetaData) ImageRelease(remote string, erasePrerelease bool) (images []
 func (md *MetaData) generateImageName(semVer *semver.Version) (repo string, version string, prerelease bool, err errors.Error) {
 	// Get the git repo name and the parent which will have been used to name the
 	// containers being created during our build process
-	gitParts := strings.Split(md.Git.URL, "/")
-	label := strings.TrimSuffix(gitParts[len(gitParts)-1], ".git")
+	gitParts := strings.Split(md.Git.URL.EscapedPath(), "/")
+
+	label := gitParts[len(gitParts)-1]
+	if strings.HasSuffix(label, ".git") {
+		label = strings.TrimSuffix(label, ".git")
+	}
 
 	// Look for pre-release components within the version string
 	preParts := strings.Split(semVer.Prerelease(), "-")
@@ -329,7 +334,7 @@ func (md *MetaData) ImageExists() (exists bool, id string, err errors.Error) {
 	return md.imageExists(md.SemVer)
 }
 
-func (md *MetaData) ImageCreate() (err errors.Error) {
+func (md *MetaData) ImageCreate(out io.Writer) (err errors.Error) {
 
 	runtime, err := md.ContainerRuntime()
 	if err != nil {
@@ -367,8 +372,8 @@ func (md *MetaData) ImageCreate() (err errors.Error) {
 	}
 
 	cmd := exec.Command("bash", "-c", strings.Join(cmds, " && "))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = out
+	cmd.Stderr = out
 
 	if errGo := cmd.Start(); errGo != nil {
 		fmt.Fprintln(os.Stderr, errors.Wrap(errGo, "unable to run the compiler").With("stack", stack.Trace().TrimRuntime()).Error())

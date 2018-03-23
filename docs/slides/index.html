@@ -98,41 +98,18 @@
                 <section data-transition="convex">
                     <h4>Build</h4>
                     <pre style="font-size: 33%">
-$ ./build.go -module cmd -r
-18:53:28.919649 INF build.go building in cmd/docker-groom
-18:53:31.009048 INF build.go building in cmd/image-exists
-18:53:33.115016 INF build.go building in cmd/image-release
-18:53:35.244453 INF build.go building in cmd/semver
-18:53:37.419693 INF build.go building in cmd/yaml-template
+$ ./build.go -dirs cmd,example -r
+/home/kmutch/mesh/bin/docker-groom
+/home/kmutch/mesh/bin/github-release
+/home/kmutch/mesh/bin/image-exists
+/home/kmutch/mesh/bin/image-release
+/home/kmutch/mesh/bin/semver
+/home/kmutch/mesh/bin/stencil
                     </pre>
+					<br>
+                    <h4 style="font-size: 50%">build lists out any compiler products for modules</h4>
+                    <h4 style="font-size: 50%">that are not containerized.  Can be used with github-release</h4>
                 </section>
-                <section data-transition="convex">
-                    <h4>Build</h4>
-                    <pre style="font-size: 33%">
-$ ./build.go -module example -r
-11:48:25.514951 INF build.go building in example/artifact
-Sending build context to Docker daemon  2.033MB
-Step 1/5 : From alpine
- ---&gt; 3fd9065eaf02
-Step 2/5 : MAINTAINER Karl Mutch &lt;karlmutch@gmail.com&gt;
- ---&gt; Using cache
- ---&gt; 7371dcf5c2bf
-Step 3/5 : ADD bin/artifact .
- ---&gt; 856ca1c1a19a
-Step 4/5 : CMD bin/artifact
- ---&gt; Running in 366cb6940b7f
-Removing intermediate container 366cb6940b7f
- ---&gt; 724b8d8ada70
-Step 5/5 : LABEL karlmutch.duat.module.version=0.2.0-08-k8s-templates-1eyMJ7       karlmutch.duat.module.name=github.com/karlmutch/duat/example/artifact
- ---&gt; Running in cdc80b9786e1
-Removing intermediate container cdc80b9786e1
- ---&gt; 4ce3a1de3dd6
-[Warning] One or more build-args [USER_GROUP_ID USER_ID USER] were not consumed
-Successfully built 4ce3a1de3dd6
-Successfully tagged karlmutch/duat/artifact:0.2.0-08-k8s-templates-1eyMJ7
-					</pre>
-                </section>
-
                 <section data-transition="convex">
                     <h4>Versioning</h4>
 					<br>
@@ -176,8 +153,8 @@ $ docker images --format "{{.ID}}: {{.Repository}}:{{.Tag}}" | head
                     <h4 style="font-size: 50%"></h4>
 					<br>
                     <pre style="font-size: 33%">
-echo "{{.fred}} {{base .duat.gitDir}}" | yaml-template -values="fred=test"
-yaml-template -input example/artifact/mock-istio.yaml
+echo "{{.fred}} {{base .duat.gitDir}}" | stencil -values="fred=test"
+stencil -input example/artifact/mock-istio.yaml
 ...
 apiVersion: extensions/v1beta1
 kind: Deployment
@@ -196,7 +173,7 @@ spec:
         image: 613076437200.dkr.ecr.us-west-2.amazonaws.com/duat/duat:0.2.0-08-k8s-templates-1eyOfH
         imagePullPolicy: Always
 ...
-kubectl apply -f <(istioctl kube-inject -f <(yaml-template -f example/artifact/mock-istio.yaml))
+kubectl apply -f <(istioctl kube-inject -f <(stencil -f example/artifact/mock-istio.yaml))
                     </pre>
                 </section>
 			</div>

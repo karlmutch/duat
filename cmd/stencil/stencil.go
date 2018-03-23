@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	logger = logxi.New("yaml-template")
+	logger = logxi.New("stencil")
 
 	verFn   = flag.String("f", "README.md", "The file to be used as the source of truth for the existing, and future, version")
 	verbose = flag.Bool("v", false, "When enabled will print internal logging for this tool")
@@ -30,15 +30,15 @@ var (
 
 func usage() {
 	fmt.Fprintln(os.Stderr, path.Base(os.Args[0]))
-	fmt.Fprintln(os.Stderr, "usage: ", os.Args[0], "[options]       yaml templating tool (yaml-template)      ", version.GitHash, "    ", version.BuildTime)
+	fmt.Fprintln(os.Stderr, "usage: ", os.Args[0], "[options]       templating tool (stencil)      ", version.GitHash, "    ", version.BuildTime)
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "yaml-template is used to process input through a templating engine, a wide range of capabilities are")
-	fmt.Fprintln(os.Stderr, "available and are documented here, https://golang.org/pkg/text/template/.")
+	fmt.Fprintln(os.Stderr, "stencil is used to process input through a templating engine, a wide range of capabilities are")
+	fmt.Fprintln(os.Stderr, "available and are documented at, https://golang.org/pkg/text/template/.")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Additional functions within templating are supported and documented here, ")
 	fmt.Fprintln(os.Stderr, "http://masterminds.github.io/sprig/")
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "Variables related to versioning and git are also made accessible to templated files")
+	fmt.Fprintln(os.Stderr, "Variables related to versioning and git are also made accessible to template files")
 	fmt.Fprintln(os.Stderr, "from the local git and semver data sources including: {{.duat.version}}, {{duat.module}}, {{.duat.[gitTag,gitHash,gitBranch,gitRepo,gitDir]}}.")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Options:")
@@ -75,7 +75,7 @@ func main() {
 
 	md, err := duat.NewMetaData(*module, *verFn)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(-1)
 	}
 

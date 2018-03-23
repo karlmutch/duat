@@ -1,6 +1,7 @@
 package duat
 
 import (
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -19,12 +20,13 @@ import (
 )
 
 type GitInfo struct {
-	URL    string          // The URL of the main git remote being used
+	URL    url.URL         // The URL of the main git remote being used
 	Repo   *git.Repository // A handle to the srd-d git object
 	Dir    string          // The directory that is being used as the repository root directory
 	Branch string          // The current branch the repo is checkedout against
 	Tag    string          // The tag for the current commit if present
-	Hash   string          // The has for the current commit
+	Hash   string          // The hash for the current commit
+	Token  string          // If the GITHUB token was available then it will be saved here
 	Err    errors.Error    // If initialization resulted in an error it may have been stored in this variable`
 }
 

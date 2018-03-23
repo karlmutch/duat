@@ -1,6 +1,7 @@
 package duat
 
 import (
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,10 +58,18 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 
 	splits := strings.Split(ref.Name().String(), "/")
 
-	md.Git.Branch = splits[len(splits)-1]
+	//Scoop up everything after the refs/heads/ to get the branch name
+	//and reattach any slashes we took out
+	md.Git.Branch = strings.Join(splits[2:], "/")
 	md.Git.Repo = repo
 	refs, _ := repo.Remotes()
-	md.Git.URL = refs[0].Config().URLs[0]
+
+	gitURL, errGo := url.Parse(refs[0].Config().URLs[0])
+	if errGo != nil {
+		md.Git.Err = errors.Wrap(errGo).With("url", refs[0].Config().URLs[0]).With("git", gitDir).With("stack", stack.Trace().TrimRuntime())
+		return md.Git.Err
+	}
+	md.Git.URL = *gitURL
 
 	// Now try to find the first tag that matches the current HEAD
 	head, _ := md.Git.Repo.Head()
