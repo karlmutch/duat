@@ -34,14 +34,14 @@ var (
 func init() {
 	r, errGo := regexp.Compile("\\<repo-version\\>.*?\\</repo-version\\>")
 	if errGo != nil {
-		fmt.Fprintf(os.Stderr, "%v",
+		fmt.Fprintf(os.Stderr, "%v\n",
 			errors.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
 		return
 	}
 	rFind = r
 	r, errGo = regexp.Compile("<[^>]*>")
 	if errGo != nil {
-		fmt.Fprintf(os.Stderr, "%v",
+		fmt.Fprintf(os.Stderr, "%v\n",
 			errors.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
 		return
 	}
@@ -49,7 +49,7 @@ func init() {
 
 	r, errGo = regexp.Compile("\\<repo-version\\>(.*?)\\</repo-version\\>")
 	if errGo != nil {
-		fmt.Fprintf(os.Stderr, "%v",
+		fmt.Fprintf(os.Stderr, "%v\n",
 			errors.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
 		return
 	}
@@ -115,9 +115,8 @@ func (md *MetaData) Apply(files []string) (err errors.Error) {
 	checkedFiles := make([]string, 0, len(files))
 	for _, file := range files {
 		if len(file) != 0 {
-			if _, err := os.Stat(file); err != nil {
-				fmt.Fprintf(os.Stderr, "a user specified target file was not found '%s'\n", file)
-				continue
+			if _, errGo := os.Stat(file); errGo != nil {
+				return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", file)
 			}
 			checkedFiles = append(checkedFiles, file)
 		}
@@ -173,11 +172,9 @@ func (md *MetaData) Prerelease() (result *semver.Version, err errors.Error) {
 
 	if md.Git == nil || md.Git.Err != nil {
 		if md.Git.Err != nil {
-			fmt.Fprintf(os.Stderr, "an operation that required git failed due to %v", md.Git.Err)
-			os.Exit(-5)
+			return nil, md.Git.Err
 		} else {
-			fmt.Fprintf(os.Stderr, "an operation that required git could not locate git information")
-			os.Exit(-6)
+			return nil, errors.New("an operation that required git could not locate git information").With("stack", stack.Trace().TrimRuntime())
 		}
 	}
 

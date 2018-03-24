@@ -33,4 +33,4 @@ ENV GOPATH=/project
 VOLUME /project
 WORKDIR /project/src/github.com/karlmutch/duat
 
-CMD /bin/bash -C ./all-build.sh
+CMD go run ./build.go -dirs cmd,example -r

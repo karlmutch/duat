@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
+	"strings"
 
 	"github.com/karlmutch/duat"
 	"github.com/karlmutch/duat/version"
@@ -25,10 +25,8 @@ var (
 	prune     = flag.Bool("prune", true, "When enabled will prune any prerelease images replaced by this build")
 	verbose   = flag.Bool("v", false, "When enabled will print internal logging for this tool")
 	recursive = flag.Bool("r", false, "When enabled this tool will visit any sub directories that contain main functions and build in each")
-	module    = flag.String("module", ".", "The location of the component that is being used to identify the container image, this will default to the current working directory")
+	userDirs  = flag.String("dirs", ".", "A comma seperated list of root directories that will be used a starting points looking for Go code, this will default to the current working directory")
 	imageOnly = flag.Bool("image-only", false, "Used to only perform a docker build of the component with no other steps")
-
-	goPath = os.Getenv("GOPATH")
 )
 
 func usage() {
@@ -64,78 +62,61 @@ func main() {
 	}
 
 	// First assume that the directory supplied is a code directory
-	dirs := []string{*module}
+	rootDirs := strings.Split(*userDirs, ",")
+	dirs := []string{}
+
 	err := errors.New("")
 
 	// If this is a recursive build scan all inner directories looking for go code
 	// and build it if there is code found
 	//
 	if *recursive {
-		dirs, err = findGoDirs(*module)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, err.Error())
-			os.Exit(-1)
+		for _, dir := range rootDirs {
+			// Will auto skip any vendor directories found
+			found, err := duat.FindGoDirs(dir)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err.Error())
+				os.Exit(-1)
+			}
+			dirs = append(dirs, found...)
 		}
+	} else {
+		dirs = rootDirs
 	}
 
 	logger.Debug(fmt.Sprintf("%v", dirs))
 
 	// Take the discovered directories and build them
 	//
+	outputs := []string{}
+	localOut := []string{}
+
 	for _, dir := range dirs {
-		if err = runBuild(dir, "README.md"); err != nil {
-			fmt.Fprintf(os.Stderr, err.Error())
+		if localOut, err = runBuild(dir, "README.md"); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(-2)
 		}
-	}
-}
-
-// Look for directories inside the root 'dir' and return their paths
-//
-func findDirs(dir string) (dirs []string, err errors.Error) {
-	dirs = []string{}
-
-	errGo := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			dirs = append(dirs, path)
-		}
-		return nil
-	})
-	if errGo != nil {
-		return nil, errors.Wrap(errGo).With("dir", dir).With("stack", stack.Trace().TrimRuntime())
-	}
-	return dirs, err
-}
-
-func findGoDirs(dir string) (dirs []string, err errors.Error) {
-	found, err := findDirs(dir)
-	if err != nil {
-		return []string{}, err
+		outputs = append(outputs, localOut...)
 	}
 
-	if found, err = duat.FindPossibleFunc("main", found); err != nil {
-		return []string{}, err
+	for _, output := range outputs {
+		fmt.Fprintln(os.Stdout, output)
 	}
-	dirs = nil
-	for _, dir := range found {
-		dirs = append(dirs, filepath.Dir(dir))
-	}
-	return dirs, nil
 }
 
 // runBuild is used to restore the current working directory after the build itself
 // has switch directories
 //
-func runBuild(dir string, verFn string) (err errors.Error) {
+func runBuild(dir string, verFn string) (outputs []string, err errors.Error) {
 
 	logger.Info(fmt.Sprintf("building in %s", dir))
 
 	cwd, errGo := os.Getwd()
 	if errGo != nil {
-		return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+		return outputs, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
-	err = build(dir, verFn, *imageOnly, *prune)
+	outputs, err = build(dir, verFn, *imageOnly, *prune)
 
 	if errGo = os.Chdir(cwd); errGo != nil {
 		logger.Warn("The original directory could not be restored after the build completed")
@@ -144,75 +125,20 @@ func runBuild(dir string, verFn string) (err errors.Error) {
 		}
 	}
 
-	return err
+	return outputs, err
 }
 
 // build performs the default build for the component within the directory specified
 //
-func build(dir string, verFn string, imageOnly bool, prune bool) (err errors.Error) {
+func build(dir string, verFn string, imageOnly bool, prune bool) (outputs []string, err errors.Error) {
+
+	outputs = []string{}
+
 	// Gather information about the current environment. also changes directory to the working area
 	md, err := duat.NewMetaData(dir, verFn)
 	if err != nil {
-		return err
+		return outputs, err
 	}
 
-	// Dont do any version manipulation if we are just preparing images
-	if !imageOnly {
-		// As we begin the build determine if we are using a pre-released version
-		// and if so automatically bump the pre-release version to reflect a development
-		// step
-		if len(md.SemVer.Prerelease()) != 0 {
-			if _, err = md.BumpPrerelease(); err != nil {
-				return err
-			}
-		}
-	}
-
-	// If there is a Dockerfile for this module then check the images etc
-	if _, err := os.Stat("./Dockerfile"); err == nil {
-		if runtime, _ := md.ContainerRuntime(); len(runtime) == 0 {
-			exists, _, err := md.ImageExists()
-			if err != nil {
-				return err
-			}
-			if exists {
-				return errors.New("an image already exists at the current software version, using 'semver pre' to bump your pre-release version will correct this").With("stack", stack.Trace().TrimRuntime())
-			}
-		}
-		logger.Debug("Dockerfile found and validated")
-	}
-
-	if !imageOnly {
-		if err = md.GoBuild(); err != nil {
-			return err
-		}
-	}
-
-	// If we have a Dockerfile in our target directory build it, unless we are running in a container then dont
-	if runtime, _ := md.ContainerRuntime(); len(runtime) == 0 {
-		if _, err := os.Stat("Dockerfile"); err == nil {
-			// Create an image
-			if err := md.ImageCreate(); err != nil {
-				if errors.Cause(err) == duat.ErrInContainer {
-					// This only a real error if the user explicitly asked for the image to be produced
-					if imageOnly {
-						return errors.New("-image-only used but we were running inside a container which is not supported").With("stack", stack.Trace().TrimRuntime())
-					}
-				} else {
-					return err
-				}
-			}
-			if prune {
-				if err := md.ImagePrune(false); err != nil {
-					fmt.Fprintln(os.Stderr, err.With("msg", "prune operation failed, and ignored").Error())
-				}
-			}
-		} else {
-			if imageOnly {
-				return errors.New("-image-only used however there is no Dockerfile present").With("stack", stack.Trace().TrimRuntime())
-			}
-			logger.Debug(fmt.Sprintf("no Dockerfile found, image build step skipped"))
-		}
-	}
-	return nil
+	return md.GoDockerBuild(imageOnly, prune)
 }

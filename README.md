@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat)   Alpha
 
-Version : <repo-version>0.2.1</repo-version>
+Version : <repo-version>0.3.0</repo-version>
 
 duat is a set of tools useful for automating workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go to manage the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and finally deploying software.
 
@@ -46,7 +46,21 @@ The tools and packages within this project rely on a couple of conventions and a
 
 4. containerization
 
-    builds are performed using containerized workflows
+    builds are performed using containers
+
+# duat configuration
+
+The duat tools use the context of the current directory and environment variables to use git, AWS, and docker.
+
+git context is determined by locating the .git directory working from the current working directory and successively through the directories parents until found.  Once the .git directory is found the repository URL, repo name, branch names and tags will all be associated with that directory.  Tools that use git also over a '-git' option to manually specify where the git context comes from.  Current tools do not perform git push/pull operations so are not impacted by the use of the GITHUB_TOKEN environment variable, when/if these features are added then this environment variable will be used.
+
+AWS context is determined using the AWS environment variables, and AWS credentials file as documented by items 2, and 3 of AWS configuration settings and precedence documented at, https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#config-settings-and-precedence.
+
+When using AWS ECR to store containers the default container registry will be used for your AWS account and containers labeled and named using their github repository and directory name for the compiled component in the case of Go code.  Python is yet to be determined and not set by the tools.
+
+Kubernetes context does not impact the current tool set offered other than for container naming and AWS ECR hosting.
+
+Because the current shell context sets the stage for using these external platforms no configuration of duat is currently needed as it is automatic.
 
 # Versioning
 
@@ -174,6 +188,7 @@ Usage:
 Options:
   -h --help              Show this message.<p>
   -version               Show the version of this software.<p>
+  -git string            The top level of the git repo to be used for the dev version (default ".")
   -f=&lt;input-file&gt;        A file containing an HTML repo-version tag to be morped or queried [default: README.md]<p>
   -t=&lt;target-file&gt;,...   A comma seperated list of files that will be examined for version tags and modified based upon the input-file version<p>
 </code></doc-opt>
@@ -204,10 +219,10 @@ Options:
 
 ## image-release
 
+<code><pre>
 image-release is used to tag a pre-release image version, as a released semantic version, and then optionally push the resulting image to an AWS ECR repository.  The pre-release version will also be cleared, if no pushes failed, from the README.md file resulting in an offical release.  Exit codes are used to denote success or failure of this command to tag then push an image.
 
-<code><pre>
-usage:  image-release [options]       docker image release tool (image-release)       c05904764f71824bbaed171b52c18b99b3082746      2018-03-17_23:47:47-0700
+age:  image-release [options]       docker image release tool (image-release)       a0412bff1a2de2ed92ef548a79f76a65d64d720e      2018-03-20_21:22:22-0700
 
 Options:
 
@@ -215,6 +230,8 @@ Options:
         The file to be used as the source of truth for the existing, and future, version (default "README.md")
   -module string
         The name of the component that is being used to identify the container image, this will default to the current working directory (default ".")
+  -production
+        When enabled will generate tools etc as production releases by removing pre-release version markers
   -release-repo string
         The name of a remote image repository, this will default to no remote repo
   -v    When enabled will print internal logging for this tool
@@ -224,9 +241,12 @@ Environment Variables:
 options can also be extracted from environment variables by changing dashes '-' to underscores and using upper case.
 
 log levels are handled by the LOGXI env variables, these are documented at https://github.com/mgutz/logxi
-
 </pre></code>
 
 ## github-release
 
-## k8s template
+This tool can be used to push binaries and other files upto github using the current version as the tag for the release.
+
+## stencil
+
+This tool is a general purpose template processing utility that reads template files and substitutes values from the software integration envirionment and runs functions specified within the template.
