@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat)   Alpha
 
-Version : <repo-version>0.2.2-feature-10-15-python-github-releases-1ezC4q</repo-version>
+Version : <repo-version>0.3.0-feature-10-15-python-github-releases-1ezo3V</repo-version>
 
 duat is a set of tools useful for automating workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go to manage the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and finally deploying software.
 

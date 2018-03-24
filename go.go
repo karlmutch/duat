@@ -5,6 +5,7 @@ package duat
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -172,6 +173,76 @@ func FindPossibleGoFunc(name string, dirs []string, tags []string) (possibles []
 		possibles = append(possibles, file)
 	}
 	return possibles, nil
+}
+
+func (md *MetaData) GoDockerBuild(imageOnly bool, prune bool) (outputs []string, err errors.Error) {
+
+	// Dont do any version manipulation if we are just preparing images
+	if !imageOnly {
+		// As we begin the build determine if we are using a pre-released version
+		// and if so automatically bump the pre-release version to reflect a development
+		// step
+		if len(md.SemVer.Prerelease()) != 0 {
+			if _, err = md.BumpPrerelease(); err != nil {
+				return outputs, err
+			}
+		}
+	}
+
+	// If there is a Dockerfile for this module then check the images etc
+	image := false
+	if _, err := os.Stat("./Dockerfile"); err == nil {
+		if runtime, _ := md.ContainerRuntime(); len(runtime) == 0 {
+			exists, _, err := md.ImageExists()
+			if err != nil {
+				return outputs, err
+			}
+			if exists {
+				return outputs, errors.New("an image already exists at the current software version, using 'semver pre' to bump your pre-release version will correct this").With("stack", stack.Trace().TrimRuntime())
+			}
+		}
+		image = true
+	}
+
+	if !imageOnly {
+		if outputs, err = md.GoBuild(); err != nil {
+			return []string{}, err
+		}
+		// If there is a Dockerfile indicating that the release product is an image then we dont
+		// include any go binaries created as outputs as the Docker image consumes them
+		if image {
+			outputs = []string{}
+		}
+	}
+
+	// If we have a Dockerfile in our target directory build it, unless we are running in a container then dont
+	if runtime, _ := md.ContainerRuntime(); len(runtime) == 0 {
+		if _, err := os.Stat("Dockerfile"); err == nil {
+			// Create an image
+			logged := strings.Builder{}
+			if err := md.ImageCreate(ioutil.Discard); err != nil {
+				if errors.Cause(err) == ErrInContainer {
+					// This only a real error if the user explicitly asked for the image to be produced
+					if imageOnly {
+						return outputs, errors.New("-image-only used but we were running inside a container which is not supported").With("stack", stack.Trace().TrimRuntime())
+					}
+				} else {
+					fmt.Fprint(os.Stderr, logged.String())
+					return []string{}, err
+				}
+			}
+			if prune {
+				if err := md.ImagePrune(false); err != nil {
+					fmt.Fprintln(os.Stderr, err.With("msg", "prune operation failed, and ignored").Error())
+				}
+			}
+		} else {
+			if imageOnly {
+				return outputs, errors.New("-image-only used however there is no Dockerfile present").With("stack", stack.Trace().TrimRuntime())
+			}
+		}
+	}
+	return outputs, nil
 }
 
 func (md *MetaData) GoBuild() (outputs []string, err errors.Error) {
