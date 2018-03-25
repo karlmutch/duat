@@ -133,6 +133,20 @@ The general idea is to produce both libraries for development artifact handling 
 
 # Installation using Github binaries
 
+duat has regular releases of the stable head of the git repo.  The release consists at this time of precompiled Linux x86_64 binaries that can be found at https://github.com/karlmutch/duat/releases.
+
+# Installation using go get
+
+duat is go gettable with the command tools compiled using the go tools.  The following commands will suffice for most Go environments.
+
+```
+go get github.com/karlmutch/duat
+go install github.com/karlmutch/duat/semver
+go install github.com/karlmutch/duat/github-release
+go install github.com/karlmutch/duat/image-release
+go install github.com/karlmutch/duat/stencil
+```
+
 # Building duat from source
 
 ## Prerequisites
