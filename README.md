@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat)   Alpha
 
-Version : <repo-version>0.3.0</repo-version>
+Version : <repo-version>0.3.2-feature-10-15-python-github-releases-1f0YuB</repo-version>
 
 duat is a set of tools useful for automating workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go to manage the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and finally deploying software.
 
@@ -10,7 +10,7 @@ duat make assumptions about naming of docker images, and semantic versioning.  d
 
 # The name duat
 
-Duat is the name given by the egyptians to the underworld.  As the sun set each day and travelled through the underworld being regenerated it would cast light on to the souls nearby bringing them to life for a period of time as it passed by.  While passing through the duat I hope these tools shine some light on your travels.
+Duat is the name given by the egyptians to the underworld.  As the sun set each day and travelled through the underworld being regenerated it would cast light on to the souls nearby bringing them to life for a period of time as it passed by.  While passing through the duat these tools hope to light each of the hours in your build pipeline.
 
 # Motivating use-cases
 
@@ -21,6 +21,14 @@ A user wishes to deliver software packaged using docker images to an AWS ECR ima
 A user wishes to deploy containerized software into an Istio, or other k8s based service mesh.
 
 Many existing cloud based platforms exist today to address requirements such as the above.  This has led to divided islands of functionality, such as Travis, that require integration with each other so that credentials and other artifacts required by workflow automation is shared between these platform. Costly and fragile integration falls to the developer and users which is time consuming and complex.  duat builds upon the observation that many developers are already operating in a cloud based environment and what is needed is a simple set of tools, if a set of simplifing assumptions is made for addressing the above use cases, especially if you already have containerized builds, and tests.
+
+For example the following workflow might be used:
+
+```shell
+./build.go -r cmd > /tmp/compiled.lst
+# test is run and passes
+cat /tmp/compiled.lst | ./cmd/github-release/github-release.go -
+```
 
 # Conventions assumptions
 
