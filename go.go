@@ -285,6 +285,33 @@ func (md *MetaData) GoBuild() (outputs []string, err errors.Error) {
 		}
 		return nil
 	})
+
+	if errGo == nil {
+		return outputs, nil
+	}
+
+	return outputs, errGo.(errors.Error)
+}
+
+func (md *MetaData) GoFetchBuilt() (outputs []string, err errors.Error) {
+	outputs = []string{}
+
+	binPath, errGo := filepath.Abs(filepath.Join(".", "bin"))
+	if errGo != nil {
+		return outputs, errors.Wrap(errGo, "unable to find binary files").With("bin", binPath).With("stack", stack.Trace().TrimRuntime())
+	}
+
+	errGo = filepath.Walk(binPath, func(path string, f os.FileInfo, err error) error {
+		if f.IsDir() {
+			return nil
+		}
+		// Is the file executable at all ?
+		if f.Mode()&0111 != 0 {
+			outputs = append(outputs, filepath.Join(binPath, f.Name()))
+		}
+		return nil
+	})
+
 	if errGo == nil {
 		return outputs, nil
 	}

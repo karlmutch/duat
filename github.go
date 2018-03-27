@@ -136,7 +136,7 @@ func (md *MetaData) publish(release *gitRelease, filepaths []string) (err errors
 			// TODO Capture errors and failures for the caller, this is not safe
 			// currently
 			if resp, err := release.githubUpload(uploadURL, file); err != nil {
-				fmt.Println(errors.Wrap(errGo).With("response", resp).With("stack", stack.Trace().TrimRuntime()).Error())
+				fmt.Println(errors.Wrap(err).With("response", resp).With("stack", stack.Trace().TrimRuntime()).Error())
 			}
 			wg.Done()
 		}(filename)

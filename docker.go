@@ -199,7 +199,16 @@ func (md *MetaData) generateImageName(semVer *semver.Version) (repo string, vers
 	// Look for pre-release components within the version string
 	preParts := strings.Split(semVer.Prerelease(), "-")
 
-	return fmt.Sprintf("%s/%s/%s", gitParts[len(gitParts)-2], label, md.Module), semVer.String(), len(preParts) >= 2, nil
+	repoName := fmt.Sprintf("%s/%s/%s", gitParts[len(gitParts)-2], label, md.Module)
+	// docker repositories only use lowercase _ and -
+	dockerRepo := strings.Builder{}
+	for i, char := range repoName {
+		if unicode.IsUpper(char) && i != 0 {
+			dockerRepo.WriteRune('-')
+		}
+		dockerRepo.WriteRune(unicode.ToLower(char))
+	}
+	return dockerRepo.String(), semVer.String(), len(preParts) >= 2, nil
 }
 
 // caller should
@@ -367,18 +376,9 @@ func (md *MetaData) ImageCreate(out io.Writer) (err errors.Error) {
 		return errors.New("could not retrieve user ID from env vars").With("stack", stack.Trace().TrimRuntime())
 	}
 
-	// docker repositories only use lowercase _ and -
-	dockerRepo := strings.Builder{}
-	for i, char := range repoName {
-		if unicode.IsUpper(char) && i != 0 {
-			dockerRepo.WriteRune('-')
-		}
-		dockerRepo.WriteRune(unicode.ToLower(char))
-	}
-
 	buildArgs := fmt.Sprintf("--build-arg USER=%s --build-arg USER_ID=`id -u %s` --build-arg USER_GROUP_ID=`id -g %s`", user, user, user)
 	cmds := []string{
-		fmt.Sprintf("docker build -t %s:%s %s -f %s .", dockerRepo.String(), tag, buildArgs, fn.Name()),
+		fmt.Sprintf("docker build -t %s:%s %s -f %s .", repoName, tag, buildArgs, fn.Name()),
 	}
 
 	cmd := exec.Command("bash", "-c", strings.Join(cmds, " && "))
