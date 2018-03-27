@@ -136,24 +136,6 @@ func (md *MetaData) Apply(files []string) (err errors.Error) {
 	return nil
 }
 
-func (md *MetaData) Inject(file string) (err errors.Error) {
-
-	if len(file) == 0 {
-		return errors.New("the inject command requires that only a single target file is specified with the -t option").With("stack", stack.Trace().TrimRuntime())
-	}
-
-	if _, err := os.Stat(file); err != nil {
-		return errors.New(fmt.Sprintf("a user specified target file was not found '%s'\n", file)).With("stack", stack.Trace().TrimRuntime())
-	}
-
-	// Process the file to stdout but stop on any errors
-	if err = md.Replace(file, "/dev/stdout", true); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // BumpPrerelease will first bump the release, adn then write the results into
 // the file nominated as the version file
 //

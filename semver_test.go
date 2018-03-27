@@ -99,10 +99,6 @@ func ApplyCase(fileVer *semver.Version, applyVer semver.Version) (err errors.Err
 	return nil
 }
 
-func TestVersionInject(t *testing.T) {
-	// Inject basic versions
-}
-
 func TestVersionReplace(t *testing.T) {
 
 	ver, err := semver.NewVersion("0.0.0-pre+build")
