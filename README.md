@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat)   Alpha
 
-Version : <repo-version>0.3.3-feature-24-semver-default-extract-1f0fXP</repo-version>
+Version : <repo-version>0.4.0</repo-version>
 
 duat is a set of tools useful for automating workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go to manage the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and finally deploying software.
 
@@ -272,3 +272,21 @@ This tool can be used to push binaries and other files upto github using the cur
 ## stencil
 
 This tool is a general purpose template processing utility that reads template files and substitutes values from the software integration envirionment and runs functions specified within the template.
+
+```shell
+stencil -input  example/artifact/Dockerfile
+```
+
+stencil support go templating for substitution of variables inside the input file.  Variables are added for duat specifically including:
+
+```
+{{.duat.version}}
+{{.duat.module}}
+{{.duat.gitTag}}
+{{.duat.gitHash}}
+{{.duat.gitBranch}}
+{{.duat.gitURL}}
+{{.duat.gitDir}}
+```
+
+Templates also support functions from masterminds.github.io/sprig.  Please refer to that github website for more information.
