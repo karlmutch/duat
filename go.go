@@ -340,7 +340,12 @@ func (md *MetaData) GoCompile(env map[string]string) (err errors.Error) {
 		buildOS = runtime.GOOS
 	}
 	if !hasArch {
-		buildOS = runtime.GOARCH
+		arch = runtime.GOARCH
+		if arch == "arm" {
+			if arm, isPresent := os.LookupEnv("GOARM"); isPresent {
+				arch += arm
+			}
+		}
 	}
 
 	buildEnv := []string{"GO_ENABLED=0"}
