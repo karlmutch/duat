@@ -341,10 +341,10 @@ func (md *MetaData) GoCompile(env map[string]string) (err errors.Error) {
 	}
 	if !hasArch {
 		arch = runtime.GOARCH
-		if arch == "arm" {
-			if arm, isPresent := os.LookupEnv("GOARM"); isPresent {
-				arch += arm
-			}
+	}
+	if arch == "arm" {
+		if arm, isPresent := os.LookupEnv("GOARM"); isPresent {
+			arch += arm
 		}
 	}
 
