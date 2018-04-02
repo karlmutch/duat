@@ -149,10 +149,10 @@ duat is go gettable with the command tools compiled using the go tools.  The fol
 
 ```
 go get github.com/karlmutch/duat
-go install github.com/karlmutch/duat/semver
-go install github.com/karlmutch/duat/github-release
-go install github.com/karlmutch/duat/image-release
-go install github.com/karlmutch/duat/stencil
+go install github.com/karlmutch/duat/cmd/semver
+go install github.com/karlmutch/duat/cmd/github-release
+go install github.com/karlmutch/duat/cmd/image-release
+go install github.com/karlmutch/duat/cmd/stencil
 ```
 
 # Building duat from source
