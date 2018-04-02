@@ -287,6 +287,7 @@ stencil support go templating for substitution of variables inside the input fil
 {{.duat.gitBranch}}
 {{.duat.gitURL}}
 {{.duat.gitDir}}
+{{.duat.awsecr}}
 ```
 
 Templates also support functions from masterminds.github.io/sprig.  Please refer to that github website for more information.
