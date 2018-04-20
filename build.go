@@ -140,5 +140,5 @@ func build(dir string, verFn string, imageOnly bool, prune bool) (outputs []stri
 		return outputs, err
 	}
 
-	return md.GoDockerBuild(imageOnly, prune)
+	return md.GoDockerBuild([]string{}, imageOnly, prune)
 }
