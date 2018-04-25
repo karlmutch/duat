@@ -368,7 +368,8 @@ func (md *MetaData) GoCompile(env map[string]string, tags []string) (err errors.
 
 	cmds := []string{
 		fmt.Sprintf("%s/bin/dep ensure", goPath),
-		fmt.Sprintf(("%s go build %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" -o bin/" + output + " .\n"),
+		"pwd",
+		fmt.Sprintf(("%s go build %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" -o bin/" + output + " ."),
 			strings.Join(buildEnv, " "), tagOption),
 	}
 
