@@ -368,7 +368,6 @@ func (md *MetaData) GoCompile(env map[string]string, tags []string) (err errors.
 
 	cmds := []string{
 		fmt.Sprintf("%s/bin/dep ensure", goPath),
-		"pwd",
 		fmt.Sprintf(("%s go build %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" -o bin/" + output + " ."),
 			strings.Join(buildEnv, " "), tagOption),
 	}
@@ -378,8 +377,10 @@ func (md *MetaData) GoCompile(env map[string]string, tags []string) (err errors.
 	cmd.Stderr = os.Stderr
 
 	if errGo := cmd.Start(); errGo != nil {
+		dir, _ := os.Getwd()
 		fmt.Fprintln(os.Stderr, errors.Wrap(errGo, "unable to run the compiler").With("module", md.Module).
-			With("stack", stack.Trace().TrimRuntime()).With("cmds", strings.Join(cmds, "¶ ")).Error())
+			With("stack", stack.Trace().TrimRuntime()).With("cmds", strings.Join(cmds, "¶ ")).
+			With("dir", dir).Error())
 		os.Exit(-3)
 	}
 
