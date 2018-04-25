@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 
+	colorable "github.com/mattn/go-colorable"
 	"github.com/mgutz/logxi" // Using a forked copy of this package results in build issues
 
 	"github.com/karlmutch/duat"
@@ -20,7 +21,7 @@ import (
 )
 
 var (
-	logger = logxi.New("image-release")
+	logger = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "image-release")
 
 	verFn        = flag.String("f", "README.md", "The file to be used as the source of truth for the existing, and future, version")
 	verbose      = flag.Bool("v", false, "When enabled will print internal logging for this tool")

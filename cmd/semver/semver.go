@@ -14,6 +14,7 @@ import (
 
 	"github.com/karlmutch/duat"
 	"github.com/karlmutch/duat/version"
+	colorable "github.com/mattn/go-colorable"
 
 	// The following packages are forked to retain copies in the event github accounts are shutdown
 	//
@@ -30,7 +31,7 @@ import (
 )
 
 var (
-	logger = logxi.New("semver")
+	logger = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "semver")
 
 	verFn   = flag.String("f", "README.md", "The file to be used as the source of truth for the existing, and future, version")
 	applyFn = flag.String("t", "", "The files to which the version data will be propagated")

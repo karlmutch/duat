@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	colorable "github.com/mattn/go-colorable"
 	"github.com/mgutz/logxi" // Using a forked copy of this package results in build issues
 
 	"github.com/karlmutch/duat"
@@ -24,14 +25,12 @@ import (
 )
 
 var (
-	logger = logxi.New("github-release")
+	logger = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "github-release")
 
-	verFn        = flag.String("f", "README.md", "The file to be used as the source of truth for the existing, and future, version")
-	verbose      = flag.Bool("v", false, "When enabled will print internal logging for this tool")
-	externalRepo = flag.String("release-repo", "", "The name of a remote image repository, this will default to no remote repo")
-	token        = flag.String("github-token", "", "The github token string obtained from https://github.com/settings/tokens, defaults to the env var GUTHUB_TOKEN")
-	message      = flag.String("description", "", "A text description of the release")
-	module       = flag.String("module", ".", "The name of the component that is being used to identify the container image, this will default to the current working directory")
+	verFn   = flag.String("f", "README.md", "The file to be used as the source of truth for the existing, and future, version")
+	verbose = flag.Bool("v", false, "When enabled will print internal logging for this tool")
+	token   = flag.String("github-token", "", "The github token string obtained from https://github.com/settings/tokens, defaults to the env var GUTHUB_TOKEN")
+	module  = flag.String("module", ".", "The name of the component that is being used to identify the container image, this will default to the current working directory")
 )
 
 func usage() {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/karlmutch/duat"
 	"github.com/karlmutch/duat/version"
+	colorable "github.com/mattn/go-colorable"
 
 	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
 	"github.com/karlmutch/stack"  // Forked copy of https://github.com/go-stack/stack
@@ -20,7 +21,7 @@ import (
 )
 
 var (
-	logger = logxi.New("build.go")
+	logger = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "build.go")
 
 	prune     = flag.Bool("prune", true, "When enabled will prune any prerelease images replaced by this build")
 	verbose   = flag.Bool("v", false, "When enabled will print internal logging for this tool")

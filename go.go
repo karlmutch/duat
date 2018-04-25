@@ -368,7 +368,8 @@ func (md *MetaData) GoCompile(env map[string]string, tags []string) (err errors.
 
 	cmds := []string{
 		fmt.Sprintf("%s/bin/dep ensure", goPath),
-		fmt.Sprintf(("%s go build %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" -o bin/" + output + " .\n"), strings.Join(buildEnv, " "), tagOption),
+		fmt.Sprintf(("%s go build %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" -o bin/" + output + " ."),
+			strings.Join(buildEnv, " "), tagOption),
 	}
 
 	cmd := exec.Command("bash", "-c", strings.Join(cmds, " && "))
@@ -376,12 +377,16 @@ func (md *MetaData) GoCompile(env map[string]string, tags []string) (err errors.
 	cmd.Stderr = os.Stderr
 
 	if errGo := cmd.Start(); errGo != nil {
-		fmt.Fprintln(os.Stderr, errors.Wrap(errGo, "unable to run the compiler").With("module", md.Module).With("stack", stack.Trace().TrimRuntime()).Error())
+		dir, _ := os.Getwd()
+		fmt.Fprintln(os.Stderr, errors.Wrap(errGo, "unable to run the compiler").With("module", md.Module).
+			With("stack", stack.Trace().TrimRuntime()).With("cmds", strings.Join(cmds, "¶ ")).
+			With("dir", dir).Error())
 		os.Exit(-3)
 	}
 
 	if errGo := cmd.Wait(); errGo != nil {
-		return errors.Wrap(errGo, "unable to run the compiler").With("stack", stack.Trace().TrimRuntime())
+		return errors.Wrap(errGo, "unable to run the compiler").
+			With("stack", stack.Trace().TrimRuntime()).With("cmds", strings.Join(cmds, "¶ "))
 	}
 	return nil
 }
