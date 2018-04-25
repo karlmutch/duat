@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	logger = logxi.NewLogger(NewConcurrentWriter(colorable.NewColorableStderr()), "image-exists")
+	logger = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "image-exists")
 
 	verFn   = flag.String("f", "README.md", "The file to be used as the source of truth for the existing, and future, version")
 	verbose = flag.Bool("v", false, "When enabled will print internal logging for this tool")

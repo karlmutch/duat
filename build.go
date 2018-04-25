@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	logger = logxi.NewLogger(NewConcurrentWriter(colorable.NewColorableStderr()), "build.go")
+	logger = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "build.go")
 
 	prune     = flag.Bool("prune", true, "When enabled will prune any prerelease images replaced by this build")
 	verbose   = flag.Bool("v", false, "When enabled will print internal logging for this tool")

@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	logger = logxi.NewLogger(NewConcurrentWriter(colorable.NewColorableStderr()), "semver")
+	logger = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "semver")
 
 	verFn   = flag.String("f", "README.md", "The file to be used as the source of truth for the existing, and future, version")
 	applyFn = flag.String("t", "", "The files to which the version data will be propagated")

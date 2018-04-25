@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	logger = logxi.NewLogger(NewConcurrentWriter(colorable.NewColorableStderr()), "docker-groom")
+	logger = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "docker-groom")
 
 	verFn    = flag.String("f", "README.md", "The file to be used as the source of truth for the existing, and future, version")
 	groomAll = flag.Bool("all", false, "Do not leave any images, default is false to leave the latest image for the component")
