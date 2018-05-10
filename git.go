@@ -62,6 +62,10 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 		//Scoop up everything after the refs/heads/ to get the branch name
 		//and reattach any slashes we took out
 		md.Git.Branch = strings.Join(splits[2:], "/")
+	} else {
+		// The branch might be available through Travis, if so and it is not available elsewhere
+		// use that value
+		md.Git.Branch = os.Getenv("TRAVIS_BRANCH")
 	}
 
 	md.Git.Repo = repo
