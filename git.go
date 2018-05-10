@@ -58,9 +58,13 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 
 	splits := strings.Split(ref.Name().String(), "/")
 
-	//Scoop up everything after the refs/heads/ to get the branch name
-	//and reattach any slashes we took out
-	md.Git.Branch = strings.Join(splits[2:], "/")
+	// If we are detached there might not be a branch for us to use
+	if len(splits) > 2 {
+		//Scoop up everything after the refs/heads/ to get the branch name
+		//and reattach any slashes we took out
+		md.Git.Branch = strings.Join(splits[2:], "/")
+	}
+
 	md.Git.Repo = repo
 	refs, _ := repo.Remotes()
 
