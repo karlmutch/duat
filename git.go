@@ -28,8 +28,7 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 	}
 
 	for {
-		_, errGo := os.Stat(filepath.Join(gitDir, ".git"))
-		if errGo == nil {
+		if _, errGo = os.Stat(filepath.Join(gitDir, ".git")); errGo == nil {
 			break
 		}
 		if !scanParents {
@@ -66,7 +65,11 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 	}
 
 	md.Git.Repo = repo
-	refs, _ := repo.Remotes()
+	refs, errGo := repo.Remotes()
+	if errGo != nil {
+		md.Git.Err = errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("git", gitDir).With("repo", repo)
+		return md.Git.Err
+	}
 
 	gitURL, errGo := url.Parse(refs[0].Config().URLs[0])
 	if errGo != nil {
