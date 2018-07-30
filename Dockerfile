@@ -13,7 +13,7 @@ ENV USER_GROUP_ID ${USER_GROUP_ID}
 
 RUN apt-get -y update
 
-RUN apt-get -y install git software-properties-common wget openssl ssh curl jq apt-utils unzip python-pip && \
+RUN apt-get -y install runc git software-properties-common wget openssl ssh curl jq apt-utils unzip python-pip && \
     apt-get clean && \
     apt-get autoremove && \
     pip install awscli --upgrade && \
@@ -22,6 +22,11 @@ RUN apt-get -y install git software-properties-common wget openssl ssh curl jq a
 
 RUN go get github.com/erning/gorun && \
     mv $GOPATH/bin/gorun /usr/local/bin
+
+RUN export IMG_SHA256="d8495994d46ee40180fbd3d3f13f12c81352b08af32cd2a3361db3f1d5503fa2" \
+    && curl -sfSL "https://github.com/genuinetools/img/releases/download/v0.4.8/img-linux-amd64" -o "/usr/local/bin/img" \
+    && echo "${IMG_SHA256}  /usr/local/bin/img" | sha256sum -c - \
+    && chmod a+x "/usr/local/bin/img"
 
 #    mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && \
 #    echo ':golang:E::go::/usr/local/bin/gorun:OC' >> /proc/sys/fs/binfmt_misc/register
