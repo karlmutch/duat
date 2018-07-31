@@ -32,6 +32,27 @@
   name = "github.com/karlmutch/errors"
   version = "1.0.1"
 
+[[override]]
+  name = "github.com/Sirupsen/logrus"
+  source = "github.com/sirupsen/logrus"
+
+[[override]]
+  name = "github.com/docker/docker"
+  source = "github.com/moby/moby"
+  branch = "master"
+
+[[override]]
+  name = "github.com/moby/moby"
+  branch = "master"
+
+[[override]]
+  name = "github.com/moby/buildkit"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/docker/distribution"
+  branch = "master"
+
 [prune]
   go-tests = true
   unused-packages = true
