@@ -11,9 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tonistiigi/fsutil"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -81,7 +79,7 @@ func (sp *fsSyncProvider) handle(method string, stream grpc.ServerStream) (retEr
 
 	dir, ok := sp.dirs[dirName]
 	if !ok {
-		return status.Errorf(codes.NotFound, "no access allowed to dir %q", dirName)
+		return errors.Errorf("no access allowed to dir %q", dirName)
 	}
 
 	excludes := opts[keyExcludePatterns]
@@ -103,12 +101,7 @@ func (sp *fsSyncProvider) handle(method string, stream grpc.ServerStream) (retEr
 		doneCh = sp.doneCh
 		sp.doneCh = nil
 	}
-	err := pr.sendFn(stream, fsutil.NewFS(dir.Dir, &fsutil.WalkOpt{
-		ExcludePatterns: excludes,
-		IncludePatterns: includes,
-		FollowPaths:     followPaths,
-		Map:             dir.Map,
-	}), progress)
+	err := pr.sendFn(stream, dir.Dir, includes, excludes, followPaths, progress, dir.Map)
 	if doneCh != nil {
 		if err != nil {
 			doneCh <- err
@@ -127,7 +120,7 @@ type progressCb func(int, bool)
 
 type protocol struct {
 	name   string
-	sendFn func(stream grpc.Stream, fs fsutil.FS, progress progressCb) error
+	sendFn func(stream grpc.Stream, srcDir string, includes, excludes, followPaths []string, progress progressCb, _map func(*fsutil.Stat) bool) error
 	recvFn func(stream grpc.Stream, destDir string, cu CacheUpdater, progress progressCb) error
 }
 
@@ -176,7 +169,7 @@ func FSSync(ctx context.Context, c session.Caller, opt FSSendRequestOpt) error {
 		}
 	}
 	if pr == nil {
-		return errors.New("no local sources enabled")
+		return errors.New("no fssync handlers")
 	}
 
 	opts := make(map[string][]string)
@@ -263,7 +256,7 @@ func (sp *fsSyncTarget) DiffCopy(stream FileSend_DiffCopyServer) error {
 	return writeTargetFile(stream, sp.outfile)
 }
 
-func CopyToCaller(ctx context.Context, fs fsutil.FS, c session.Caller, progress func(int, bool)) error {
+func CopyToCaller(ctx context.Context, srcPath string, c session.Caller, progress func(int, bool)) error {
 	method := session.MethodURL(_FileSend_serviceDesc.ServiceName, "diffcopy")
 	if !c.Supports(method) {
 		return errors.Errorf("method %s not supported by the client", method)
@@ -276,7 +269,7 @@ func CopyToCaller(ctx context.Context, fs fsutil.FS, c session.Caller, progress 
 		return err
 	}
 
-	return sendDiffCopy(cc, fs, progress)
+	return sendDiffCopy(cc, srcPath, nil, nil, nil, progress, nil)
 }
 
 func CopyFileWriter(ctx context.Context, c session.Caller) (io.WriteCloser, error) {

@@ -107,9 +107,6 @@ func Walk(ctx context.Context, p string, opt *WalkOpt, fn filepath.WalkFunc) err
 						}
 					}
 					if !matched {
-						if fi.IsDir() {
-							return filepath.SkipDir
-						}
 						return nil
 					}
 					if !partial && fi.IsDir() {
@@ -239,7 +236,7 @@ func trimUntilIndex(str, sep string, count int) string {
 		s = s[idx+len(sep):]
 		i += idx + len(sep)
 		c++
-		if c > count {
+		if c >= count {
 			return str[:i-len(sep)]
 		}
 	}

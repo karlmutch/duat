@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moby/buildkit/client"
+	"github.com/moby/buildkit/identity"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/flightcontrol"
 	"github.com/moby/buildkit/util/progress"
@@ -20,7 +21,7 @@ type ResolveOpFunc func(Vertex, Builder) (Op, error)
 
 type Builder interface {
 	Build(ctx context.Context, e Edge) (CachedResult, error)
-	Context(ctx context.Context) context.Context
+	Call(ctx context.Context, name string, fn func(ctx context.Context) error) error
 }
 
 // Solver provides a shared graph of all the vertexes currently being
@@ -160,13 +161,14 @@ func (sb *subBuilder) Build(ctx context.Context, e Edge) (CachedResult, error) {
 		return nil, err
 	}
 	sb.mu.Lock()
-	sb.exporters = append(sb.exporters, res.CacheKeys()[0]) // all keys already have full export chain
+	sb.exporters = append(sb.exporters, res.CacheKey())
 	sb.mu.Unlock()
 	return res, nil
 }
 
-func (sb *subBuilder) Context(ctx context.Context) context.Context {
-	return progress.WithProgress(ctx, sb.mpw)
+func (sb *subBuilder) Call(ctx context.Context, name string, fn func(ctx context.Context) error) error {
+	ctx = progress.WithProgress(ctx, sb.mpw)
+	return inVertexContext(ctx, name, fn)
 }
 
 type Job struct {
@@ -442,8 +444,9 @@ func (j *Job) Discard() error {
 	return nil
 }
 
-func (j *Job) Context(ctx context.Context) context.Context {
-	return progress.WithProgress(ctx, j.pw)
+func (j *Job) Call(ctx context.Context, name string, fn func(ctx context.Context) error) error {
+	ctx = progress.WithProgress(ctx, j.pw)
+	return inVertexContext(ctx, name, fn)
 }
 
 type cacheMapResp struct {
@@ -554,9 +557,6 @@ func (s *sharedOp) CalcSlowCache(ctx context.Context, index Index, f ResultBased
 		return key, err
 	})
 	if err != nil {
-		ctx = progress.WithProgress(ctx, s.st.mpw)
-		notifyStarted(ctx, &s.st.clientVertex, false)
-		notifyCompleted(ctx, &s.st.clientVertex, err, false)
 		return "", err
 	}
 	return key.(digest.Digest), nil
@@ -758,4 +758,17 @@ func notifyCompleted(ctx context.Context, v *client.Vertex, err error, cached bo
 		v.Error = err.Error()
 	}
 	pw.Write(v.Digest.String(), *v)
+}
+
+func inVertexContext(ctx context.Context, name string, f func(ctx context.Context) error) error {
+	v := client.Vertex{
+		Digest: digest.FromBytes([]byte(identity.NewID())),
+		Name:   name,
+	}
+	pw, _, ctx := progress.FromContext(ctx, progress.WithMetadata("vertex", v.Digest))
+	notifyStarted(ctx, &v, false)
+	defer pw.Close()
+	err := f(ctx)
+	notifyCompleted(ctx, &v, err, false)
+	return err
 }

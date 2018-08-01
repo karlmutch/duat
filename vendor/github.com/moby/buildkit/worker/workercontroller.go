@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"github.com/containerd/containerd/filters"
-	"github.com/moby/buildkit/client"
 	"github.com/pkg/errors"
 )
 
@@ -59,19 +58,3 @@ func (c *Controller) Get(id string) (Worker, error) {
 }
 
 // TODO: add Get(Constraint) (*Worker, error)
-
-func (c *Controller) WorkerInfos() []client.WorkerInfo {
-	workers, err := c.List()
-	if err != nil {
-		return nil
-	}
-	out := make([]client.WorkerInfo, 0, len(workers))
-	for _, w := range workers {
-		out = append(out, client.WorkerInfo{
-			ID:        w.ID(),
-			Labels:    w.Labels(),
-			Platforms: w.Platforms(),
-		})
-	}
-	return out
-}

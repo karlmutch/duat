@@ -42,20 +42,6 @@ func (v *vertex) Name() string {
 
 type LoadOpt func(*pb.Op, *pb.OpMetadata, *solver.VertexOptions) error
 
-func WithValidateCaps() LoadOpt {
-	cs := pb.Caps.CapSet(pb.Caps.All())
-	return func(_ *pb.Op, md *pb.OpMetadata, opt *solver.VertexOptions) error {
-		if md != nil {
-			for c := range md.Caps {
-				if err := cs.Supports(c); err != nil {
-					return err
-				}
-			}
-		}
-		return nil
-	}
-}
-
 func WithCacheSources(cms []solver.CacheManager) LoadOpt {
 	return func(_ *pb.Op, _ *pb.OpMetadata, opt *solver.VertexOptions) error {
 		opt.CacheSources = cms
@@ -65,9 +51,8 @@ func WithCacheSources(cms []solver.CacheManager) LoadOpt {
 
 func RuntimePlatforms(p []specs.Platform) LoadOpt {
 	var defaultPlatform *pb.Platform
-	pp := make([]specs.Platform, len(p))
 	for i := range p {
-		pp[i] = platforms.Normalize(p[i])
+		p[i] = platforms.Normalize(p[i])
 	}
 	return func(op *pb.Op, _ *pb.OpMetadata, opt *solver.VertexOptions) error {
 		if op.Platform == nil {
@@ -82,7 +67,7 @@ func RuntimePlatforms(p []specs.Platform) LoadOpt {
 		}
 		if _, ok := op.Op.(*pb.Op_Exec); ok {
 			var found bool
-			for _, pp := range pp {
+			for _, pp := range p {
 				if pp.OS == op.Platform.OS && pp.Architecture == op.Platform.Architecture && pp.Variant == op.Platform.Variant {
 					found = true
 					break

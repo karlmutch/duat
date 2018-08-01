@@ -306,9 +306,7 @@ func (s *scheduler) mergeTo(target, src *edge) bool {
 			target.secondaryExporters = append(target.secondaryExporters, expDep{i, CacheKeyWithSelector{CacheKey: *d.slowCacheKey}})
 		}
 		if d.result != nil {
-			for _, dk := range d.result.CacheKeys() {
-				target.secondaryExporters = append(target.secondaryExporters, expDep{i, CacheKeyWithSelector{CacheKey: dk, Selector: src.cacheMap.Deps[i].Selector}})
-			}
+			target.secondaryExporters = append(target.secondaryExporters, expDep{i, CacheKeyWithSelector{CacheKey: d.result.CacheKey(), Selector: src.cacheMap.Deps[i].Selector}})
 		}
 	}
 

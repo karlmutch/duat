@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -22,10 +23,11 @@ type Stream interface {
 	Context() context.Context
 }
 
-func Send(ctx context.Context, conn Stream, fs FS, progressCb func(int, bool)) error {
+func Send(ctx context.Context, conn Stream, root string, opt *WalkOpt, progressCb func(int, bool)) error {
 	s := &sender{
 		conn:         &syncStream{Stream: conn},
-		fs:           fs,
+		root:         root,
+		opt:          opt,
 		files:        make(map[uint32]string),
 		progressCb:   progressCb,
 		sendpipeline: make(chan *sendHandle, 128),
@@ -40,7 +42,8 @@ type sendHandle struct {
 
 type sender struct {
 	conn            Stream
-	fs              FS
+	opt             *WalkOpt
+	root            string
 	files           map[uint32]string
 	mu              sync.RWMutex
 	progressCb      func(int, bool)
@@ -127,7 +130,7 @@ func (s *sender) queue(id uint32) error {
 }
 
 func (s *sender) sendFile(h *sendHandle) error {
-	f, err := s.fs.Open(h.path)
+	f, err := os.Open(filepath.Join(s.root, h.path))
 	if err == nil {
 		defer f.Close()
 		buf := bufPool.Get().([]byte)
@@ -141,7 +144,7 @@ func (s *sender) sendFile(h *sendHandle) error {
 
 func (s *sender) walk(ctx context.Context) error {
 	var i uint32 = 0
-	err := s.fs.Walk(ctx, func(path string, fi os.FileInfo, err error) error {
+	err := Walk(ctx, s.root, s.opt, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}

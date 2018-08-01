@@ -133,11 +133,6 @@ func (s *Store) Load(id string, resultID string) (solver.CacheResult, error) {
 
 func (s *Store) AddResult(id string, res solver.CacheResult) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.Bucket([]byte(linksBucket)).CreateBucketIfNotExists([]byte(id))
-		if err != nil {
-			return err
-		}
-
 		b, err := tx.Bucket([]byte(resultBucket)).CreateBucketIfNotExists([]byte(id))
 		if err != nil {
 			return err
@@ -223,7 +218,7 @@ func (s *Store) releaseHelper(tx *bolt.Tx, id, resultID string) error {
 		return nil
 	}
 
-	if err := ids.Delete([]byte(id)); err != nil {
+	if err := ids.Delete([]byte(resultID)); err != nil {
 		return err
 	}
 
@@ -288,11 +283,6 @@ func (s *Store) emptyBranchWithParents(tx *bolt.Tx, id []byte) error {
 			return err
 		}
 	}
-
-	// intentionally ignoring errors
-	tx.Bucket([]byte(linksBucket)).DeleteBucket([]byte(id))
-	tx.Bucket([]byte(resultBucket)).DeleteBucket([]byte(id))
-
 	return nil
 }
 

@@ -10,7 +10,6 @@ import (
 	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/snapshot"
 	"github.com/moby/buildkit/util/flightcontrol"
-	"github.com/moby/buildkit/util/winlayers"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
@@ -33,22 +32,6 @@ func GetDiffPairs(ctx context.Context, contentStore content.Store, snapshotter s
 		return nil, nil
 	}
 
-	if err := ref.Finalize(ctx, true); err != nil {
-		return nil, err
-	}
-
-	if isTypeWindows(ref) {
-		ctx = winlayers.UseWindowsLayerMode(ctx)
-	}
-
-	return getDiffPairs(ctx, contentStore, snapshotter, differ, ref, createBlobs)
-}
-
-func getDiffPairs(ctx context.Context, contentStore content.Store, snapshotter snapshot.Snapshotter, differ diff.Comparer, ref cache.ImmutableRef, createBlobs bool) ([]DiffPair, error) {
-	if ref == nil {
-		return nil, nil
-	}
-
 	eg, ctx := errgroup.WithContext(ctx)
 	var diffPairs []DiffPair
 	var currentPair DiffPair
@@ -56,7 +39,7 @@ func getDiffPairs(ctx context.Context, contentStore content.Store, snapshotter s
 	if parent != nil {
 		defer parent.Release(context.TODO())
 		eg.Go(func() error {
-			dp, err := getDiffPairs(ctx, contentStore, snapshotter, differ, parent, createBlobs)
+			dp, err := GetDiffPairs(ctx, contentStore, snapshotter, differ, parent, createBlobs)
 			if err != nil {
 				return err
 			}
@@ -137,15 +120,4 @@ func getDiffPairs(ctx context.Context, contentStore content.Store, snapshotter s
 		return nil, err
 	}
 	return append(diffPairs, currentPair), nil
-}
-
-func isTypeWindows(ref cache.ImmutableRef) bool {
-	if cache.GetLayerType(ref) == "windows" {
-		return true
-	}
-	if parent := ref.Parent(); parent != nil {
-		defer parent.Release(context.TODO())
-		return isTypeWindows(parent)
-	}
-	return false
 }

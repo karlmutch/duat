@@ -1,5 +1,7 @@
-package duat
+package image
 
+// Build an image from a Dockerfile, using runc, without the need for a docker daemon
+//
 // This file contains the implementation of the build command found within the
 // img tool written by the genuinetools team.  It was been modified to be used
 // as a library by duat.  To see the original code please checkout
@@ -7,18 +9,18 @@ package duat
 
 import (
 	"context"
-	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/containerd/console"
 	"github.com/containerd/containerd/namespaces"
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/docker/distribution/reference"
 	"github.com/genuinetools/img/client"
+	"github.com/genuinetools/img/types"
 	controlapi "github.com/moby/buildkit/api/services/control"
 	bkclient "github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/identity"
@@ -31,18 +33,8 @@ import (
 	"github.com/karlmutch/stack"  // Forked copy of https://github.com/go-stack/stack
 )
 
-const buildHelp = `Build an image from a Dockerfile, using runc, without the need for a docker daemon.`
-
-func (cmd *BuildCommand) Register(fs *flag.FlagSet) {
-	fs.StringVar(&cmd.dockerfilePath, "f", "", "Name of the Dockerfile (Default is 'PATH/Dockerfile')")
-	fs.StringVar(&cmd.tag, "t", "", "Name and optionally a tag in the 'name:tag' format")
-	fs.StringVar(&cmd.target, "target", "", "Set the target build stage to build")
-	fs.Var(&cmd.buildArgs, "build-arg", "Set build-time variables")
-	fs.BoolVar(&cmd.noConsole, "no-console", false, "Use non-console progress UI")
-}
-
 type BuildCommand struct {
-	buildArgs      stringSlice
+	buildArgs      []string
 	dockerfilePath string
 	target         string
 	tag            string
@@ -51,44 +43,62 @@ type BuildCommand struct {
 	noConsole  bool
 }
 
-func NewBuildCmd() (bc *BuildCommand) {
-	bc = &BuildCommand{}
+func NewBuildCmd(dir string, target string, tag string, buildArgs []string) (bc *BuildCommand, err errors.Error) {
+
+	bc = &BuildCommand{
+		dockerfilePath: filepath.Join(dir, "./Dockerfile"),
+		buildArgs:      buildArgs,
+		target:         target,
+		tag:            tag,
+		contextDir:     dir,
+		noConsole:      true,
+	}
+
+	if len(dir) == 0 || dir == "." {
+		cwd, errGo := os.Getwd()
+		if errGo != nil {
+			return nil, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+		}
+		bc.contextDir = cwd
+		bc.dockerfilePath = filepath.Join(cwd, "./Dockerfile")
+	}
+	bc.dockerfilePath = filepath.Clean(bc.dockerfilePath)
+
+	if _, errGo := os.Stat(bc.dockerfilePath); os.IsNotExist(errGo) {
+		return nil, errors.Wrap(errGo).With("file", bc.dockerfilePath).With("stack", stack.Trace().TrimRuntime())
+	}
+
+	named, errGo := reference.ParseNormalizedNamed(bc.tag)
+	if errGo != nil {
+		return nil, errors.Wrap(errGo, "invalid image name").With("tag", bc.tag).With("stack", stack.Trace().TrimRuntime())
+	}
+	// This will add the latest lag if they did not provide one
+	bc.tag = reference.TagNameOnly(named).String()
+
+	return bc, nil
 }
 
-func (cmd *BuildCommand) Run(args []string) (err error) {
-	if len(args) < 1 {
-		return errors.New("no dockerfile location was passed").With("stack", stack.Trace().TrimRuntime())
-	}
+func (cmd *BuildCommand) Build(stateDir string, logger chan<- string) (err errors.Error) {
 
 	if cmd.tag == "" {
 		return errors.New("tag for the generated image is missing").With("stack", stack.Trace().TrimRuntime())
 	}
 
-	// Get the specified context.
-	cmd.contextDir = args[0]
-
 	if cmd.contextDir == "" {
 		return errors.New("directory for the build context is empty").With("stack", stack.Trace().TrimRuntime())
 	}
 
-	// Parse the image name and tag.
-	named, errGo := reference.ParseNormalizedNamed(cmd.tag)
-	if errGo != nil {
-		return errors.Wrap(errGo, fmt.Sprintf("parsing image name %q failed", cmd.tag)).With("tag", cmd.tag).With("stack", stack.Trace().TrimRuntime())
-	}
-	// Add the latest lag if they did not provide one.
-	cmd.tag = reference.TagNameOnly(named).String()
-
 	// Set the dockerfile path as the default if one was not given.
 	if cmd.dockerfilePath == "" {
-		cmd.dockerfilePath, errGo = securejoin.SecureJoin(cmd.contextDir, defaultDockerfileName)
-		if err != nil {
-			return errors.Wrap(errGo).With("dockerfile", defaultDockerfileName).With("dir", cmd.contextDir).With("stack", stack.Trace().TrimRuntime())
+		p, errGo := securejoin.SecureJoin(cmd.contextDir, "Dockerfile")
+		if errGo != nil {
+			return errors.Wrap(errGo).With("dockerfile", p).With("dir", cmd.contextDir).With("stack", stack.Trace().TrimRuntime())
 		}
+		cmd.dockerfilePath = p
 	}
 
 	// Create the client.
-	c, errGo := client.New(stateDir, backend, cmd.getLocalDirs())
+	c, errGo := client.New(stateDir, types.AutoBackend, cmd.getLocalDirs())
 	if errGo != nil {
 		return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
@@ -110,14 +120,23 @@ func (cmd *BuildCommand) Run(args []string) (err error) {
 		frontendAttrs["build-arg:"+kv[0]] = kv[1]
 	}
 
-	fmt.Printf("Building %s\n", cmd.tag)
-	fmt.Println("Setting up the rootfs... this may take a bit.")
+	if logger != nil {
+		buffer := strings.Builder{}
+		buffer.WriteString("building ")
+		buffer.WriteString(cmd.tag)
+		buffer.WriteString("\nsetting up the rootfs... this may take a bit")
+
+		select {
+		case logger <- buffer.String():
+		case <-time.After(time.Second):
+		}
+	}
 
 	// Create the context.
 	ctx := appcontext.Context()
-	sess, sessDialer, err := c.Session(ctx)
-	if err != nil {
-		return err
+	sess, sessDialer, errGo := c.Session(ctx)
+	if errGo != nil {
+		return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	id := identity.NewID()
@@ -129,6 +148,7 @@ func (cmd *BuildCommand) Run(args []string) (err error) {
 	eg.Go(func() error {
 		return sess.Run(ctx, sessDialer)
 	})
+
 	// Solve the dockerfile.
 	eg.Go(func() error {
 		defer sess.Close()
@@ -143,13 +163,31 @@ func (cmd *BuildCommand) Run(args []string) (err error) {
 			FrontendAttrs: frontendAttrs,
 		}, ch)
 	})
+
+	// Capture logging style output from the builder
 	eg.Go(func() error {
-		return showProgress(ch, cmd.noConsole)
+
+		output := &WriterChannel{
+			c:       make(chan<- string),
+			timeout: time.Duration(20 * time.Millisecond),
+		}
+
+		return showProgress(ch, cmd.noConsole, output)
 	})
-	if err := eg.Wait(); err != nil {
-		return err
+
+	if errGo := eg.Wait(); errGo != nil {
+		return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
-	fmt.Printf("Successfully built %s\n", cmd.tag)
+
+	if logger != nil {
+		buffer := strings.Builder{}
+		buffer.WriteString("successfully built ")
+		buffer.WriteString(cmd.tag)
+		select {
+		case logger <- buffer.String():
+		case <-time.After(time.Second):
+		}
+	}
 
 	return nil
 }
@@ -161,7 +199,24 @@ func (cmd *BuildCommand) getLocalDirs() map[string]string {
 	}
 }
 
-func showProgress(ch chan *controlapi.StatusResponse, noConsole bool) error {
+type WriterChannel struct {
+	c       chan<- string
+	timeout time.Duration
+}
+
+func (wc *WriterChannel) Write(p []byte) (n int, err error) {
+	if wc != nil && wc.c != nil {
+		select {
+		case wc.c <- string(p):
+			return
+		case <-time.After(wc.timeout):
+		}
+	}
+	fmt.Sprintln(string(p))
+	return len(p), nil
+}
+
+func showProgress(ch chan *controlapi.StatusResponse, noConsole bool, sink *WriterChannel) error {
 	displayCh := make(chan *bkclient.SolveStatus)
 	go func() {
 		for resp := range ch {
@@ -201,11 +256,35 @@ func showProgress(ch chan *controlapi.StatusResponse, noConsole bool) error {
 		}
 		close(displayCh)
 	}()
+
+	if sink != nil {
+		return progressui.DisplaySolveStatus(context.TODO(), nil, sink, displayCh)
+	}
+
 	var c console.Console
 	if !noConsole {
 		if cf, err := console.ConsoleFromFile(os.Stderr); err == nil {
 			c = cf
 		}
 	}
+
 	return progressui.DisplaySolveStatus(context.TODO(), c, os.Stdout, displayCh)
+}
+
+func Prune(stateDir string) (err errors.Error) {
+	// Create the client.
+	c, errGo := client.New(stateDir, types.AutoBackend, nil)
+	if err != nil {
+		return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+	}
+	defer c.Close()
+
+	// Create the context.
+	ctx := session.NewContext(appcontext.Context(), identity.NewID())
+	ctx = namespaces.WithNamespace(ctx, "buildkit")
+
+	if _, errGo := c.Prune(ctx); errGo != nil {
+		return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+	}
+	return nil
 }

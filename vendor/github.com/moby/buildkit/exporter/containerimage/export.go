@@ -7,17 +7,20 @@ import (
 
 	"github.com/containerd/containerd/errdefs"
 	"github.com/containerd/containerd/images"
+	"github.com/moby/buildkit/cache"
 	"github.com/moby/buildkit/exporter"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/util/push"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 const (
-	keyImageName = "name"
-	keyPush      = "push"
-	keyInsecure  = "registry.insecure"
-	ociTypes     = "oci-mediatypes"
+	keyImageName        = "name"
+	keyPush             = "push"
+	keyInsecure         = "registry.insecure"
+	exporterImageConfig = "containerimage.config"
+	ociTypes            = "oci-mediatypes"
 )
 
 type Opt struct {
@@ -65,6 +68,8 @@ func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exp
 				return nil, errors.Wrapf(err, "non-bool value specified for %s", k)
 			}
 			i.insecure = b
+		case exporterImageConfig:
+			i.config = []byte(v)
 		case ociTypes:
 			if v == "" {
 				i.ociTypes = true
@@ -76,10 +81,7 @@ func (e *imageExporter) Resolve(ctx context.Context, opt map[string]string) (exp
 			}
 			i.ociTypes = b
 		default:
-			if i.meta == nil {
-				i.meta = make(map[string][]byte)
-				i.meta[k] = []byte(v)
-			}
+			logrus.Warnf("image exporter: unknown option %s", k)
 		}
 	}
 	return i, nil
@@ -91,18 +93,18 @@ type imageExporterInstance struct {
 	push       bool
 	insecure   bool
 	ociTypes   bool
-	meta       map[string][]byte
+	config     []byte
 }
 
 func (e *imageExporterInstance) Name() string {
 	return "exporting to image"
 }
 
-func (e *imageExporterInstance) Export(ctx context.Context, src exporter.Source) (map[string]string, error) {
-	for k, v := range e.meta {
-		src.Metadata[k] = v
+func (e *imageExporterInstance) Export(ctx context.Context, ref cache.ImmutableRef, opt map[string][]byte) (map[string]string, error) {
+	if config, ok := opt[exporterImageConfig]; ok {
+		e.config = config
 	}
-	desc, err := e.opt.ImageWriter.Commit(ctx, src, e.ociTypes)
+	desc, err := e.opt.ImageWriter.Commit(ctx, ref, e.config, e.ociTypes)
 	if err != nil {
 		return nil, err
 	}

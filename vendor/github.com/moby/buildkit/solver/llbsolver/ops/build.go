@@ -117,16 +117,12 @@ func (b *buildOp) Exec(ctx context.Context, inputs []solver.Result) (outputs []s
 	lm.Unmount()
 	lm = nil
 
-	newRes, err := b.b.Solve(ctx, frontend.SolveRequest{
+	newref, _, err := b.b.Solve(ctx, frontend.SolveRequest{
 		Definition: def.ToPB(),
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	for _, r := range newRes.Refs {
-		r.Release(context.TODO())
-	}
-
-	return []solver.Result{newRes.Ref}, err
+	return []solver.Result{newref}, err
 }

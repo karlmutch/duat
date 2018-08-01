@@ -133,7 +133,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:04b1eb007bf23aebd6bf7752296f569a83cff8c1b4891935511da6a8a7d2e083"
+  digest = "1:0f7773fadda124000c115ad69601c31bfbe26943782a9e1cf3463ae67b94e7a5"
   name = "github.com/containerd/containerd"
   packages = [
     "archive",
@@ -175,11 +175,10 @@
     "sys",
   ]
   pruneopts = "UT"
-  revision = "c55b9636f7079877e14c7a7f3ba1f57646f37c86"
+  revision = "875b92c507577fda378c26aed4030dcdeeff50eb"
 
 [[projects]]
-  branch = "master"
-  digest = "1:406ce04b6ad88587b01f73e64efc34f9e6c72c331a8b0dc762c61e4ea0488277"
+  digest = "1:a38ae8c91028969dbc198b04cea4dcf499c3e2f9902fba4785af4eefbb091d13"
   name = "github.com/containerd/continuity"
   packages = [
     "fs",
@@ -188,7 +187,7 @@
     "sysx",
   ]
   pruneopts = "UT"
-  revision = "0377f7d767206f3a9e8881d0f02267b0d89c7a62"
+  revision = "d3c23511c1bf5851696cba83143d9cbcd666869b"
 
 [[projects]]
   branch = "master"
@@ -250,7 +249,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:4d0f9abff51cfa7f230ae90fcdc99fcc6147dadc56399f7170418d1719ea8115"
+  digest = "1:6e4e4fc0a48975ebf607bbed1c24a3dd7855f0a5692892e44b364a9495af0490"
   name = "github.com/docker/docker"
   packages = [
     "api",
@@ -269,6 +268,7 @@
     "api/types/time",
     "api/types/versions",
     "api/types/volume",
+    "builder/dockerignore",
     "client",
     "errdefs",
     "pkg/archive",
@@ -281,6 +281,7 @@
     "pkg/longpath",
     "pkg/mount",
     "pkg/pools",
+    "pkg/signal",
     "pkg/stringid",
     "pkg/system",
     "pkg/tarsum",
@@ -290,7 +291,7 @@
     "registry/resumable",
   ]
   pruneopts = "UT"
-  revision = "73d73ba9622596b9c405f1ac955474804b286be6"
+  revision = "62739828d0bdf75b6dfc38e43d9d496c3da3db96"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -341,8 +342,7 @@
   version = "v0.3.3"
 
 [[projects]]
-  branch = "master"
-  digest = "1:3b9be9bbbeccd3de023e2712cb46eb43005eade9a00bac6e82fc7bcdf036021b"
+  digest = "1:74933066af88bc54177d62994bba377974290734ecb2a763da9266d8a1be9620"
   name = "github.com/docker/libnetwork"
   packages = [
     "resolvconf",
@@ -350,7 +350,7 @@
     "types",
   ]
   pruneopts = "UT"
-  revision = "9ffeaf7d8b64fa0eb64cc27835dc1a5a90328024"
+  revision = "822e5b59d346b7ad0735df2c8e445e9787320e67"
 
 [[projects]]
   digest = "1:de4a74b504df31145ffa8ca0c4edbffa2f3eb7f466753962184611b618fa5981"
@@ -393,14 +393,6 @@
   pruneopts = "UT"
   revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
   version = "v2.2.1"
-
-[[projects]]
-  digest = "1:e13cb038286ab79c110c415198e69fd8b02c5e7794cda168c04e3149736d8a21"
-  name = "github.com/gogo/googleapis"
-  packages = ["google/rpc"]
-  pruneopts = "UT"
-  revision = "08a7655d27152912db7aaf4f983275eaf8d128ef"
-  version = "v1.0.0"
 
 [[projects]]
   digest = "1:3f7c586d2fd571c4f2e3d313c0638b33b999055de507d5f11fafe27e5adc30db"
@@ -471,12 +463,12 @@
   revision = "8e809c8a86450a29b90dcc9efbf062d0fe6d9746"
 
 [[projects]]
-  branch = "master"
-  digest = "1:2394f5a25132b3868eff44599cc28d44bdd0330806e34c495d754dd052df612b"
+  digest = "1:913cf7536fc69d53ff2f35a3e9a1249dce737af9f2d1ad323b0383b6ff784516"
   name = "github.com/hashicorp/go-immutable-radix"
   packages = ["."]
   pruneopts = "UT"
-  revision = "7f3cd4390caab3250a57f30efdb2a65dd7649ecf"
+  revision = "826af9ccf0feeee615d546d69b11f8e98da8c8f1"
+  source = "github.com/tonistiigi/go-immutable-radix"
 
 [[projects]]
   branch = "master"
@@ -501,14 +493,6 @@
   pruneopts = "UT"
   revision = "9f23e2d6bd2a77f959b2bf6acdbefd708a83a4a4"
   version = "v0.3.6"
-
-[[projects]]
-  branch = "master"
-  digest = "1:3a04dd1cef94bd8dae8ba3ab471e48d7d8271a91028b63436ebb7b3d6002a9ae"
-  name = "github.com/ishidawataru/sctp"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "42f77ff5ed8d5b4a44d40cf86fa64bd220df6945"
 
 [[projects]]
   branch = "master"
@@ -646,12 +630,10 @@
   revision = "2bca23e0e452137f789efbc8610126fd8b94f73b"
 
 [[projects]]
-  branch = "master"
-  digest = "1:112fb45bbfecfb1ac5a6411649d864e881b4ae8d75643197bf4a84560803fe22"
+  digest = "1:7a24ac716b3ab2f570f96d64b696be206d7863d82403478822ed6d5b6a3f5424"
   name = "github.com/moby/buildkit"
   packages = [
     "api/services/control",
-    "api/types",
     "cache",
     "cache/blobs",
     "cache/contenthash",
@@ -660,17 +642,23 @@
     "cache/remotecache/v1",
     "client",
     "client/llb",
+    "client/llb/imagemetaresolver",
     "control",
     "executor",
     "executor/oci",
     "executor/runcexecutor",
     "exporter",
     "exporter/containerimage",
-    "exporter/containerimage/exptypes",
     "exporter/local",
     "exporter/oci",
     "frontend",
     "frontend/dockerfile",
+    "frontend/dockerfile/builder",
+    "frontend/dockerfile/command",
+    "frontend/dockerfile/dockerfile2llb",
+    "frontend/dockerfile/instructions",
+    "frontend/dockerfile/parser",
+    "frontend/dockerfile/shell",
     "frontend/gateway",
     "frontend/gateway/client",
     "frontend/gateway/pb",
@@ -680,12 +668,10 @@
     "session/auth/authprovider",
     "session/filesync",
     "session/grpchijack",
-    "session/secrets",
     "session/testutil",
     "snapshot",
     "snapshot/blobmapping",
     "snapshot/containerd",
-    "snapshot/imagerefchecker",
     "solver",
     "solver/boltdbcachestorage",
     "solver/internal/pipe",
@@ -697,8 +683,6 @@
     "source/git",
     "source/http",
     "source/local",
-    "util/apicaps",
-    "util/apicaps/pb",
     "util/appcontext",
     "util/appdefaults",
     "util/cond",
@@ -715,12 +699,11 @@
     "util/system",
     "util/throttle",
     "util/tracing",
-    "util/winlayers",
     "worker",
     "worker/base",
   ]
   pruneopts = "UT"
-  revision = "a5f442f2f4a068ef26ba71a865892a4a05db7705"
+  revision = "4e6f27047212e5129b62f082455a6bd81b361811"
 
 [[projects]]
   branch = "master"
@@ -806,15 +789,15 @@
   version = "v0.8.0"
 
 [[projects]]
-  digest = "1:d14a5f4bfecf017cb780bdde1b6483e5deb87e12c332544d2c430eda58734bcb"
+  branch = "master"
+  digest = "1:b82cbeab62e085ff6566c125f2978b17488f423466fb781dad29f4f4e388c75b"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
     "prometheus/promhttp",
   ]
   pruneopts = "UT"
-  revision = "c5b7fccd204277076155f10851dad72b76a49317"
-  version = "v0.8.0"
+  revision = "bcbbc08eb2ddff3af83bbf11e7ec13b4fd730b6e"
 
 [[projects]]
   branch = "master"
@@ -887,12 +870,11 @@
   revision = "33e07d32887e1e06b7c025f27ce52f62c7990bc0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:79193b1e871f8cad08ead0707b5dac22afe84b026e81d42350d9e1a57437b353"
+  digest = "1:b090171a4058954ab644018c87ce50b5c141d288df078727fd9befe4cbb91aad"
   name = "github.com/tonistiigi/fsutil"
   packages = ["."]
   pruneopts = "UT"
-  revision = "b19464cd1b6a00773b4f2eb7acf9c30426f9df42"
+  revision = "f636df5a0ce4d0ad213cf3405007b0c737f320d5"
 
 [[projects]]
   branch = "master"
@@ -1013,10 +995,10 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "UT"
-  revision = "2a72893556e4d1f6c795a4c039314c9fa751eedb"
+  revision = "daca94659cb50e9f37c1b834680f2e46358f10b0"
 
 [[projects]]
-  digest = "1:1a9c0243b6fc4ccd431b2ac2eb964b453db89e0465bab46a718695f8a7f25bfb"
+  digest = "1:047efbc3c9a51f3002b0002f92543857d372654a676fb6b01931982cd80467dd"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -1034,7 +1016,9 @@
     "internal",
     "internal/backoff",
     "internal/channelz",
+    "internal/envconfig",
     "internal/grpcrand",
+    "internal/transport",
     "keepalive",
     "metadata",
     "naming",
@@ -1045,11 +1029,10 @@
     "stats",
     "status",
     "tap",
-    "transport",
   ]
   pruneopts = "UT"
-  revision = "168a6198bcb0ef175f7dacec0b8691fc141dc9b8"
-  version = "v1.13.0"
+  revision = "32fb0ac620c32ba40a4626ddf94d90d12cce3455"
+  version = "v1.14.0"
 
 [[projects]]
   digest = "1:fd4a663d6407f5fb9f7b41e1f0bdeaf744b6bf4e23e5cc463c34d6e39036229e"
@@ -1139,6 +1122,7 @@
     "github.com/docker/docker/api/types",
     "github.com/docker/docker/client",
     "github.com/genuinetools/img/client",
+    "github.com/genuinetools/img/types",
     "github.com/go-yaml/yaml",
     "github.com/karlmutch/amicontained/container",
     "github.com/karlmutch/base62",

@@ -8,10 +8,6 @@
 		gateway.proto
 
 	It has these top-level messages:
-		Result
-		RefMap
-		ReturnRequest
-		ReturnResponse
 		ResolveImageConfigRequest
 		ResolveImageConfigResponse
 		SolveRequest
@@ -28,10 +24,7 @@ import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"
 import _ "github.com/gogo/protobuf/gogoproto"
-import google_rpc "github.com/gogo/googleapis/google/rpc"
 import pb "github.com/moby/buildkit/solver/pb"
-import moby_buildkit_v1_types "github.com/moby/buildkit/api/types"
-import moby_buildkit_v1_apicaps "github.com/moby/buildkit/util/apicaps/pb"
 
 import github_com_opencontainers_go_digest "github.com/opencontainers/go-digest"
 
@@ -51,191 +44,15 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
-type Result struct {
-	// Types that are valid to be assigned to Result:
-	//	*Result_Ref
-	//	*Result_Refs
-	Result   isResult_Result   `protobuf_oneof:"result"`
-	Metadata map[string][]byte `protobuf:"bytes,10,rep,name=metadata" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-}
-
-func (m *Result) Reset()                    { *m = Result{} }
-func (m *Result) String() string            { return proto.CompactTextString(m) }
-func (*Result) ProtoMessage()               {}
-func (*Result) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{0} }
-
-type isResult_Result interface {
-	isResult_Result()
-	MarshalTo([]byte) (int, error)
-	Size() int
-}
-
-type Result_Ref struct {
-	Ref string `protobuf:"bytes,1,opt,name=ref,proto3,oneof"`
-}
-type Result_Refs struct {
-	Refs *RefMap `protobuf:"bytes,2,opt,name=refs,oneof"`
-}
-
-func (*Result_Ref) isResult_Result()  {}
-func (*Result_Refs) isResult_Result() {}
-
-func (m *Result) GetResult() isResult_Result {
-	if m != nil {
-		return m.Result
-	}
-	return nil
-}
-
-func (m *Result) GetRef() string {
-	if x, ok := m.GetResult().(*Result_Ref); ok {
-		return x.Ref
-	}
-	return ""
-}
-
-func (m *Result) GetRefs() *RefMap {
-	if x, ok := m.GetResult().(*Result_Refs); ok {
-		return x.Refs
-	}
-	return nil
-}
-
-func (m *Result) GetMetadata() map[string][]byte {
-	if m != nil {
-		return m.Metadata
-	}
-	return nil
-}
-
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*Result) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _Result_OneofMarshaler, _Result_OneofUnmarshaler, _Result_OneofSizer, []interface{}{
-		(*Result_Ref)(nil),
-		(*Result_Refs)(nil),
-	}
-}
-
-func _Result_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*Result)
-	// result
-	switch x := m.Result.(type) {
-	case *Result_Ref:
-		_ = b.EncodeVarint(1<<3 | proto.WireBytes)
-		_ = b.EncodeStringBytes(x.Ref)
-	case *Result_Refs:
-		_ = b.EncodeVarint(2<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Refs); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("Result.Result has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _Result_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*Result)
-	switch tag {
-	case 1: // result.ref
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeStringBytes()
-		m.Result = &Result_Ref{x}
-		return true, err
-	case 2: // result.refs
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(RefMap)
-		err := b.DecodeMessage(msg)
-		m.Result = &Result_Refs{msg}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _Result_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*Result)
-	// result
-	switch x := m.Result.(type) {
-	case *Result_Ref:
-		n += proto.SizeVarint(1<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(len(x.Ref)))
-		n += len(x.Ref)
-	case *Result_Refs:
-		s := proto.Size(x.Refs)
-		n += proto.SizeVarint(2<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
-}
-
-type RefMap struct {
-	Refs map[string]string `protobuf:"bytes,1,rep,name=refs" json:"refs,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-}
-
-func (m *RefMap) Reset()                    { *m = RefMap{} }
-func (m *RefMap) String() string            { return proto.CompactTextString(m) }
-func (*RefMap) ProtoMessage()               {}
-func (*RefMap) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{1} }
-
-func (m *RefMap) GetRefs() map[string]string {
-	if m != nil {
-		return m.Refs
-	}
-	return nil
-}
-
-type ReturnRequest struct {
-	Result *Result            `protobuf:"bytes,1,opt,name=result" json:"result,omitempty"`
-	Error  *google_rpc.Status `protobuf:"bytes,2,opt,name=error" json:"error,omitempty"`
-}
-
-func (m *ReturnRequest) Reset()                    { *m = ReturnRequest{} }
-func (m *ReturnRequest) String() string            { return proto.CompactTextString(m) }
-func (*ReturnRequest) ProtoMessage()               {}
-func (*ReturnRequest) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{2} }
-
-func (m *ReturnRequest) GetResult() *Result {
-	if m != nil {
-		return m.Result
-	}
-	return nil
-}
-
-func (m *ReturnRequest) GetError() *google_rpc.Status {
-	if m != nil {
-		return m.Error
-	}
-	return nil
-}
-
-type ReturnResponse struct {
-}
-
-func (m *ReturnResponse) Reset()                    { *m = ReturnResponse{} }
-func (m *ReturnResponse) String() string            { return proto.CompactTextString(m) }
-func (*ReturnResponse) ProtoMessage()               {}
-func (*ReturnResponse) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{3} }
-
 type ResolveImageConfigRequest struct {
-	Ref         string       `protobuf:"bytes,1,opt,name=Ref,proto3" json:"Ref,omitempty"`
-	Platform    *pb.Platform `protobuf:"bytes,2,opt,name=Platform" json:"Platform,omitempty"`
-	ResolveMode string       `protobuf:"bytes,3,opt,name=ResolveMode,proto3" json:"ResolveMode,omitempty"`
+	Ref      string       `protobuf:"bytes,1,opt,name=Ref,proto3" json:"Ref,omitempty"`
+	Platform *pb.Platform `protobuf:"bytes,2,opt,name=Platform" json:"Platform,omitempty"`
 }
 
 func (m *ResolveImageConfigRequest) Reset()                    { *m = ResolveImageConfigRequest{} }
 func (m *ResolveImageConfigRequest) String() string            { return proto.CompactTextString(m) }
 func (*ResolveImageConfigRequest) ProtoMessage()               {}
-func (*ResolveImageConfigRequest) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{4} }
+func (*ResolveImageConfigRequest) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{0} }
 
 func (m *ResolveImageConfigRequest) GetRef() string {
 	if m != nil {
@@ -251,13 +68,6 @@ func (m *ResolveImageConfigRequest) GetPlatform() *pb.Platform {
 	return nil
 }
 
-func (m *ResolveImageConfigRequest) GetResolveMode() string {
-	if m != nil {
-		return m.ResolveMode
-	}
-	return ""
-}
-
 type ResolveImageConfigResponse struct {
 	Digest github_com_opencontainers_go_digest.Digest `protobuf:"bytes,1,opt,name=Digest,proto3,customtype=github.com/opencontainers/go-digest.Digest" json:"Digest"`
 	Config []byte                                     `protobuf:"bytes,2,opt,name=Config,proto3" json:"Config,omitempty"`
@@ -267,7 +77,7 @@ func (m *ResolveImageConfigResponse) Reset()         { *m = ResolveImageConfigRe
 func (m *ResolveImageConfigResponse) String() string { return proto.CompactTextString(m) }
 func (*ResolveImageConfigResponse) ProtoMessage()    {}
 func (*ResolveImageConfigResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptorGateway, []int{5}
+	return fileDescriptorGateway, []int{1}
 }
 
 func (m *ResolveImageConfigResponse) GetConfig() []byte {
@@ -278,20 +88,18 @@ func (m *ResolveImageConfigResponse) GetConfig() []byte {
 }
 
 type SolveRequest struct {
-	Definition        *pb.Definition    `protobuf:"bytes,1,opt,name=Definition" json:"Definition,omitempty"`
-	Frontend          string            `protobuf:"bytes,2,opt,name=Frontend,proto3" json:"Frontend,omitempty"`
-	FrontendOpt       map[string]string `protobuf:"bytes,3,rep,name=FrontendOpt" json:"FrontendOpt,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	ImportCacheRefs   []string          `protobuf:"bytes,4,rep,name=ImportCacheRefs" json:"ImportCacheRefs,omitempty"`
-	AllowResultReturn bool              `protobuf:"varint,5,opt,name=allowResultReturn,proto3" json:"allowResultReturn,omitempty"`
-	// apicaps.CapSolveInlineReturn deprecated
-	Final        bool   `protobuf:"varint,10,opt,name=Final,proto3" json:"Final,omitempty"`
-	ExporterAttr []byte `protobuf:"bytes,11,opt,name=ExporterAttr,proto3" json:"ExporterAttr,omitempty"`
+	Definition      *pb.Definition    `protobuf:"bytes,1,opt,name=Definition" json:"Definition,omitempty"`
+	Frontend        string            `protobuf:"bytes,2,opt,name=Frontend,proto3" json:"Frontend,omitempty"`
+	FrontendOpt     map[string]string `protobuf:"bytes,3,rep,name=FrontendOpt" json:"FrontendOpt,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	ImportCacheRefs []string          `protobuf:"bytes,4,rep,name=ImportCacheRefs" json:"ImportCacheRefs,omitempty"`
+	Final           bool              `protobuf:"varint,10,opt,name=Final,proto3" json:"Final,omitempty"`
+	ExporterAttr    []byte            `protobuf:"bytes,11,opt,name=ExporterAttr,proto3" json:"ExporterAttr,omitempty"`
 }
 
 func (m *SolveRequest) Reset()                    { *m = SolveRequest{} }
 func (m *SolveRequest) String() string            { return proto.CompactTextString(m) }
 func (*SolveRequest) ProtoMessage()               {}
-func (*SolveRequest) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{6} }
+func (*SolveRequest) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{2} }
 
 func (m *SolveRequest) GetDefinition() *pb.Definition {
 	if m != nil {
@@ -321,13 +129,6 @@ func (m *SolveRequest) GetImportCacheRefs() []string {
 	return nil
 }
 
-func (m *SolveRequest) GetAllowResultReturn() bool {
-	if m != nil {
-		return m.AllowResultReturn
-	}
-	return false
-}
-
 func (m *SolveRequest) GetFinal() bool {
 	if m != nil {
 		return m.Final
@@ -343,16 +144,14 @@ func (m *SolveRequest) GetExporterAttr() []byte {
 }
 
 type SolveResponse struct {
-	// deprecated
-	Ref string `protobuf:"bytes,1,opt,name=ref,proto3" json:"ref,omitempty"`
-	// these fields are returned when allowMapReturn was set
-	Result *Result `protobuf:"bytes,3,opt,name=result" json:"result,omitempty"`
+	Ref          string `protobuf:"bytes,1,opt,name=Ref,proto3" json:"Ref,omitempty"`
+	ExporterAttr []byte `protobuf:"bytes,2,opt,name=ExporterAttr,proto3" json:"ExporterAttr,omitempty"`
 }
 
 func (m *SolveResponse) Reset()                    { *m = SolveResponse{} }
 func (m *SolveResponse) String() string            { return proto.CompactTextString(m) }
 func (*SolveResponse) ProtoMessage()               {}
-func (*SolveResponse) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{7} }
+func (*SolveResponse) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{3} }
 
 func (m *SolveResponse) GetRef() string {
 	if m != nil {
@@ -361,9 +160,9 @@ func (m *SolveResponse) GetRef() string {
 	return ""
 }
 
-func (m *SolveResponse) GetResult() *Result {
+func (m *SolveResponse) GetExporterAttr() []byte {
 	if m != nil {
-		return m.Result
+		return m.ExporterAttr
 	}
 	return nil
 }
@@ -377,7 +176,7 @@ type ReadFileRequest struct {
 func (m *ReadFileRequest) Reset()                    { *m = ReadFileRequest{} }
 func (m *ReadFileRequest) String() string            { return proto.CompactTextString(m) }
 func (*ReadFileRequest) ProtoMessage()               {}
-func (*ReadFileRequest) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{8} }
+func (*ReadFileRequest) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{4} }
 
 func (m *ReadFileRequest) GetRef() string {
 	if m != nil {
@@ -408,7 +207,7 @@ type FileRange struct {
 func (m *FileRange) Reset()                    { *m = FileRange{} }
 func (m *FileRange) String() string            { return proto.CompactTextString(m) }
 func (*FileRange) ProtoMessage()               {}
-func (*FileRange) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{9} }
+func (*FileRange) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{5} }
 
 func (m *FileRange) GetOffset() int64 {
 	if m != nil {
@@ -431,7 +230,7 @@ type ReadFileResponse struct {
 func (m *ReadFileResponse) Reset()                    { *m = ReadFileResponse{} }
 func (m *ReadFileResponse) String() string            { return proto.CompactTextString(m) }
 func (*ReadFileResponse) ProtoMessage()               {}
-func (*ReadFileResponse) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{10} }
+func (*ReadFileResponse) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{6} }
 
 func (m *ReadFileResponse) GetData() []byte {
 	if m != nil {
@@ -446,45 +245,17 @@ type PingRequest struct {
 func (m *PingRequest) Reset()                    { *m = PingRequest{} }
 func (m *PingRequest) String() string            { return proto.CompactTextString(m) }
 func (*PingRequest) ProtoMessage()               {}
-func (*PingRequest) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{11} }
+func (*PingRequest) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{7} }
 
 type PongResponse struct {
-	FrontendAPICaps []moby_buildkit_v1_apicaps.APICap      `protobuf:"bytes,1,rep,name=FrontendAPICaps" json:"FrontendAPICaps"`
-	LLBCaps         []moby_buildkit_v1_apicaps.APICap      `protobuf:"bytes,2,rep,name=LLBCaps" json:"LLBCaps"`
-	Workers         []*moby_buildkit_v1_types.WorkerRecord `protobuf:"bytes,3,rep,name=Workers" json:"Workers,omitempty"`
 }
 
 func (m *PongResponse) Reset()                    { *m = PongResponse{} }
 func (m *PongResponse) String() string            { return proto.CompactTextString(m) }
 func (*PongResponse) ProtoMessage()               {}
-func (*PongResponse) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{12} }
-
-func (m *PongResponse) GetFrontendAPICaps() []moby_buildkit_v1_apicaps.APICap {
-	if m != nil {
-		return m.FrontendAPICaps
-	}
-	return nil
-}
-
-func (m *PongResponse) GetLLBCaps() []moby_buildkit_v1_apicaps.APICap {
-	if m != nil {
-		return m.LLBCaps
-	}
-	return nil
-}
-
-func (m *PongResponse) GetWorkers() []*moby_buildkit_v1_types.WorkerRecord {
-	if m != nil {
-		return m.Workers
-	}
-	return nil
-}
+func (*PongResponse) Descriptor() ([]byte, []int) { return fileDescriptorGateway, []int{8} }
 
 func init() {
-	proto.RegisterType((*Result)(nil), "moby.buildkit.v1.frontend.Result")
-	proto.RegisterType((*RefMap)(nil), "moby.buildkit.v1.frontend.RefMap")
-	proto.RegisterType((*ReturnRequest)(nil), "moby.buildkit.v1.frontend.ReturnRequest")
-	proto.RegisterType((*ReturnResponse)(nil), "moby.buildkit.v1.frontend.ReturnResponse")
 	proto.RegisterType((*ResolveImageConfigRequest)(nil), "moby.buildkit.v1.frontend.ResolveImageConfigRequest")
 	proto.RegisterType((*ResolveImageConfigResponse)(nil), "moby.buildkit.v1.frontend.ResolveImageConfigResponse")
 	proto.RegisterType((*SolveRequest)(nil), "moby.buildkit.v1.frontend.SolveRequest")
@@ -507,14 +278,10 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for LLBBridge service
 
 type LLBBridgeClient interface {
-	// apicaps:CapResolveImage
 	ResolveImageConfig(ctx context.Context, in *ResolveImageConfigRequest, opts ...grpc.CallOption) (*ResolveImageConfigResponse, error)
-	// apicaps:CapSolveBase
 	Solve(ctx context.Context, in *SolveRequest, opts ...grpc.CallOption) (*SolveResponse, error)
-	// apicaps:CapReadFile
 	ReadFile(ctx context.Context, in *ReadFileRequest, opts ...grpc.CallOption) (*ReadFileResponse, error)
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PongResponse, error)
-	Return(ctx context.Context, in *ReturnRequest, opts ...grpc.CallOption) (*ReturnResponse, error)
 }
 
 type lLBBridgeClient struct {
@@ -561,26 +328,13 @@ func (c *lLBBridgeClient) Ping(ctx context.Context, in *PingRequest, opts ...grp
 	return out, nil
 }
 
-func (c *lLBBridgeClient) Return(ctx context.Context, in *ReturnRequest, opts ...grpc.CallOption) (*ReturnResponse, error) {
-	out := new(ReturnResponse)
-	err := grpc.Invoke(ctx, "/moby.buildkit.v1.frontend.LLBBridge/Return", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // Server API for LLBBridge service
 
 type LLBBridgeServer interface {
-	// apicaps:CapResolveImage
 	ResolveImageConfig(context.Context, *ResolveImageConfigRequest) (*ResolveImageConfigResponse, error)
-	// apicaps:CapSolveBase
 	Solve(context.Context, *SolveRequest) (*SolveResponse, error)
-	// apicaps:CapReadFile
 	ReadFile(context.Context, *ReadFileRequest) (*ReadFileResponse, error)
 	Ping(context.Context, *PingRequest) (*PongResponse, error)
-	Return(context.Context, *ReturnRequest) (*ReturnResponse, error)
 }
 
 func RegisterLLBBridgeServer(s *grpc.Server, srv LLBBridgeServer) {
@@ -659,24 +413,6 @@ func _LLBBridge_Ping_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _LLBBridge_Return_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReturnRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(LLBBridgeServer).Return(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/moby.buildkit.v1.frontend.LLBBridge/Return",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(LLBBridgeServer).Return(ctx, req.(*ReturnRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 var _LLBBridge_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "moby.buildkit.v1.frontend.LLBBridge",
 	HandlerType: (*LLBBridgeServer)(nil),
@@ -697,174 +433,9 @@ var _LLBBridge_serviceDesc = grpc.ServiceDesc{
 			MethodName: "Ping",
 			Handler:    _LLBBridge_Ping_Handler,
 		},
-		{
-			MethodName: "Return",
-			Handler:    _LLBBridge_Return_Handler,
-		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "gateway.proto",
-}
-
-func (m *Result) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Result) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.Result != nil {
-		nn1, err := m.Result.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += nn1
-	}
-	if len(m.Metadata) > 0 {
-		for k, _ := range m.Metadata {
-			dAtA[i] = 0x52
-			i++
-			v := m.Metadata[k]
-			byteSize := 0
-			if len(v) > 0 {
-				byteSize = 1 + len(v) + sovGateway(uint64(len(v)))
-			}
-			mapSize := 1 + len(k) + sovGateway(uint64(len(k))) + byteSize
-			i = encodeVarintGateway(dAtA, i, uint64(mapSize))
-			dAtA[i] = 0xa
-			i++
-			i = encodeVarintGateway(dAtA, i, uint64(len(k)))
-			i += copy(dAtA[i:], k)
-			if len(v) > 0 {
-				dAtA[i] = 0x12
-				i++
-				i = encodeVarintGateway(dAtA, i, uint64(len(v)))
-				i += copy(dAtA[i:], v)
-			}
-		}
-	}
-	return i, nil
-}
-
-func (m *Result_Ref) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	dAtA[i] = 0xa
-	i++
-	i = encodeVarintGateway(dAtA, i, uint64(len(m.Ref)))
-	i += copy(dAtA[i:], m.Ref)
-	return i, nil
-}
-func (m *Result_Refs) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Refs != nil {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintGateway(dAtA, i, uint64(m.Refs.Size()))
-		n2, err := m.Refs.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n2
-	}
-	return i, nil
-}
-func (m *RefMap) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *RefMap) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if len(m.Refs) > 0 {
-		for k, _ := range m.Refs {
-			dAtA[i] = 0xa
-			i++
-			v := m.Refs[k]
-			mapSize := 1 + len(k) + sovGateway(uint64(len(k))) + 1 + len(v) + sovGateway(uint64(len(v)))
-			i = encodeVarintGateway(dAtA, i, uint64(mapSize))
-			dAtA[i] = 0xa
-			i++
-			i = encodeVarintGateway(dAtA, i, uint64(len(k)))
-			i += copy(dAtA[i:], k)
-			dAtA[i] = 0x12
-			i++
-			i = encodeVarintGateway(dAtA, i, uint64(len(v)))
-			i += copy(dAtA[i:], v)
-		}
-	}
-	return i, nil
-}
-
-func (m *ReturnRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ReturnRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if m.Result != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintGateway(dAtA, i, uint64(m.Result.Size()))
-		n3, err := m.Result.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n3
-	}
-	if m.Error != nil {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintGateway(dAtA, i, uint64(m.Error.Size()))
-		n4, err := m.Error.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n4
-	}
-	return i, nil
-}
-
-func (m *ReturnResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *ReturnResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	return i, nil
 }
 
 func (m *ResolveImageConfigRequest) Marshal() (dAtA []byte, err error) {
@@ -892,17 +463,11 @@ func (m *ResolveImageConfigRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintGateway(dAtA, i, uint64(m.Platform.Size()))
-		n5, err := m.Platform.MarshalTo(dAtA[i:])
+		n1, err := m.Platform.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n5
-	}
-	if len(m.ResolveMode) > 0 {
-		dAtA[i] = 0x1a
-		i++
-		i = encodeVarintGateway(dAtA, i, uint64(len(m.ResolveMode)))
-		i += copy(dAtA[i:], m.ResolveMode)
+		i += n1
 	}
 	return i, nil
 }
@@ -956,11 +521,11 @@ func (m *SolveRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintGateway(dAtA, i, uint64(m.Definition.Size()))
-		n6, err := m.Definition.MarshalTo(dAtA[i:])
+		n2, err := m.Definition.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n6
+		i += n2
 	}
 	if len(m.Frontend) > 0 {
 		dAtA[i] = 0x12
@@ -999,16 +564,6 @@ func (m *SolveRequest) MarshalTo(dAtA []byte) (int, error) {
 			i++
 			i += copy(dAtA[i:], s)
 		}
-	}
-	if m.AllowResultReturn {
-		dAtA[i] = 0x28
-		i++
-		if m.AllowResultReturn {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i++
 	}
 	if m.Final {
 		dAtA[i] = 0x50
@@ -1050,15 +605,11 @@ func (m *SolveResponse) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintGateway(dAtA, i, uint64(len(m.Ref)))
 		i += copy(dAtA[i:], m.Ref)
 	}
-	if m.Result != nil {
-		dAtA[i] = 0x1a
+	if len(m.ExporterAttr) > 0 {
+		dAtA[i] = 0x12
 		i++
-		i = encodeVarintGateway(dAtA, i, uint64(m.Result.Size()))
-		n7, err := m.Result.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n7
+		i = encodeVarintGateway(dAtA, i, uint64(len(m.ExporterAttr)))
+		i += copy(dAtA[i:], m.ExporterAttr)
 	}
 	return i, nil
 }
@@ -1094,11 +645,11 @@ func (m *ReadFileRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintGateway(dAtA, i, uint64(m.Range.Size()))
-		n8, err := m.Range.MarshalTo(dAtA[i:])
+		n3, err := m.Range.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n8
+		i += n3
 	}
 	return i, nil
 }
@@ -1188,42 +739,6 @@ func (m *PongResponse) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.FrontendAPICaps) > 0 {
-		for _, msg := range m.FrontendAPICaps {
-			dAtA[i] = 0xa
-			i++
-			i = encodeVarintGateway(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
-			}
-			i += n
-		}
-	}
-	if len(m.LLBCaps) > 0 {
-		for _, msg := range m.LLBCaps {
-			dAtA[i] = 0x12
-			i++
-			i = encodeVarintGateway(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
-			}
-			i += n
-		}
-	}
-	if len(m.Workers) > 0 {
-		for _, msg := range m.Workers {
-			dAtA[i] = 0x1a
-			i++
-			i = encodeVarintGateway(dAtA, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(dAtA[i:])
-			if err != nil {
-				return 0, err
-			}
-			i += n
-		}
-	}
 	return i, nil
 }
 
@@ -1236,77 +751,6 @@ func encodeVarintGateway(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return offset + 1
 }
-func (m *Result) Size() (n int) {
-	var l int
-	_ = l
-	if m.Result != nil {
-		n += m.Result.Size()
-	}
-	if len(m.Metadata) > 0 {
-		for k, v := range m.Metadata {
-			_ = k
-			_ = v
-			l = 0
-			if len(v) > 0 {
-				l = 1 + len(v) + sovGateway(uint64(len(v)))
-			}
-			mapEntrySize := 1 + len(k) + sovGateway(uint64(len(k))) + l
-			n += mapEntrySize + 1 + sovGateway(uint64(mapEntrySize))
-		}
-	}
-	return n
-}
-
-func (m *Result_Ref) Size() (n int) {
-	var l int
-	_ = l
-	l = len(m.Ref)
-	n += 1 + l + sovGateway(uint64(l))
-	return n
-}
-func (m *Result_Refs) Size() (n int) {
-	var l int
-	_ = l
-	if m.Refs != nil {
-		l = m.Refs.Size()
-		n += 1 + l + sovGateway(uint64(l))
-	}
-	return n
-}
-func (m *RefMap) Size() (n int) {
-	var l int
-	_ = l
-	if len(m.Refs) > 0 {
-		for k, v := range m.Refs {
-			_ = k
-			_ = v
-			mapEntrySize := 1 + len(k) + sovGateway(uint64(len(k))) + 1 + len(v) + sovGateway(uint64(len(v)))
-			n += mapEntrySize + 1 + sovGateway(uint64(mapEntrySize))
-		}
-	}
-	return n
-}
-
-func (m *ReturnRequest) Size() (n int) {
-	var l int
-	_ = l
-	if m.Result != nil {
-		l = m.Result.Size()
-		n += 1 + l + sovGateway(uint64(l))
-	}
-	if m.Error != nil {
-		l = m.Error.Size()
-		n += 1 + l + sovGateway(uint64(l))
-	}
-	return n
-}
-
-func (m *ReturnResponse) Size() (n int) {
-	var l int
-	_ = l
-	return n
-}
-
 func (m *ResolveImageConfigRequest) Size() (n int) {
 	var l int
 	_ = l
@@ -1316,10 +760,6 @@ func (m *ResolveImageConfigRequest) Size() (n int) {
 	}
 	if m.Platform != nil {
 		l = m.Platform.Size()
-		n += 1 + l + sovGateway(uint64(l))
-	}
-	l = len(m.ResolveMode)
-	if l > 0 {
 		n += 1 + l + sovGateway(uint64(l))
 	}
 	return n
@@ -1364,9 +804,6 @@ func (m *SolveRequest) Size() (n int) {
 			n += 1 + l + sovGateway(uint64(l))
 		}
 	}
-	if m.AllowResultReturn {
-		n += 2
-	}
 	if m.Final {
 		n += 2
 	}
@@ -1384,8 +821,8 @@ func (m *SolveResponse) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovGateway(uint64(l))
 	}
-	if m.Result != nil {
-		l = m.Result.Size()
+	l = len(m.ExporterAttr)
+	if l > 0 {
 		n += 1 + l + sovGateway(uint64(l))
 	}
 	return n
@@ -1440,24 +877,6 @@ func (m *PingRequest) Size() (n int) {
 func (m *PongResponse) Size() (n int) {
 	var l int
 	_ = l
-	if len(m.FrontendAPICaps) > 0 {
-		for _, e := range m.FrontendAPICaps {
-			l = e.Size()
-			n += 1 + l + sovGateway(uint64(l))
-		}
-	}
-	if len(m.LLBCaps) > 0 {
-		for _, e := range m.LLBCaps {
-			l = e.Size()
-			n += 1 + l + sovGateway(uint64(l))
-		}
-	}
-	if len(m.Workers) > 0 {
-		for _, e := range m.Workers {
-			l = e.Size()
-			n += 1 + l + sovGateway(uint64(l))
-		}
-	}
 	return n
 }
 
@@ -1473,570 +892,6 @@ func sovGateway(x uint64) (n int) {
 }
 func sozGateway(x uint64) (n int) {
 	return sovGateway(uint64((x << 1) ^ uint64((int64(x) >> 63))))
-}
-func (m *Result) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGateway
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Result: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Result: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Ref", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGateway
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGateway
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Result = &Result_Ref{string(dAtA[iNdEx:postIndex])}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Refs", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGateway
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGateway
-			}
-			postIndex := iNdEx + msglen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &RefMap{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Result = &Result_Refs{v}
-			iNdEx = postIndex
-		case 10:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Metadata", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGateway
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGateway
-			}
-			postIndex := iNdEx + msglen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Metadata == nil {
-				m.Metadata = make(map[string][]byte)
-			}
-			var mapkey string
-			mapvalue := []byte{}
-			for iNdEx < postIndex {
-				entryPreIndex := iNdEx
-				var wire uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowGateway
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					wire |= (uint64(b) & 0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				fieldNum := int32(wire >> 3)
-				if fieldNum == 1 {
-					var stringLenmapkey uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowGateway
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						stringLenmapkey |= (uint64(b) & 0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intStringLenmapkey := int(stringLenmapkey)
-					if intStringLenmapkey < 0 {
-						return ErrInvalidLengthGateway
-					}
-					postStringIndexmapkey := iNdEx + intStringLenmapkey
-					if postStringIndexmapkey > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
-					iNdEx = postStringIndexmapkey
-				} else if fieldNum == 2 {
-					var mapbyteLen uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowGateway
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						mapbyteLen |= (uint64(b) & 0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intMapbyteLen := int(mapbyteLen)
-					if intMapbyteLen < 0 {
-						return ErrInvalidLengthGateway
-					}
-					postbytesIndex := iNdEx + intMapbyteLen
-					if postbytesIndex > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapvalue = make([]byte, mapbyteLen)
-					copy(mapvalue, dAtA[iNdEx:postbytesIndex])
-					iNdEx = postbytesIndex
-				} else {
-					iNdEx = entryPreIndex
-					skippy, err := skipGateway(dAtA[iNdEx:])
-					if err != nil {
-						return err
-					}
-					if skippy < 0 {
-						return ErrInvalidLengthGateway
-					}
-					if (iNdEx + skippy) > postIndex {
-						return io.ErrUnexpectedEOF
-					}
-					iNdEx += skippy
-				}
-			}
-			m.Metadata[mapkey] = mapvalue
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGateway(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthGateway
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *RefMap) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGateway
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: RefMap: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: RefMap: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Refs", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGateway
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGateway
-			}
-			postIndex := iNdEx + msglen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Refs == nil {
-				m.Refs = make(map[string]string)
-			}
-			var mapkey string
-			var mapvalue string
-			for iNdEx < postIndex {
-				entryPreIndex := iNdEx
-				var wire uint64
-				for shift := uint(0); ; shift += 7 {
-					if shift >= 64 {
-						return ErrIntOverflowGateway
-					}
-					if iNdEx >= l {
-						return io.ErrUnexpectedEOF
-					}
-					b := dAtA[iNdEx]
-					iNdEx++
-					wire |= (uint64(b) & 0x7F) << shift
-					if b < 0x80 {
-						break
-					}
-				}
-				fieldNum := int32(wire >> 3)
-				if fieldNum == 1 {
-					var stringLenmapkey uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowGateway
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						stringLenmapkey |= (uint64(b) & 0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intStringLenmapkey := int(stringLenmapkey)
-					if intStringLenmapkey < 0 {
-						return ErrInvalidLengthGateway
-					}
-					postStringIndexmapkey := iNdEx + intStringLenmapkey
-					if postStringIndexmapkey > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
-					iNdEx = postStringIndexmapkey
-				} else if fieldNum == 2 {
-					var stringLenmapvalue uint64
-					for shift := uint(0); ; shift += 7 {
-						if shift >= 64 {
-							return ErrIntOverflowGateway
-						}
-						if iNdEx >= l {
-							return io.ErrUnexpectedEOF
-						}
-						b := dAtA[iNdEx]
-						iNdEx++
-						stringLenmapvalue |= (uint64(b) & 0x7F) << shift
-						if b < 0x80 {
-							break
-						}
-					}
-					intStringLenmapvalue := int(stringLenmapvalue)
-					if intStringLenmapvalue < 0 {
-						return ErrInvalidLengthGateway
-					}
-					postStringIndexmapvalue := iNdEx + intStringLenmapvalue
-					if postStringIndexmapvalue > l {
-						return io.ErrUnexpectedEOF
-					}
-					mapvalue = string(dAtA[iNdEx:postStringIndexmapvalue])
-					iNdEx = postStringIndexmapvalue
-				} else {
-					iNdEx = entryPreIndex
-					skippy, err := skipGateway(dAtA[iNdEx:])
-					if err != nil {
-						return err
-					}
-					if skippy < 0 {
-						return ErrInvalidLengthGateway
-					}
-					if (iNdEx + skippy) > postIndex {
-						return io.ErrUnexpectedEOF
-					}
-					iNdEx += skippy
-				}
-			}
-			m.Refs[mapkey] = mapvalue
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGateway(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthGateway
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ReturnRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGateway
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ReturnRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ReturnRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Result", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGateway
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGateway
-			}
-			postIndex := iNdEx + msglen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Result == nil {
-				m.Result = &Result{}
-			}
-			if err := m.Result.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGateway
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGateway
-			}
-			postIndex := iNdEx + msglen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.Error == nil {
-				m.Error = &google_rpc.Status{}
-			}
-			if err := m.Error.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGateway(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthGateway
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *ReturnResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowGateway
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: ReturnResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ReturnResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipGateway(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthGateway
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
 }
 func (m *ResolveImageConfigRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
@@ -2128,35 +983,6 @@ func (m *ResolveImageConfigRequest) Unmarshal(dAtA []byte) error {
 			if err := m.Platform.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ResolveMode", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGateway
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthGateway
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ResolveMode = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -2527,26 +1353,6 @@ func (m *SolveRequest) Unmarshal(dAtA []byte) error {
 			}
 			m.ImportCacheRefs = append(m.ImportCacheRefs, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
-		case 5:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field AllowResultReturn", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGateway
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.AllowResultReturn = bool(v != 0)
 		case 10:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Final", wireType)
@@ -2677,11 +1483,11 @@ func (m *SolveResponse) Unmarshal(dAtA []byte) error {
 			}
 			m.Ref = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 3:
+		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Result", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ExporterAttr", wireType)
 			}
-			var msglen int
+			var byteLen int
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowGateway
@@ -2691,23 +1497,21 @@ func (m *SolveResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
+				byteLen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			if msglen < 0 {
+			if byteLen < 0 {
 				return ErrInvalidLengthGateway
 			}
-			postIndex := iNdEx + msglen
+			postIndex := iNdEx + byteLen
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.Result == nil {
-				m.Result = &Result{}
-			}
-			if err := m.Result.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
+			m.ExporterAttr = append(m.ExporterAttr[:0], dAtA[iNdEx:postIndex]...)
+			if m.ExporterAttr == nil {
+				m.ExporterAttr = []byte{}
 			}
 			iNdEx = postIndex
 		default:
@@ -3120,99 +1924,6 @@ func (m *PongResponse) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: PongResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field FrontendAPICaps", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGateway
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGateway
-			}
-			postIndex := iNdEx + msglen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.FrontendAPICaps = append(m.FrontendAPICaps, moby_buildkit_v1_apicaps.APICap{})
-			if err := m.FrontendAPICaps[len(m.FrontendAPICaps)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LLBCaps", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGateway
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGateway
-			}
-			postIndex := iNdEx + msglen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.LLBCaps = append(m.LLBCaps, moby_buildkit_v1_apicaps.APICap{})
-			if err := m.LLBCaps[len(m.LLBCaps)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Workers", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowGateway
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthGateway
-			}
-			postIndex := iNdEx + msglen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Workers = append(m.Workers, &moby_buildkit_v1_types.WorkerRecord{})
-			if err := m.Workers[len(m.Workers)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGateway(dAtA[iNdEx:])
@@ -3342,67 +2053,46 @@ var (
 func init() { proto.RegisterFile("gateway.proto", fileDescriptorGateway) }
 
 var fileDescriptorGateway = []byte{
-	// 982 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x56, 0x4b, 0x6f, 0xdb, 0x46,
-	0x10, 0x0e, 0x4d, 0x49, 0x91, 0x46, 0x52, 0xac, 0x2e, 0x8a, 0x42, 0xe1, 0xc1, 0x51, 0x89, 0x22,
-	0x65, 0xf3, 0x20, 0x51, 0xa5, 0x45, 0xd2, 0x04, 0x48, 0x1b, 0xd9, 0x31, 0xe2, 0x56, 0x46, 0x84,
-	0xcd, 0x21, 0x40, 0xd0, 0x1e, 0x56, 0xd2, 0x92, 0x26, 0x4c, 0x71, 0xd9, 0xe5, 0xca, 0xae, 0xd0,
-	0x4b, 0xdb, 0x53, 0x7e, 0x5a, 0x8e, 0x3d, 0xf7, 0x10, 0x14, 0xbe, 0xf5, 0x5f, 0x14, 0xfb, 0xa0,
-	0x4c, 0xbf, 0x64, 0xfb, 0xa4, 0x9d, 0xe5, 0x7c, 0x33, 0xdf, 0xec, 0x7c, 0xb3, 0x2b, 0x68, 0x47,
-	0x44, 0xd0, 0x43, 0xb2, 0xf0, 0x33, 0xce, 0x04, 0x43, 0xb7, 0x67, 0x6c, 0xbc, 0xf0, 0xc7, 0xf3,
-	0x38, 0x99, 0xee, 0xc7, 0xc2, 0x3f, 0xf8, 0xda, 0x0f, 0x39, 0x4b, 0x05, 0x4d, 0xa7, 0xce, 0xc3,
-	0x28, 0x16, 0x7b, 0xf3, 0xb1, 0x3f, 0x61, 0xb3, 0x20, 0x62, 0x11, 0x0b, 0x14, 0x62, 0x3c, 0x0f,
-	0x95, 0xa5, 0x0c, 0xb5, 0xd2, 0x91, 0x9c, 0xfe, 0x69, 0xf7, 0x88, 0xb1, 0x28, 0xa1, 0x24, 0x8b,
-	0x73, 0xb3, 0x0c, 0x78, 0x36, 0x09, 0x72, 0x41, 0xc4, 0x3c, 0x37, 0x98, 0x07, 0x25, 0x8c, 0x24,
-	0x12, 0x14, 0x44, 0x82, 0x9c, 0x25, 0x07, 0x94, 0x07, 0xd9, 0x38, 0x60, 0x59, 0xe1, 0x1d, 0x5c,
-	0xe8, 0x4d, 0xb2, 0x38, 0x10, 0x8b, 0x8c, 0xe6, 0xc1, 0x21, 0xe3, 0xfb, 0x94, 0x1b, 0xc0, 0xa3,
-	0x0b, 0x01, 0x73, 0x11, 0x27, 0x12, 0x35, 0x21, 0x59, 0x2e, 0x93, 0xc8, 0x5f, 0x0d, 0x72, 0xff,
-	0xb3, 0xa0, 0x86, 0x69, 0x3e, 0x4f, 0x04, 0x42, 0x60, 0x73, 0x1a, 0x76, 0xad, 0x9e, 0xe5, 0x35,
-	0x5e, 0xdd, 0xc0, 0xd2, 0x40, 0x8f, 0xa1, 0xc2, 0x69, 0x98, 0x77, 0xd7, 0x7a, 0x96, 0xd7, 0xec,
-	0x7f, 0xee, 0x5f, 0x78, 0x7e, 0x3e, 0xa6, 0xe1, 0x2e, 0xc9, 0x5e, 0xdd, 0xc0, 0x0a, 0x80, 0x7e,
-	0x82, 0xfa, 0x8c, 0x0a, 0x32, 0x25, 0x82, 0x74, 0xa1, 0x67, 0x7b, 0xcd, 0x7e, 0xb0, 0x12, 0x2c,
-	0x19, 0xf8, 0xbb, 0x06, 0xf1, 0x32, 0x15, 0x7c, 0x81, 0x97, 0x01, 0x9c, 0x67, 0xd0, 0x3e, 0xf1,
-	0x09, 0x75, 0xc0, 0xde, 0xa7, 0x0b, 0x4d, 0x15, 0xcb, 0x25, 0xfa, 0x14, 0xaa, 0x07, 0x24, 0x99,
-	0x53, 0xc5, 0xb4, 0x85, 0xb5, 0xf1, 0x74, 0xed, 0x89, 0x35, 0xa8, 0x43, 0x8d, 0xab, 0xf0, 0xee,
-	0x5f, 0xaa, 0x56, 0x49, 0x13, 0x7d, 0x6f, 0xea, 0xb2, 0x14, 0xb5, 0xfb, 0x97, 0xd6, 0x25, 0x7f,
-	0x72, 0x4d, 0x4b, 0x01, 0x9d, 0xc7, 0xd0, 0x58, 0x6e, 0x5d, 0x46, 0xa7, 0x51, 0xa2, 0xe3, 0x0a,
-	0x68, 0x63, 0x2a, 0xe6, 0x3c, 0xc5, 0xf4, 0xd7, 0x39, 0xcd, 0x05, 0xfa, 0xae, 0xe0, 0xa7, 0xf0,
-	0x97, 0x1d, 0xb2, 0x74, 0xc4, 0x06, 0x80, 0x3c, 0xa8, 0x52, 0xce, 0x19, 0x37, 0xed, 0x41, 0xbe,
-	0x56, 0x9e, 0xcf, 0xb3, 0x89, 0xff, 0x46, 0x29, 0x0f, 0x6b, 0x07, 0xb7, 0x03, 0xb7, 0x8a, 0xac,
-	0x79, 0xc6, 0xd2, 0x9c, 0xba, 0x0b, 0xb8, 0x8d, 0xa9, 0xd2, 0xdd, 0xce, 0x8c, 0x44, 0x74, 0x93,
-	0xa5, 0x61, 0x1c, 0x15, 0x9c, 0x3a, 0x60, 0xe3, 0x42, 0x0a, 0x58, 0x2e, 0x91, 0x07, 0xf5, 0x51,
-	0x42, 0x44, 0xc8, 0xf8, 0xcc, 0x64, 0x6b, 0xf9, 0xd9, 0xd8, 0x2f, 0xf6, 0xf0, 0xf2, 0x2b, 0xea,
-	0x41, 0xd3, 0x04, 0xde, 0x65, 0x53, 0xda, 0xb5, 0x55, 0x8c, 0xf2, 0x96, 0xfb, 0x87, 0x05, 0xce,
-	0x79, 0xb9, 0x35, 0x33, 0xf4, 0x23, 0xd4, 0xb6, 0xe2, 0x88, 0xe6, 0xfa, 0x40, 0x1a, 0x83, 0xfe,
-	0x87, 0x8f, 0x77, 0x6e, 0xfc, 0xf3, 0xf1, 0xce, 0xbd, 0x92, 0xbe, 0x59, 0x46, 0xd3, 0x09, 0x4b,
-	0x05, 0x89, 0x53, 0xca, 0xe5, 0xc4, 0x3d, 0x9c, 0x2a, 0x88, 0xaf, 0x91, 0xd8, 0x44, 0x40, 0x9f,
-	0x41, 0x4d, 0x47, 0x37, 0xba, 0x30, 0x96, 0xfb, 0xde, 0x86, 0xd6, 0x1b, 0x49, 0xa0, 0xa8, 0xd8,
-	0x07, 0xd8, 0xa2, 0x61, 0x9c, 0xc6, 0x22, 0x66, 0xa9, 0xe9, 0xc4, 0x2d, 0x59, 0xe1, 0xf1, 0x2e,
-	0x2e, 0x79, 0x20, 0x07, 0xea, 0xdb, 0xa6, 0x2b, 0xa6, 0xc7, 0x4b, 0x1b, 0xbd, 0x83, 0x66, 0xb1,
-	0x7e, 0x9d, 0x89, 0xae, 0xad, 0x34, 0xf6, 0x64, 0x45, 0x5b, 0xcb, 0x4c, 0xfc, 0x12, 0x54, 0x0b,
-	0xae, 0x1c, 0x0c, 0x79, 0xb0, 0xbe, 0x33, 0xcb, 0x18, 0x17, 0x9b, 0x64, 0xb2, 0x47, 0xa5, 0x04,
-	0xbb, 0x95, 0x9e, 0xed, 0x35, 0xf0, 0xe9, 0x6d, 0xf4, 0x00, 0x3e, 0x21, 0x49, 0xc2, 0x0e, 0x8d,
-	0x66, 0x54, 0xf7, 0xbb, 0xd5, 0x9e, 0xe5, 0xd5, 0xf1, 0xd9, 0x0f, 0x52, 0xb0, 0xdb, 0x71, 0x4a,
-	0x92, 0x2e, 0x28, 0x0f, 0x6d, 0x20, 0x17, 0x5a, 0x2f, 0x7f, 0x93, 0x61, 0x29, 0x7f, 0x21, 0x04,
-	0xef, 0x36, 0xd5, 0x21, 0x9e, 0xd8, 0x73, 0x9e, 0x43, 0xe7, 0x34, 0xe5, 0x6b, 0x0d, 0xc4, 0xcf,
-	0xd0, 0x36, 0xf5, 0x9b, 0xfe, 0x77, 0x4a, 0xf7, 0x90, 0xbe, 0x85, 0x8e, 0x47, 0xc4, 0xbe, 0xe6,
-	0x88, 0xb8, 0xbf, 0xc3, 0x3a, 0xa6, 0x64, 0xba, 0x1d, 0x27, 0xf4, 0x62, 0x71, 0xcb, 0x66, 0xc6,
-	0x09, 0x1d, 0x11, 0xb1, 0xb7, 0x6c, 0xa6, 0xb1, 0xd1, 0x53, 0xa8, 0x62, 0x92, 0x46, 0xd4, 0xa4,
-	0xfe, 0x62, 0x45, 0x6a, 0x95, 0x44, 0xfa, 0x62, 0x0d, 0x71, 0x9f, 0x41, 0x63, 0xb9, 0x27, 0xa5,
-	0xf8, 0x3a, 0x0c, 0x73, 0xaa, 0x65, 0x6d, 0x63, 0x63, 0xc9, 0xfd, 0x21, 0x4d, 0x23, 0x93, 0xda,
-	0xc6, 0xc6, 0x72, 0xef, 0x42, 0xe7, 0x98, 0xb9, 0x39, 0x1a, 0x04, 0x95, 0x2d, 0x79, 0xa3, 0x5a,
-	0xaa, 0x0f, 0x6a, 0xed, 0xb6, 0xa1, 0x39, 0x8a, 0xd3, 0x62, 0x74, 0xdd, 0x23, 0x0b, 0x5a, 0x23,
-	0x96, 0x1e, 0x8f, 0xd3, 0x08, 0xd6, 0x8b, 0xfe, 0xbc, 0x18, 0xed, 0x6c, 0x92, 0xac, 0xb8, 0xf5,
-	0x7a, 0x67, 0x4b, 0x31, 0x6f, 0x84, 0xaf, 0x1d, 0x07, 0x15, 0x39, 0x79, 0xf8, 0x34, 0x1c, 0xfd,
-	0x00, 0x37, 0x87, 0xc3, 0x81, 0x8a, 0xb4, 0x76, 0xad, 0x48, 0x05, 0x0c, 0x3d, 0x87, 0x9b, 0x6f,
-	0xd5, 0xd3, 0x95, 0x9b, 0xe9, 0x38, 0xe7, 0x58, 0xd5, 0x0b, 0xe7, 0x6b, 0x37, 0x4c, 0x27, 0x8c,
-	0x4f, 0x71, 0x01, 0xea, 0xbf, 0xaf, 0x40, 0x63, 0x38, 0x1c, 0x0c, 0x78, 0x3c, 0x8d, 0x28, 0xfa,
-	0xd3, 0x02, 0x74, 0xf6, 0x3e, 0x41, 0xdf, 0xac, 0x56, 0xc9, 0xf9, 0x57, 0x9f, 0xf3, 0xed, 0x35,
-	0x51, 0xe6, 0x94, 0xdf, 0x41, 0x55, 0xa9, 0x18, 0x7d, 0x79, 0xc5, 0x39, 0x77, 0xbc, 0xcb, 0x1d,
-	0x4d, 0xec, 0x09, 0xd4, 0x0b, 0x25, 0xa0, 0x7b, 0x2b, 0xe9, 0x9d, 0x10, 0xba, 0x73, 0xff, 0x4a,
-	0xbe, 0x26, 0xc9, 0x5b, 0xa8, 0x48, 0x19, 0xa1, 0xbb, 0x2b, 0x40, 0x25, 0x9d, 0x39, 0xab, 0xea,
-	0x3c, 0xa1, 0xbf, 0x5f, 0xe4, 0xa3, 0xab, 0xee, 0x18, 0x6f, 0x25, 0x9f, 0xd2, 0x9b, 0xe8, 0x7c,
-	0x75, 0x05, 0x4f, 0x1d, 0x7e, 0xd0, 0xfa, 0x70, 0xb4, 0x61, 0xfd, 0x7d, 0xb4, 0x61, 0xfd, 0x7b,
-	0xb4, 0x61, 0x8d, 0x6b, 0xea, 0x5f, 0xcd, 0xa3, 0xff, 0x03, 0x00, 0x00, 0xff, 0xff, 0xf4, 0x11,
-	0x1c, 0x4b, 0xf8, 0x09, 0x00, 0x00,
+	// 652 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0x4d, 0x4f, 0xdb, 0x4a,
+	0x14, 0x7d, 0x8e, 0x01, 0x25, 0x37, 0xe6, 0x43, 0xa3, 0xa7, 0x27, 0xe3, 0x05, 0x44, 0xd6, 0x13,
+	0xcf, 0xe2, 0x15, 0x5b, 0x4d, 0x5b, 0x09, 0x51, 0xa9, 0x52, 0xc3, 0x87, 0x44, 0x85, 0x44, 0x34,
+	0x5d, 0x20, 0xb1, 0x1b, 0x27, 0x63, 0x33, 0xc2, 0x99, 0x71, 0xed, 0x09, 0x6d, 0xd4, 0x4d, 0xfb,
+	0x73, 0xfa, 0x4f, 0x58, 0x76, 0xcd, 0x02, 0x55, 0xfc, 0x92, 0xca, 0xe3, 0x71, 0x30, 0x50, 0x52,
+	0xba, 0x9b, 0x73, 0x7d, 0xef, 0x99, 0x73, 0xe7, 0xdc, 0x6b, 0x58, 0x8c, 0x89, 0xa4, 0x1f, 0xc9,
+	0xc4, 0x4f, 0x33, 0x21, 0x05, 0x5a, 0x1d, 0x89, 0x70, 0xe2, 0x87, 0x63, 0x96, 0x0c, 0xcf, 0x99,
+	0xf4, 0x2f, 0x9e, 0xfb, 0x51, 0x26, 0xb8, 0xa4, 0x7c, 0xe8, 0x6c, 0xc5, 0x4c, 0x9e, 0x8d, 0x43,
+	0x7f, 0x20, 0x46, 0x41, 0x2c, 0x62, 0x11, 0xa8, 0x8a, 0x70, 0x1c, 0x29, 0xa4, 0x80, 0x3a, 0x95,
+	0x4c, 0xce, 0xb3, 0x5a, 0x7a, 0x41, 0x1a, 0x54, 0xa4, 0x41, 0x2e, 0x92, 0x0b, 0x9a, 0x05, 0x69,
+	0x18, 0x88, 0x34, 0x2f, 0xb3, 0xdd, 0x13, 0x58, 0xc5, 0x54, 0x7d, 0x38, 0x1c, 0x91, 0x98, 0xee,
+	0x0a, 0x1e, 0xb1, 0x18, 0xd3, 0x0f, 0x63, 0x9a, 0x4b, 0xb4, 0x02, 0x26, 0xa6, 0x91, 0x6d, 0x74,
+	0x0c, 0xaf, 0x85, 0x8b, 0x23, 0xf2, 0xa0, 0xd9, 0x4f, 0x88, 0x8c, 0x44, 0x36, 0xb2, 0x1b, 0x1d,
+	0xc3, 0x6b, 0x77, 0x2d, 0x3f, 0x0d, 0xfd, 0x2a, 0x86, 0xa7, 0x5f, 0xdd, 0x2f, 0x06, 0x38, 0xbf,
+	0x62, 0xce, 0x53, 0xc1, 0x73, 0x8a, 0xde, 0xc1, 0xc2, 0x1e, 0x8b, 0x69, 0x2e, 0x4b, 0xf6, 0x5e,
+	0xf7, 0xf2, 0x7a, 0xfd, 0xaf, 0xab, 0xeb, 0xf5, 0xcd, 0x9a, 0x7a, 0x91, 0x52, 0x3e, 0x10, 0x5c,
+	0x12, 0xc6, 0x69, 0x96, 0x07, 0xb1, 0xd8, 0x1a, 0xaa, 0x12, 0xbf, 0xac, 0xc4, 0x9a, 0x01, 0xfd,
+	0x03, 0x0b, 0x25, 0xbb, 0x92, 0x64, 0x61, 0x8d, 0xdc, 0xab, 0x06, 0x58, 0xef, 0x0b, 0x01, 0x55,
+	0x3f, 0x3e, 0xc0, 0x1e, 0x8d, 0x18, 0x67, 0x92, 0x09, 0xae, 0x2e, 0x6e, 0x77, 0x97, 0x0a, 0xfd,
+	0xb7, 0x51, 0x5c, 0xcb, 0x40, 0x0e, 0x34, 0x0f, 0xb4, 0x0b, 0x8a, 0xba, 0x85, 0xa7, 0x18, 0x9d,
+	0x42, 0xbb, 0x3a, 0x1f, 0xa7, 0xd2, 0x36, 0x3b, 0xa6, 0xd7, 0xee, 0x6e, 0xfb, 0x8f, 0xda, 0xe8,
+	0xd7, 0x95, 0xf8, 0xb5, 0xd2, 0x7d, 0x2e, 0xb3, 0x09, 0xae, 0x93, 0x21, 0x0f, 0x96, 0x0f, 0x47,
+	0xa9, 0xc8, 0xe4, 0x2e, 0x19, 0x9c, 0x51, 0x4c, 0xa3, 0xdc, 0x9e, 0xeb, 0x98, 0x5e, 0x0b, 0xdf,
+	0x0f, 0xa3, 0xbf, 0x61, 0xfe, 0x80, 0x71, 0x92, 0xd8, 0xd0, 0x31, 0xbc, 0x26, 0x2e, 0x01, 0x72,
+	0xc1, 0xda, 0xff, 0x54, 0x24, 0xd2, 0xec, 0xad, 0x94, 0x99, 0xdd, 0x56, 0xcf, 0x72, 0x27, 0xe6,
+	0xbc, 0x81, 0x95, 0xfb, 0x22, 0x0a, 0xbf, 0xcf, 0xe9, 0xa4, 0xf2, 0xfb, 0x9c, 0x4e, 0x0a, 0xfe,
+	0x0b, 0x92, 0x8c, 0xa9, 0x6e, 0xbf, 0x04, 0x3b, 0x8d, 0x6d, 0xc3, 0xdd, 0x87, 0x45, 0xdd, 0x91,
+	0x76, 0xf4, 0xe1, 0xb0, 0xdc, 0x97, 0xd1, 0x78, 0x28, 0xc3, 0xfd, 0x0c, 0xcb, 0x98, 0x92, 0xe1,
+	0x01, 0x4b, 0xe8, 0xe3, 0x53, 0x57, 0xf8, 0xc0, 0x12, 0xda, 0x27, 0xf2, 0x6c, 0xea, 0x83, 0xc6,
+	0x68, 0x07, 0xe6, 0x31, 0xe1, 0x31, 0xb5, 0x4d, 0x65, 0xe7, 0xbf, 0x33, 0x1c, 0x50, 0x97, 0x14,
+	0xb9, 0xb8, 0x2c, 0x71, 0x5f, 0x43, 0x6b, 0x1a, 0x2b, 0xa6, 0xe8, 0x38, 0x8a, 0x72, 0x5a, 0x4e,
+	0xa4, 0x89, 0x35, 0x2a, 0xe2, 0x47, 0x94, 0xc7, 0xfa, 0x6a, 0x13, 0x6b, 0xe4, 0x6e, 0xc0, 0xca,
+	0xad, 0x72, 0xfd, 0x06, 0x08, 0xe6, 0xf6, 0x88, 0x24, 0x8a, 0xc1, 0xc2, 0xea, 0xec, 0x2e, 0x42,
+	0xbb, 0xcf, 0x78, 0xb5, 0x53, 0xee, 0x12, 0x58, 0x7d, 0xc1, 0xa7, 0x8b, 0xd0, 0xfd, 0x66, 0x42,
+	0xeb, 0xe8, 0xa8, 0xd7, 0xcb, 0xd8, 0x30, 0xa6, 0xe8, 0xab, 0x01, 0xe8, 0xe1, 0xd6, 0xa0, 0x97,
+	0x33, 0xba, 0x7a, 0x74, 0x7d, 0x9d, 0x57, 0x7f, 0x58, 0xa5, 0x9b, 0x38, 0x85, 0x79, 0xe5, 0x2c,
+	0xfa, 0xef, 0x89, 0xd3, 0xec, 0x78, 0xbf, 0x4f, 0xd4, 0xdc, 0x03, 0x68, 0x56, 0x8f, 0x86, 0x36,
+	0x67, 0xca, 0xbb, 0x33, 0x13, 0xce, 0xff, 0x4f, 0xca, 0xd5, 0x97, 0x9c, 0xc0, 0x5c, 0xf1, 0xe2,
+	0x68, 0x63, 0x46, 0x51, 0xcd, 0x12, 0x67, 0x56, 0x9f, 0x75, 0xaf, 0x7a, 0xd6, 0xe5, 0xcd, 0x9a,
+	0xf1, 0xfd, 0x66, 0xcd, 0xf8, 0x71, 0xb3, 0x66, 0x84, 0x0b, 0xea, 0x0f, 0xfa, 0xe2, 0x67, 0x00,
+	0x00, 0x00, 0xff, 0xff, 0xbc, 0x68, 0x1b, 0xf0, 0xca, 0x05, 0x00, 0x00,
 }

@@ -12,11 +12,5 @@ type Exporter interface {
 
 type ExporterInstance interface {
 	Name() string
-	Export(context.Context, Source) (map[string]string, error)
-}
-
-type Source struct {
-	Ref      cache.ImmutableRef
-	Refs     map[string]cache.ImmutableRef
-	Metadata map[string][]byte
+	Export(context.Context, cache.ImmutableRef, map[string][]byte) (map[string]string, error)
 }

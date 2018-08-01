@@ -9,22 +9,21 @@ import (
 	"github.com/containerd/containerd/remotes/docker"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth"
-	"github.com/moby/buildkit/source"
 	"github.com/moby/buildkit/util/tracing"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-func NewResolver(ctx context.Context, sm *session.Manager, imageStore images.Store, mode source.ResolveMode) remotes.Resolver {
+func NewResolver(ctx context.Context, sm *session.Manager, imageStore images.Store) remotes.Resolver {
 	r := docker.NewResolver(docker.ResolverOptions{
 		Client:      tracing.DefaultClient,
 		Credentials: getCredentialsFromSession(ctx, sm),
 	})
 
-	if imageStore == nil || mode == source.ResolveModeForcePull {
+	if imageStore == nil {
 		return r
 	}
 
-	return withLocalResolver{r, imageStore, mode}
+	return localFallbackResolver{r, imageStore}
 }
 
 func getCredentialsFromSession(ctx context.Context, sm *session.Manager) func(string) (string, string, error) {
@@ -57,29 +56,20 @@ func getCredentialsFromSession(ctx context.Context, sm *session.Manager) func(st
 //   request.
 // - Pusher wouldn't make sense to push locally, so just forward.
 
-type withLocalResolver struct {
+type localFallbackResolver struct {
 	remotes.Resolver
-	is   images.Store
-	mode source.ResolveMode
+	is images.Store
 }
 
-func (r withLocalResolver) Resolve(ctx context.Context, ref string) (string, ocispec.Descriptor, error) {
-	if r.mode == source.ResolveModePreferLocal {
-		if img, err := r.is.Get(ctx, ref); err == nil {
-			return ref, img.Target, nil
-		}
-	}
-
+func (r localFallbackResolver) Resolve(ctx context.Context, ref string) (string, ocispec.Descriptor, error) {
 	n, desc, err := r.Resolver.Resolve(ctx, ref)
 	if err == nil {
 		return n, desc, err
 	}
 
-	if r.mode == source.ResolveModeDefault {
-		if img, err := r.is.Get(ctx, ref); err == nil {
-			return ref, img.Target, nil
-		}
+	img, err2 := r.is.Get(ctx, ref)
+	if err2 != nil {
+		return "", ocispec.Descriptor{}, err
 	}
-
-	return "", ocispec.Descriptor{}, err
+	return ref, img.Target, nil
 }

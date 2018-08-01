@@ -233,7 +233,7 @@ func (md *MetaData) GoDockerBuild(tags []string, imageOnly bool, prune bool) (ou
 				}
 			}
 			if prune {
-				if err := md.ImagePrune(false); err != nil {
+				if err := md.DockerPrune(false); err != nil {
 					fmt.Fprintln(os.Stderr, err.With("msg", "prune operation failed, and ignored").Error())
 				}
 			}

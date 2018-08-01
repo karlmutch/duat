@@ -5,7 +5,6 @@ import (
 
 	"github.com/docker/distribution/reference"
 	controlapi "github.com/moby/buildkit/api/services/control"
-	apitypes "github.com/moby/buildkit/api/types"
 	"github.com/moby/buildkit/cache/remotecache"
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/exporter"
@@ -16,6 +15,7 @@ import (
 	"github.com/moby/buildkit/solver/llbsolver"
 	"github.com/moby/buildkit/solver/pb"
 	"github.com/moby/buildkit/worker"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -36,13 +36,10 @@ type Opt struct {
 type Controller struct { // TODO: ControlService
 	opt    Opt
 	solver *llbsolver.Solver
-	cache  solver.CacheManager
 }
 
 func NewController(opt Opt) (*Controller, error) {
-	cache := solver.NewCacheManager("local", opt.CacheKeyStorage, worker.NewCacheResultStorage(opt.WorkerController))
-
-	solver, err := llbsolver.New(opt.WorkerController, opt.Frontends, cache, opt.ResolveCacheImporterFunc)
+	solver, err := llbsolver.New(opt.WorkerController, opt.Frontends, opt.CacheKeyStorage, opt.ResolveCacheImporterFunc)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create solver")
 	}
@@ -50,7 +47,6 @@ func NewController(opt Opt) (*Controller, error) {
 	c := &Controller{
 		opt:    opt,
 		solver: solver,
-		cache:  cache,
 	}
 	return c, nil
 }
@@ -86,8 +82,6 @@ func (c *Controller) DiskUsage(ctx context.Context, r *controlapi.DiskUsageReque
 				Description: r.Description,
 				CreatedAt:   r.CreatedAt,
 				LastUsedAt:  r.LastUsedAt,
-				RecordType:  string(r.RecordType),
-				Shared:      r.Shared,
 			})
 		}
 	}
@@ -103,31 +97,15 @@ func (c *Controller) Prune(req *controlapi.PruneRequest, stream controlapi.Contr
 		return errors.Wrap(err, "failed to list workers for prune")
 	}
 
-	didPrune := false
-	defer func() {
-		if didPrune {
-			if c, ok := c.cache.(interface {
-				ReleaseUnreferenced() error
-			}); ok {
-				if err := c.ReleaseUnreferenced(); err != nil {
-					logrus.Errorf("failed to release cache metadata: %+v")
-				}
-			}
-		}
-	}()
-
 	for _, w := range workers {
 		func(w worker.Worker) {
 			eg.Go(func() error {
-				return w.Prune(ctx, ch, client.PruneInfo{
-					Filter: req.Filter,
-					All:    req.All,
-				})
+				return w.Prune(ctx, ch)
 			})
 		}(w)
 	}
 
-	eg2, _ := errgroup.WithContext(stream.Context())
+	eg2, ctx := errgroup.WithContext(stream.Context())
 
 	eg2.Go(func() error {
 		defer close(ch)
@@ -136,7 +114,6 @@ func (c *Controller) Prune(req *controlapi.PruneRequest, stream controlapi.Contr
 
 	eg2.Go(func() error {
 		for r := range ch {
-			didPrune = true
 			if err := stream.Send(&controlapi.UsageRecord{
 				// TODO: add worker info
 				ID:          r.ID,
@@ -148,8 +125,6 @@ func (c *Controller) Prune(req *controlapi.PruneRequest, stream controlapi.Contr
 				Description: r.Description,
 				CreatedAt:   r.CreatedAt,
 				LastUsedAt:  r.LastUsedAt,
-				RecordType:  string(r.RecordType),
-				Shared:      r.Shared,
 			}); err != nil {
 				return err
 			}
@@ -300,10 +275,10 @@ func (c *Controller) ListWorkers(ctx context.Context, r *controlapi.ListWorkersR
 		return nil, err
 	}
 	for _, w := range workers {
-		resp.Record = append(resp.Record, &apitypes.WorkerRecord{
+		resp.Record = append(resp.Record, &controlapi.WorkerRecord{
 			ID:        w.ID(),
 			Labels:    w.Labels(),
-			Platforms: pb.PlatformsFromSpec(w.Platforms()),
+			Platforms: toPBPlatforms(w.Platforms()),
 		})
 	}
 	return resp, nil
@@ -326,4 +301,18 @@ func parseCacheExporterOpt(opt map[string]string) solver.CacheExportMode {
 		}
 	}
 	return solver.CacheExportModeMin
+}
+
+func toPBPlatforms(p []specs.Platform) []pb.Platform {
+	out := make([]pb.Platform, 0, len(p))
+	for _, pp := range p {
+		out = append(out, pb.Platform{
+			OS:           pp.OS,
+			Architecture: pp.Architecture,
+			Variant:      pp.Variant,
+			OSVersion:    pp.OSVersion,
+			OSFeatures:   pp.OSFeatures,
+		})
+	}
+	return out
 }
