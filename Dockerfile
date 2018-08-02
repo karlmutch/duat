@@ -47,7 +47,7 @@ RUN go get github.com/erning/gorun && \
 #    mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && \
 #    echo ':golang:E::go::/usr/local/bin/gorun:OC' >> /proc/sys/fs/binfmt_misc/register
 
-#USER ${USER}
+USER ${USER}
 VOLUME /project
 WORKDIR /project/src/github.com/karlmutch/duat
 
