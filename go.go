@@ -411,8 +411,8 @@ func (md *MetaData) GoTest(env map[string]string, tags []string, opts []string) 
 
 	cmds := []string{
 		fmt.Sprintf("%s/bin/dep ensure", goPath),
-		fmt.Sprintf(("%s go test -a %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" ."),
-			strings.Join(buildEnv, " "), tagOption),
+		fmt.Sprintf(("%s go test -v -a %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" %s ."),
+			strings.Join(buildEnv, " "), tagOption, strings.Join(opts, " ")),
 	}
 
 	cmd := exec.Command("bash", "-c", strings.Join(cmds, " && "))
