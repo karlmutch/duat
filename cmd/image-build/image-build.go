@@ -15,6 +15,7 @@ import (
 
 	"github.com/karlmutch/duat"
 	"github.com/karlmutch/duat/version"
+	"github.com/karlmutch/stack"
 
 	"github.com/karlmutch/envflag" // Forked copy of https://github.com/GoBike/envfla
 	"github.com/karlmutch/errors"  // Forked copy of https://github.com/jjeffery/errors
@@ -79,7 +80,7 @@ func main() {
 	}
 
 	if logger.IsDebug() {
-		logger.Debug(fmt.Sprintf("%s:%s", repo, ver))
+		logger.Debug(fmt.Sprintf("%s:%s %v", repo, ver, stack.Trace().TrimRuntime()))
 	}
 
 	// First assume that the directory supplied is a code directory
@@ -118,15 +119,14 @@ func main() {
 
 	}
 
-	logger.Debug(fmt.Sprintf("%v", dirs))
+	logger.Debug(fmt.Sprintf("%v %v", dirs, stack.Trace().TrimRuntime()))
 
 	for _, dir := range dirs {
-		logger.Info(fmt.Sprintln("building in", dir, "version", ver, "writing to", filepath.Join(dir, filepath.Base(dir)+".tar")))
-		/**
-				if err := md.ImageBuild(dir, "", ver, []string{}, filepath.Join(dir, filepath.Base(dir)+".tar")); err != nil {
-					fmt.Fprintln(os.Stderr, err.Error())
-					os.Exit(-3)
-				}
-		**/
+		imgName := fmt.Sprintf("%s:%s", repo, ver)
+		logger.Debug(fmt.Sprintln("building in", dir, "image", imgName, "writing to", filepath.Join(dir, filepath.Base(dir)+".tar"), stack.Trace().TrimRuntime()))
+		if err := md.ImageBuild(dir, "", imgName, []string{}, filepath.Join(dir, filepath.Base(dir)+".tar")); err != nil {
+			fmt.Fprintln(os.Stderr, fmt.Sprint(err))
+			os.Exit(-3)
+		}
 	}
 }

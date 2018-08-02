@@ -25,6 +25,7 @@ func init() {
 		usrErr = errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 		return
 	}
+	usrErr = nil
 
 	usrData = usr
 	stateDir = filepath.Join(usr.HomeDir, ".local", "share", "img")

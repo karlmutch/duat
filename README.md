@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat)   Alpha
 
-Version : <repo-version>0.7.2-feature-35-travis-and-git-1fkkUW</repo-version>
+Version : <repo-version>0.7.2-feature-35-travis-and-git-1fl4xU</repo-version>
 
 duat is a set of tools useful for automating workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go to manage the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and finally deploying software.
 
@@ -37,13 +37,13 @@ The tools and packages within this project rely on a couple of conventions and a
 1. git
 
     git is the primary source code management tool
-    
+
     git tags are semver compliant
 
 2. release targets
 
     can be containers stored using docker registries
-    
+
     can be github releases
 
 3. semantic versioning
