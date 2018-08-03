@@ -161,7 +161,7 @@ go install github.com/karlmutch/duat/cmd/stencil
 
 ```
 go get github.com/erning/gorun
-sudo mv ~/go/bin/gorun /usr/local/bin/
+sudo cp $GOPATH/bin/gorun /usr/local/bin/gorun
 echo ':golang:E::go::/usr/local/bin/gorun:OC' | sudo tee /proc/sys/fs/binfmt_misc/register
 ```
 
