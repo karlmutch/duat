@@ -76,7 +76,7 @@ func main() {
 		os.Exit(-2)
 	}
 
-	if err = md.ImagePrune(*groomAll); err != nil {
+	if err = md.DockerPrune(*groomAll); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(-3)
 	}

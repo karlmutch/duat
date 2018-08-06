@@ -218,9 +218,9 @@ func (md *MetaData) GenerateImageName() (repo string, version string, prerelease
 	return md.generateImageName(md.SemVer)
 }
 
-// ImagePrune will wipe the images from the local registry, the all option can be used to leave the latest image present
+// DockerPrune will wipe the images from the local registry, the all option can be used to leave the latest image present
 //
-func (md *MetaData) ImagePrune(all bool) (err errors.Error) {
+func (md *MetaData) DockerPrune(all bool) (err errors.Error) {
 
 	repo, ver, pre, err := md.GenerateImageName()
 	if err != nil {

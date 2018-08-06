@@ -233,7 +233,7 @@ func (md *MetaData) GoDockerBuild(tags []string, imageOnly bool, prune bool) (ou
 				}
 			}
 			if prune {
-				if err := md.ImagePrune(false); err != nil {
+				if err := md.DockerPrune(false); err != nil {
 					fmt.Fprintln(os.Stderr, err.With("msg", "prune operation failed, and ignored").Error())
 				}
 			}
@@ -379,6 +379,49 @@ func (md *MetaData) GoCompile(env map[string]string, tags []string) (err errors.
 	if errGo := cmd.Start(); errGo != nil {
 		dir, _ := os.Getwd()
 		fmt.Fprintln(os.Stderr, errors.Wrap(errGo, "unable to run the compiler").With("module", md.Module).
+			With("stack", stack.Trace().TrimRuntime()).With("cmds", strings.Join(cmds, "¶ ")).
+			With("dir", dir).Error())
+		os.Exit(-3)
+	}
+
+	if errGo := cmd.Wait(); errGo != nil {
+		return errors.Wrap(errGo, "unable to run the compiler").
+			With("stack", stack.Trace().TrimRuntime()).With("cmds", strings.Join(cmds, "¶ "))
+	}
+	return nil
+}
+
+func (md *MetaData) GoTest(env map[string]string, tags []string, opts []string) (err errors.Error) {
+
+	// prepare flags and options needed for the actual build
+	ldFlags := []string{}
+	ldFlags = append(ldFlags, fmt.Sprintf("-X github.com/karlmutch/duat/version.BuildTime=%s", time.Now().Format("2006-01-02_15:04:04-0700")))
+	ldFlags = append(ldFlags, fmt.Sprintf("-X github.com/karlmutch/duat/version.GitHash=%s", md.Git.Hash))
+	ldFlags = append(ldFlags, fmt.Sprintf("-X github.com/karlmutch/duat/version.SemVer=\"%s\"", md.SemVer.String()))
+
+	buildEnv := []string{"GO_ENABLED=0"}
+	for k, v := range env {
+		buildEnv = append(buildEnv, fmt.Sprintf("%s='%s'", k, v))
+	}
+
+	tagOption := ""
+	if len(tags) > 0 {
+		tagOption = fmt.Sprintf(" -tags \"%s\" ", strings.Join(tags, " "))
+	}
+
+	cmds := []string{
+		fmt.Sprintf("%s/bin/dep ensure", goPath),
+		fmt.Sprintf(("%s go test %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" %s ."),
+			strings.Join(buildEnv, " "), tagOption, strings.Join(opts, " ")),
+	}
+
+	cmd := exec.Command("bash", "-c", strings.Join(cmds, " && "))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if errGo := cmd.Start(); errGo != nil {
+		dir, _ := os.Getwd()
+		fmt.Fprintln(os.Stderr, errors.Wrap(errGo, "unable to run the test").With("module", md.Module).
 			With("stack", stack.Trace().TrimRuntime()).With("cmds", strings.Join(cmds, "¶ ")).
 			With("dir", dir).Error())
 		os.Exit(-3)

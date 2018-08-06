@@ -28,8 +28,7 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 	}
 
 	for {
-		_, errGo := os.Stat(filepath.Join(gitDir, ".git"))
-		if errGo == nil {
+		if _, errGo = os.Stat(filepath.Join(gitDir, ".git")); errGo == nil {
 			break
 		}
 		if !scanParents {
@@ -58,11 +57,23 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 
 	splits := strings.Split(ref.Name().String(), "/")
 
-	//Scoop up everything after the refs/heads/ to get the branch name
-	//and reattach any slashes we took out
-	md.Git.Branch = strings.Join(splits[2:], "/")
+	// If we are detached there might not be a branch for us to use
+	if len(splits) > 2 {
+		//Scoop up everything after the refs/heads/ to get the branch name
+		//and reattach any slashes we took out
+		md.Git.Branch = strings.Join(splits[2:], "/")
+	} else {
+		// The branch might be available through Travis, if so and it is not available elsewhere
+		// use that value
+		md.Git.Branch = os.Getenv("TRAVIS_BRANCH")
+	}
+
 	md.Git.Repo = repo
-	refs, _ := repo.Remotes()
+	refs, errGo := repo.Remotes()
+	if errGo != nil {
+		md.Git.Err = errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("git", gitDir).With("repo", repo)
+		return md.Git.Err
+	}
 
 	gitURL, errGo := url.Parse(refs[0].Config().URLs[0])
 	if errGo != nil {
