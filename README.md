@@ -1,4 +1,4 @@
-# Developer utilities and tools (duat)   Alpha
+# Developer utilities and tools (duat)  Alpha
 
 Version : <repo-version>0.8.0</repo-version>
 
