@@ -74,7 +74,7 @@ func main() {
 	if *recursive {
 		for _, dir := range rootDirs {
 			// Will auto skip any vendor directories found
-			found, err := duat.FindGoDirs(dir)
+			found, err := duat.FindGoDirs(dir, "main")
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err.Error())
 				os.Exit(-1)
