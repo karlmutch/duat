@@ -46,7 +46,7 @@ func findDirs(dir string) (dirs []string, err errors.Error) {
 	return dirs, err
 }
 
-func FindGoDirs(dir string) (dirs []string, err errors.Error) {
+func FindGoDirs(dir string, funct string) (dirs []string, err errors.Error) {
 	dirs = []string{}
 
 	found, err := findDirs(dir)
@@ -54,7 +54,7 @@ func FindGoDirs(dir string) (dirs []string, err errors.Error) {
 		return []string{}, err
 	}
 
-	groomed, err := FindPossibleGoFunc("main", found, []string{})
+	groomed, err := FindPossibleGoFunc(funct, found, []string{})
 	if err != nil {
 		return []string{}, err
 	}
