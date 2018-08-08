@@ -299,7 +299,12 @@ func (md *MetaData) GoFetchBuilt() (outputs []string, err errors.Error) {
 
 	binPath, errGo := filepath.Abs(filepath.Join(".", "bin"))
 	if errGo != nil {
-		return outputs, errors.Wrap(errGo, "unable to find binary files").With("bin", binPath).With("stack", stack.Trace().TrimRuntime())
+		return outputs, errors.Wrap(errGo, "unable to find binary files").With("stack", stack.Trace().TrimRuntime())
+	}
+
+	// Nothing to be found which is a valid condition
+	if fi, err := os.Stat(binPath); err != nil || !fi.IsDir() {
+		return outputs, nil
 	}
 
 	errGo = filepath.Walk(binPath, func(path string, f os.FileInfo, err error) error {

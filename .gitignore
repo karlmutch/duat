@@ -14,3 +14,4 @@
 cmd/semver/bin/
 bin
 example/artifact/bin
+compiled.lst
