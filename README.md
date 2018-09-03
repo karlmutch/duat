@@ -2,11 +2,17 @@
 
 Version : <repo-version>0.8.1</repo-version>
 
-duat is a set of tools useful for automating workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go to manage the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and finally deploying software.
+duat is a set of tools useful for automating workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go to manage the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and deploying software.
 
 This repository also delivers go import packages for handling meta data and artifacts associated with software development activities.
 
 duat make assumptions about naming of docker images, and semantic versioning.  duat provides tools and assistance, but intentionally does not impose and end-to-end automation solution, for CI/CD.
+
+# About
+
+This project was started as a means of experimenting with continuous integration using go the primary langage I now use for software implemention also as my primary means of automatting build and release processes.  Other projects such as mage, https://magefile.org/, have also attempted to do the same.  This project was started with the intention of working with go libraries primarily for handling versioning, git source control, and containerization.  Mage in contrast leverages a strategy of wrapping shell commands to achieve the same.
+
+duat is an attempt to determine the impact of using a set of conventions and using direct implementations of functionality that would otherwise have been invoked via a shell.
 
 # The name duat
 
@@ -38,7 +44,7 @@ The tools and packages within this project rely on a couple of conventions and a
 
     git is the primary source code management tool
 
-    git tags are semver compliant
+    git tags are semver 2 compliant
 
 2. release targets
 
