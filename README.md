@@ -1,12 +1,12 @@
 # Developer utilities and tools (duat)  Alpha
 
-Version : <repo-version>0.8.1</repo-version>
+Version : <repo-version>0.8.2</repo-version>
 
 duat is a set of tools useful for automating workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go to manage the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and deploying software.
 
 This repository also delivers go import packages for handling meta data and artifacts associated with software development activities.
 
-duat make assumptions about naming of docker images, and semantic versioning.  duat provides tools and assistance, but intentionally does not impose and end-to-end automation solution, for CI/CD.
+duat make assumptions about naming of docker images, and semantic versioning.  duat provides tools and assistance specifically for go based development, but intentionally does not impose an end-to-end automation solution, for CI/CD.
 
 # About
 
