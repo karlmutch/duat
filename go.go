@@ -46,7 +46,7 @@ func findDirs(dir string) (dirs []string, err errors.Error) {
 	return dirs, err
 }
 
-func FindGoDirs(dir string, funct string) (dirs []string, err errors.Error) {
+func FindGoDirs(dir string, funcs []string) (dirs []string, err errors.Error) {
 	dirs = []string{}
 
 	found, err := findDirs(dir)
@@ -54,7 +54,7 @@ func FindGoDirs(dir string, funct string) (dirs []string, err errors.Error) {
 		return []string{}, err
 	}
 
-	groomed, err := FindPossibleGoFunc(funct, found, []string{})
+	groomed, err := FindPossibleGoFuncs(funcs, found, []string{})
 	if err != nil {
 		return []string{}, err
 	}
@@ -160,18 +160,27 @@ func FindGoFuncIn(funcName string, dir string, tags []string) (file string, err 
 	return file, nil
 }
 
-// FindPossibleGoFunc can be used to hunt down directories where there was a function found
-// that matches the specification of the user, or if as a result of an error during
+// FindPossibleGoFuncs can be used to hunt down directories where there was a function found
+// that matches one of the specifications of the user, or if as a result of an error during
 // checking we might not be sure that the function does not exist
 //
-func FindPossibleGoFunc(name string, dirs []string, tags []string) (possibles []string, err errors.Error) {
+func FindPossibleGoFuncs(names []string, dirs []string, tags []string) (possibles []string, err errors.Error) {
 	possibles = []string{}
+	files := map[string]struct{}{}
 	for _, dir := range dirs {
-		file, err := FindGoFuncIn(name, dir, tags)
-		if err == nil && len(file) == 0 {
-			continue
+		for _, name := range names {
+			// Some what inefficent as we are scanning the dir
+			// potentially multiple times
+			file, err := FindGoFuncIn(name, dir, tags)
+			if err == nil && len(file) == 0 {
+				continue
+			}
+			// Avoid duplicates
+			if _, isPresent := files[file]; !isPresent {
+				files[file] = struct{}{}
+				possibles = append(possibles, file)
+			}
 		}
-		possibles = append(possibles, file)
 	}
 	return possibles, nil
 }
