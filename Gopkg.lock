@@ -163,6 +163,14 @@
   version = "v1.38.1"
 
 [[projects]]
+  digest = "1:7f89e0c888fb99c61055c646f5678aae645b0b0a1443d9b2dcd9964d850827ce"
+  name = "github.com/go-test/deep"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "6592d9cc0a499ad2d5f574fde80a2b5c5cc3b4f5"
+  version = "v1.0.1"
+
+[[projects]]
   digest = "1:342378ac4dcb378a5448dd723f0784ae519383532f5e70ade24132c4c8693202"
   name = "github.com/go-yaml/yaml"
   packages = ["."]
@@ -542,6 +550,7 @@
     "github.com/aws/aws-sdk-go/service/ecr",
     "github.com/docker/docker/api/types",
     "github.com/docker/docker/client",
+    "github.com/go-test/deep",
     "github.com/go-yaml/yaml",
     "github.com/karlmutch/amicontained/container",
     "github.com/karlmutch/base62",

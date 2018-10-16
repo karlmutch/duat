@@ -48,7 +48,7 @@ func TestGitLoad(t *testing.T) {
 		t.Error(errors.Wrap(err, msg).With("stack", stack.Trace().TrimRuntime()).With("url", gitURL).With("dir", baseDir).With("testDir", md.Git.Dir))
 		return
 	}
-	if md.Git.URL != gitURL {
+	if md.Git.URL.String() != gitURL {
 		msg := "located git clone URL did not match the requested url"
 		t.Error(errors.Wrap(err, msg).With("stack", stack.Trace().TrimRuntime()).With("url", gitURL).With("dir", baseDir).With("testDir", md.Git.Dir).With("extractedURL", md.Git.URL))
 		return
@@ -122,9 +122,9 @@ func TestGitLoad(t *testing.T) {
 		t.Error(errors.New(msg).With("stack", stack.Trace().TrimRuntime()).With("url", gitURL).With("dir", baseDir).With("testDir", md.Git.Dir))
 		return
 	}
-	if md.Git.Branch != "HEAD" {
+	if md.Git.Branch != "" {
 		msg := "located git clone testDir in a git subdirectory did not appear to be properly detached"
-		t.Error(errors.New(msg).With("stack", stack.Trace().TrimRuntime()).With("url", gitURL).With("dir", baseDir).With("testDir", md.Git.Dir))
+		t.Error(errors.New(msg).With("branch", md.Git.Branch).With("stack", stack.Trace().TrimRuntime()).With("url", gitURL).With("dir", baseDir).With("testDir", md.Git.Dir))
 		return
 	}
 }
