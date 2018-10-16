@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat)  Alpha
 
-Version : <repo-version>0.9.0</repo-version>
+Version : <repo-version>0.9.1</repo-version>
 
 duat is a set of tools useful for automating workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go to manage the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and deploying software.
 
@@ -35,7 +35,7 @@ For example the following workflow might be used to compile duat itself:
 ```shell
 go run ./build.go -r cmd > /tmp/compiled.lst
 # test is run and passes
-cat /tmp/compiled.lst | go run ./cmd/github-release/github-release.go -
+go run ./cmd/github-release/github-release.go `cat /tmp/compiled.lst`
 ```
 
 # Conventions assumptions
