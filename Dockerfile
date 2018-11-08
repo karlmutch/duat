@@ -20,7 +20,7 @@ RUN apt-get -y install git software-properties-common wget openssl ssh curl jq a
     groupadd -f -g ${USER_GROUP_ID} ${USER} && \
     useradd -g ${USER_GROUP_ID} -u ${USER_ID} -ms /bin/bash ${USER}
 
-ENV GO_VERSION 1.10.3
+ENV GO_VERSION 1.11.2
 
 RUN cd /home/${USER} && \
     mkdir -p /home/${USER}/go && \
