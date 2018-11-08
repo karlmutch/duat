@@ -93,13 +93,16 @@ func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, ov
 	vars["Env"] = envs
 
 	duatVars := map[string]interface{}{
-		"version":   md.SemVer.String(),
-		"module":    md.Module,
-		"gitTag":    md.Git.Tag,
-		"gitHash":   md.Git.Hash,
-		"gitBranch": md.Git.Branch,
-		"gitURL":    md.Git.URL,
-		"gitDir":    md.Git.Dir,
+		"version":     md.SemVer.String(),
+		"module":      md.Module,
+		"gitTag":      md.Git.Tag,
+		"gitHash":     md.Git.Hash,
+		"gitBranch":   md.Git.Branch,
+		"gitURL":      md.Git.URL,
+		"gitDir":      md.Git.Dir,
+		"userID":      md.user.Uid,
+		"userName":    md.user.Username,
+		"userGroupID": md.user.Gid,
 	}
 	if runtime, err := md.ContainerRuntime(); err == nil {
 		duatVars["runtime"] = runtime

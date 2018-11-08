@@ -3,6 +3,7 @@ package duat
 import (
 	"net/url"
 	"os"
+	"os/user"
 	"path/filepath"
 
 	// The following packages are forked to retain copies in the event github accounts are shutdown
@@ -31,6 +32,7 @@ type GitInfo struct {
 }
 
 type MetaData struct {
+	user    *user.User
 	Dockers map[string]docker.Client
 	SemVer  *semver.Version
 	Module  string // A string name for the software component that is being handled
@@ -53,6 +55,12 @@ func (md *MetaData) Clear() {
 func NewMetaData(dir string, verFile string) (md *MetaData, err errors.Error) {
 
 	md = &MetaData{}
+
+	usr, errGo := user.Current()
+	if errGo != nil {
+		return nil, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+	}
+	md.user = usr
 
 	cwd, errGo := os.Getwd()
 	if errGo != nil {
