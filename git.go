@@ -75,9 +75,13 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 		return md.Git.Err
 	}
 
-	gitURL, errGo := url.Parse(refs[0].Config().URLs[0])
+	urlLoc := refs[0].Config().URLs[0]
+	if strings.HasPrefix(urlLoc, "git@github.com:") {
+		urlLoc = strings.Replace(urlLoc, "git@github.com:", "https://github.com/", 1)
+	}
+	gitURL, errGo := url.Parse(urlLoc)
 	if errGo != nil {
-		md.Git.Err = errors.Wrap(errGo).With("url", refs[0].Config().URLs[0]).With("git", gitDir).With("stack", stack.Trace().TrimRuntime())
+		md.Git.Err = errors.Wrap(errGo).With("url", urlLoc).With("git", gitDir).With("stack", stack.Trace().TrimRuntime())
 		return md.Git.Err
 	}
 	md.Git.URL = *gitURL
