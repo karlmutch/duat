@@ -258,12 +258,12 @@
   revision = "ae3268980a293939fc31d786fe86f1453333d386"
 
 [[projects]]
-  digest = "1:6a3aabb4de1f9e85c7ae2bb8ae97eb87b7d5e6ca39b1648251e0f11b34f4232f"
+  digest = "1:ac54fdbe6038c2ed2431fc31b3a1f059d315da9cf593bf87ccc0493764d6ea8e"
   name = "github.com/karlmutch/errors"
   packages = ["."]
   pruneopts = "UT"
-  revision = "a34a51e66ce34c250486f85f1822c884f8dee966"
-  version = "v1.0.1"
+  revision = "4f39c4610ac98f897f2dbc6a4a4b89aa86bcf45b"
+  version = "v1.0.2"
 
 [[projects]]
   digest = "1:b311407991ca82ea46706557aef8d32b56e96c2f95481754b5a5d34a984a3af3"
