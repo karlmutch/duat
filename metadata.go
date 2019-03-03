@@ -12,8 +12,8 @@ import (
 	// to do this.  In any event I ended up doing both with my own forks
 	"github.com/karlmutch/semver" // Forked copy of https://github.com/Masterminds/semver
 
-	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
-	"github.com/karlmutch/stack"  // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
+	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
 
 	docker "github.com/docker/docker/client"
 
@@ -28,7 +28,7 @@ type GitInfo struct {
 	Tag    string          // The tag for the current commit if present
 	Hash   string          // The hash for the current commit
 	Token  string          // If the GITHUB token was available then it will be saved here
-	Err    errors.Error    // If initialization resulted in an error it may have been stored in this variable`
+	Err    kv.Error        // If initialization resulted in an error it may have been stored in this variable`
 }
 
 type MetaData struct {
@@ -52,19 +52,19 @@ func (md *MetaData) Clear() {
 // appropriate project information into the meta-data structure returned to
 // the caller
 //
-func NewMetaData(dir string, verFile string) (md *MetaData, err errors.Error) {
+func NewMetaData(dir string, verFile string) (md *MetaData, err kv.Error) {
 
 	md = &MetaData{}
 
 	usr, errGo := user.Current()
 	if errGo != nil {
-		return nil, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+		return nil, kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 	md.user = usr
 
 	cwd, errGo := os.Getwd()
 	if errGo != nil {
-		return nil, errors.Wrap(errGo, "current directory unknown").With("stack", stack.Trace().TrimRuntime())
+		return nil, kv.Wrap(errGo, "current directory unknown").With("stack", stack.Trace().TrimRuntime())
 	}
 	md.Module = filepath.Base(cwd)
 
@@ -79,12 +79,12 @@ func NewMetaData(dir string, verFile string) (md *MetaData, err errors.Error) {
 		}
 		path, errGo := filepath.Abs(dirCtx)
 		if errGo != nil {
-			return nil, errors.Wrap(errGo, "could not resolve the project directory").With("dir", dirCtx).With("stack", stack.Trace().TrimRuntime())
+			return nil, kv.Wrap(errGo, "could not resolve the project directory").With("dir", dirCtx).With("stack", stack.Trace().TrimRuntime())
 		}
 
 		if cwd != path {
 			if errGo := os.Chdir(path); errGo != nil {
-				return nil, errors.Wrap(errGo, "could not change to the project directory").With("dir", path).With("stack", stack.Trace().TrimRuntime())
+				return nil, kv.Wrap(errGo, "could not change to the project directory").With("dir", path).With("stack", stack.Trace().TrimRuntime())
 			}
 		}
 	}

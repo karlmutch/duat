@@ -1,4 +1,6 @@
-package kv
+// Package logfmt provides utilities for writing key/value pairs
+// in logfmt format.
+package logfmt
 
 import (
 	"bytes"
@@ -13,9 +15,9 @@ import (
 // constant byte values
 var (
 	bytesNull   = []byte("null")
-	bytesPanic  = []byte(`<PANIC>`)
-	bytesError  = []byte(`<ERROR>`)
-	bytesEmptyK = []byte(`<EMPTY>`)
+	bytesPanic  = []byte(`PANIC`)
+	bytesError  = []byte(`ERROR`)
+	bytesEmptyK = []byte(`EMPTY`)
 	bytesEmptyV = []byte(`""`)
 
 	escapeSequences = map[rune]string{
@@ -27,23 +29,21 @@ var (
 	}
 )
 
-func writeKeyValue(buf *bytes.Buffer, key, value interface{}) {
-	if buf.Len() > 0 {
-		buf.WriteRune(' ')
-	}
-	writeKey(buf, key)
-	buf.WriteRune('=')
-	writeValue(buf, value)
+// Writer is an interface implemented by both bytes.Buffer and strings.Builder
+type Writer interface {
+	Write(p []byte) (n int, err error)
+	WriteString(s string) (n int, err error)
+	WriteRune(r rune) (n int, err error)
 }
 
-func writeKey(buf *bytes.Buffer, value interface{}) {
-	defer func() {
-		if r := recover(); r != nil {
-			if buf != nil {
-				buf.Write(bytesPanic)
-			}
-		}
-	}()
+// WriteKeyValue writes a key/value pair to the writer.
+func WriteKeyValue(buf Writer, key, value interface{}) {
+	writeKey(buf, key)
+	buf.WriteRune('=')
+	WriteValue(buf, value)
+}
+
+func writeKey(buf Writer, value interface{}) {
 	switch v := value.(type) {
 	case nil:
 		writeBytesKey(buf, bytesNull)
@@ -81,7 +81,7 @@ func writeKey(buf *bytes.Buffer, value interface{}) {
 	}
 }
 
-func writeBytesKey(buf *bytes.Buffer, b []byte) {
+func writeBytesKey(buf Writer, b []byte) {
 	if b == nil {
 		buf.Write(bytesNull)
 		return
@@ -106,7 +106,7 @@ func writeBytesKey(buf *bytes.Buffer, b []byte) {
 	buf.Write(b)
 }
 
-func writeStringKey(buf *bytes.Buffer, s string) {
+func writeStringKey(buf Writer, s string) {
 	if s == "" {
 		buf.Write(bytesEmptyK)
 		return
@@ -125,7 +125,9 @@ func writeStringKey(buf *bytes.Buffer, s string) {
 	}
 }
 
-func writeTextMarshalerKey(buf *bytes.Buffer, t encoding.TextMarshaler) {
+func writeTextMarshalerKey(buf Writer, t encoding.TextMarshaler) {
+	defer recoverFromPanic(buf)
+
 	b, err := t.MarshalText()
 	if err != nil {
 		buf.Write(bytesError)
@@ -134,14 +136,16 @@ func writeTextMarshalerKey(buf *bytes.Buffer, t encoding.TextMarshaler) {
 	writeBytesKey(buf, b)
 }
 
-func writeValue(buf *bytes.Buffer, value interface{}) {
-	defer func() {
-		if r := recover(); r != nil {
-			if buf != nil {
-				buf.Write(bytesPanic)
-			}
+func recoverFromPanic(buf Writer) {
+	if r := recover(); r != nil {
+		if buf != nil {
+			buf.Write(bytesPanic)
 		}
-	}()
+	}
+}
+
+// WriteValue writes the value to the writer.
+func WriteValue(buf Writer, value interface{}) {
 	switch v := value.(type) {
 	case nil:
 		writeBytesValue(buf, bytesNull)
@@ -172,14 +176,14 @@ func writeValue(buf *bytes.Buffer, value interface{}) {
 				buf.Write(bytesNull)
 				return
 			}
-			writeValue(buf, rv.Elem().Interface())
+			WriteValue(buf, rv.Elem().Interface())
 			return
 		}
 		writeStringValue(buf, fmt.Sprint(value))
 	}
 }
 
-func writeBytesValue(buf *bytes.Buffer, b []byte) {
+func writeBytesValue(buf Writer, b []byte) {
 	if b == nil {
 		buf.Write(bytesNull)
 		return
@@ -215,7 +219,7 @@ func writeBytesValue(buf *bytes.Buffer, b []byte) {
 	buf.WriteRune('"')
 }
 
-func writeStringValue(buf *bytes.Buffer, s string) {
+func writeStringValue(buf Writer, s string) {
 	if s == "" {
 		buf.Write(bytesEmptyV)
 		return
@@ -247,7 +251,8 @@ func writeStringValue(buf *bytes.Buffer, s string) {
 	buf.WriteRune('"')
 }
 
-func writeTextMarshalerValue(buf *bytes.Buffer, t encoding.TextMarshaler) {
+func writeTextMarshalerValue(buf Writer, t encoding.TextMarshaler) {
+	defer recoverFromPanic(buf)
 	b, err := t.MarshalText()
 	if err != nil {
 		buf.Write(bytesError)
@@ -258,7 +263,7 @@ func writeTextMarshalerValue(buf *bytes.Buffer, t encoding.TextMarshaler) {
 
 func needsQuote(c rune) bool {
 	// This test will result in more values being quoted than is strictly
-	// necesary for logfmt, but quoting all non-letter and non-digits makes
+	// necessary for logfmt, but quoting all non-letter and non-digits makes
 	// this compatible with the default colog extractor.
 	return !unicode.IsLetter(c) && !unicode.IsDigit(c) && c != '_'
 }

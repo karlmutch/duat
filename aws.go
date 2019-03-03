@@ -10,11 +10,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 
-	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
-	"github.com/karlmutch/stack"  // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
+	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
 )
 
-func GetECRToken() (token string, err errors.Error) {
+func GetECRToken() (token string, err kv.Error) {
 	svc := ecr.New(session.New())
 	input := &ecr.GetAuthorizationTokenInput{}
 
@@ -23,24 +23,24 @@ func GetECRToken() (token string, err errors.Error) {
 		if aerr, ok := errGo.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ecr.ErrCodeServerException:
-				return "", errors.New(ecr.ErrCodeServerException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
+				return "", kv.NewError(ecr.ErrCodeServerException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
 			case ecr.ErrCodeInvalidParameterException:
-				return "", errors.New(ecr.ErrCodeInvalidParameterException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
+				return "", kv.NewError(ecr.ErrCodeInvalidParameterException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
 			default:
-				return "", errors.Wrap(aerr).With("stack", stack.Trace().TrimRuntime())
+				return "", kv.Wrap(aerr).With("stack", stack.Trace().TrimRuntime())
 			}
 		} else {
-			return "", errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+			return "", kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 		}
 	}
 	if len(result.AuthorizationData) != 1 {
-		return "", errors.New("aws auth data is in an unknown format").With("stack", stack.Trace().TrimRuntime())
+		return "", kv.NewError("aws auth data is in an unknown format").With("stack", stack.Trace().TrimRuntime())
 	}
 
 	return *result.AuthorizationData[0].AuthorizationToken, nil
 }
 
-func CreateECRRepo(repo string) (err errors.Error) {
+func CreateECRRepo(repo string) (err kv.Error) {
 	svc := ecr.New(session.New())
 	input := &ecr.CreateRepositoryInput{
 		RepositoryName: aws.String(repo),
@@ -50,24 +50,24 @@ func CreateECRRepo(repo string) (err errors.Error) {
 		if aerr, ok := errGo.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ecr.ErrCodeServerException:
-				return errors.New(ecr.ErrCodeServerException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
+				return kv.NewError(ecr.ErrCodeServerException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
 			case ecr.ErrCodeInvalidParameterException:
-				return errors.New(ecr.ErrCodeInvalidParameterException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
+				return kv.NewError(ecr.ErrCodeInvalidParameterException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
 			case ecr.ErrCodeRepositoryAlreadyExistsException:
-				return errors.Wrap(aerr).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
+				return kv.Wrap(aerr).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
 			case ecr.ErrCodeLimitExceededException:
-				return errors.New(ecr.ErrCodeLimitExceededException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
+				return kv.NewError(ecr.ErrCodeLimitExceededException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
 			default:
-				return errors.Wrap(aerr).With("stack", stack.Trace().TrimRuntime())
+				return kv.Wrap(aerr).With("stack", stack.Trace().TrimRuntime())
 			}
 		} else {
-			return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+			return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 		}
 	}
 	return nil
 }
 
-func GetECRDefaultURL() (urlOut *url.URL, err errors.Error) {
+func GetECRDefaultURL() (urlOut *url.URL, err kv.Error) {
 
 	svc := ecr.New(session.New())
 	input := &ecr.DescribeRepositoriesInput{MaxResults: aws.Int64(1)}
@@ -77,16 +77,16 @@ func GetECRDefaultURL() (urlOut *url.URL, err errors.Error) {
 		if aerr, ok := errGo.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ecr.ErrCodeServerException:
-				return nil, errors.New(ecr.ErrCodeServerException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
+				return nil, kv.NewError(ecr.ErrCodeServerException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
 			case ecr.ErrCodeInvalidParameterException:
-				return nil, errors.New(ecr.ErrCodeInvalidParameterException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
+				return nil, kv.NewError(ecr.ErrCodeInvalidParameterException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
 			case ecr.ErrCodeRepositoryNotFoundException:
-				return nil, errors.New(ecr.ErrCodeRepositoryNotFoundException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
+				return nil, kv.NewError(ecr.ErrCodeRepositoryNotFoundException).With("cause", aerr.Error()).With("stack", stack.Trace().TrimRuntime())
 			default:
-				return nil, errors.Wrap(aerr).With("stack", stack.Trace().TrimRuntime())
+				return nil, kv.Wrap(aerr).With("stack", stack.Trace().TrimRuntime())
 			}
 		} else {
-			return nil, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+			return nil, kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 		}
 	}
 	for _, repo := range result.Repositories {
@@ -95,7 +95,7 @@ func GetECRDefaultURL() (urlOut *url.URL, err errors.Error) {
 		}
 		urlOut, errGo = url.Parse("https://" + *repo.RepositoryUri)
 		if errGo != nil {
-			return nil, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+			return nil, kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 		}
 		return urlOut, nil
 	}

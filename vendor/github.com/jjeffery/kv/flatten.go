@@ -5,14 +5,18 @@ import (
 	"strconv"
 )
 
-// Flatten accepts a keyvals slice and "flattens" it into a slice
+type keyvalser interface {
+	Keyvals() []interface{}
+}
+
+// flattenFix accepts a keyvals slice and "flattens" it into a slice
 // of alternating key/value pairs. See the examples.
 //
-// Flatten will also check the result to ensure it is a valid
+// flattenFix will also check the result to ensure it is a valid
 // slice of key/value pairs. The returned slice is guaranteed
 // to have an even number of items, and every item at an even-numbered
 // index is guaranteed to be a string.
-func Flatten(keyvals []interface{}) []interface{} {
+func flattenFix(keyvals []interface{}) []interface{} {
 	// opinionated constants for names of keys
 	const (
 		keyMsg           = "msg"
@@ -35,28 +39,13 @@ func Flatten(keyvals []interface{}) []interface{} {
 
 	for i, val := range keyvals {
 		switch v := val.(type) {
-		case Map:
-			requiresFlattening = true
-			estimatedLen += len(v) * 2
-		case Pair:
-			requiresFlattening = true
-			estimatedLen += 2
 		case List:
 			requiresFlattening = true
 			// TODO(jpj): recursively descending into the keyvals
 			// will come up with a reasonably length estimate, but
 			// for now just double the number of elements in the slice
 			// and this is probably accurate enough.
-			estimatedLen = len(v) * 2
-		case keyvalPairer:
-			requiresFlattening = true
-			estimatedLen += 2
-		case keyvalsAppender:
-			requiresFlattening = true
-			// some unknown Keyvals appender: not possible to estimate
-			// so just use a constant. More than 8 key/value pairs is
-			// uncommon.
-			estimatedLen += 16
+			estimatedLen += len(v)
 		case keyvalser:
 			// unknown implementation: calling Keyvals could result in
 			// additional memory allocation, so use a conservative guess
@@ -179,19 +168,10 @@ func flatten(
 		// At this point the first item in the input is a keyvalsAppender,
 		// keyvalser, keyvalPairer, or keyvalMapper.
 		switch v := input[0].(type) {
-		case keyvalsAppender:
-			// The contract with appendKeyvals is that it promises to
-			// append a valid key/value pairs, so no checking.
-			output = v.appendKeyvals(output)
-		case keyvalPairer:
-			{
-				key, value := v.keyvalPair()
-				output = append(output, key, value)
-			}
 		case keyvalser:
 			// The Keyvals method does not guarantee to return a valid
 			// key/value list, so flatten and fix it as if this slice
-			// had been passed to the Flatten function in the first place.
+			// had been passed to the flattenFix function in the first place.
 			output = flatten(output, v.Keyvals(), missingKeyName)
 		default:
 			//panic("cannot happen")
@@ -205,20 +185,18 @@ func flatten(
 
 // countScalars returns the count of items in input up to but
 // not including the first non-scalar item. A scalar is a single
-// value item, ie not a keyvalser, keyvalPairer, keyvalMapper or
-// keyvalsAppender.
+// value item, ie not a keyvalser.
 func countScalars(input []interface{}) int {
 	for i := 0; i < len(input); i++ {
 		switch input[i].(type) {
-		case keyvalsAppender, keyvalser, keyvalPairer:
+		case keyvalser:
 			return i
 		}
 	}
 	return len(input)
 }
 
-// flattenScalars adjusts a list of items, none of which are keyvalsers,
-// keyvalsAppenders, keyvalMappers, or keyvalPairers.
+// flattenScalars adjusts a list of items, none of which are keyvalsers.
 //
 // Ideally the list will have an even number of items, with strings in the
 // even indices. If it doesn't, this function will fix it.
@@ -358,7 +336,7 @@ func insertKeyAt(input []interface{}, index int, keyName interface{}) []interfac
 
 // this could be public and configurable
 var knownKeys = map[string]struct{}{
-	"msg":   struct{}{},
-	"level": struct{}{},
-	"id":    struct{}{},
+	"msg":   {},
+	"level": {},
+	"id":    {},
 }

@@ -17,7 +17,7 @@ import (
 
 	"github.com/karlmutch/envflag" // Forked copy of https://github.com/GoBike/envfla
 
-	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
+	"github.com/jjeffery/kv" // Forked copy of https://github.com/jjeffery/kv
 )
 
 var (
@@ -49,7 +49,7 @@ func init() {
 	flag.Usage = usage
 }
 
-func Released(md *duat.MetaData) (err errors.Error) {
+func Released(md *duat.MetaData) (err kv.Error) {
 	return md.Replace(md.VerFile, md.VerFile, false)
 }
 

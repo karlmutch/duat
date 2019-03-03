@@ -25,9 +25,9 @@ import (
 
 	"github.com/karlmutch/envflag" // Forked copy of https://github.com/GoBike/envflag
 
-	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
-	"github.com/karlmutch/stack"  // Forked copy of https://github.com/go-stack/stack
-	"github.com/mgutz/logxi"      // Using a forked copy of this package results in build issues
+	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
+	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
+	"github.com/mgutz/logxi"     // Using a forked copy of this package results in build issues
 )
 
 var (
@@ -78,14 +78,14 @@ func init() {
 	r, errGo := regexp.Compile("\\<repo-version\\>.*?\\</repo-version\\>")
 	if errGo != nil {
 		fmt.Fprintf(os.Stderr, "%v\n",
-			errors.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+			kv.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
 		return
 	}
 	rFind = r
 	r, errGo = regexp.Compile("<[^>]*>")
 	if errGo != nil {
 		fmt.Fprintf(os.Stderr, "%v\n",
-			errors.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+			kv.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
 		return
 	}
 	rHTML = r

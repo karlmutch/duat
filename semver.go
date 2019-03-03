@@ -21,8 +21,8 @@ import (
 
 	"github.com/karlmutch/semver" // Forked copy of https://github.com/Masterminds/semver
 
-	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
-	"github.com/karlmutch/stack"  // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
+	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
 )
 
 var (
@@ -35,14 +35,14 @@ func init() {
 	r, errGo := regexp.Compile("\\<repo-version\\>.*?\\</repo-version\\>")
 	if errGo != nil {
 		fmt.Fprintf(os.Stderr, "%v\n",
-			errors.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+			kv.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
 		return
 	}
 	rFind = r
 	r, errGo = regexp.Compile("<[^>]*>")
 	if errGo != nil {
 		fmt.Fprintf(os.Stderr, "%v\n",
-			errors.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+			kv.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
 		return
 	}
 	rHTML = r
@@ -50,21 +50,21 @@ func init() {
 	r, errGo = regexp.Compile("\\<repo-version\\>(.*?)\\</repo-version\\>")
 	if errGo != nil {
 		fmt.Fprintf(os.Stderr, "%v\n",
-			errors.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+			kv.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
 		return
 	}
 	rVerReplace = r
 }
 
-func (md *MetaData) LoadVer(fn string) (ver *semver.Version, err errors.Error) {
+func (md *MetaData) LoadVer(fn string) (ver *semver.Version, err kv.Error) {
 
 	if md.SemVer != nil {
-		return nil, errors.New("version already loaded").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+		return nil, kv.NewError("version already loaded").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}
 
 	file, errGo := os.Open(fn)
 	if errGo != nil {
-		return nil, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+		return nil, kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}
 	defer file.Close()
 	scan := bufio.NewScanner(file)
@@ -82,48 +82,48 @@ func (md *MetaData) LoadVer(fn string) (ver *semver.Version, err errors.Error) {
 				}
 				ver, errGo = semver.NewVersion(extracted)
 				if errGo != nil {
-					return nil, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn).With("extracted", extracted).With("version", version)
+					return nil, kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn).With("extracted", extracted).With("version", version)
 				}
 				continue
 			}
 			newVer := html.UnescapeString(rHTML.ReplaceAllString(version, ""))
 			if newVer != ver.String() {
-				return nil, errors.New("all repo-version HTML tags must have the same version string").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+				return nil, kv.NewError("all repo-version HTML tags must have the same version string").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 			}
 		}
 	}
 
 	if ver == nil {
-		return nil, errors.New("version not found").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+		return nil, kv.NewError("version not found").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}
 
 	md.SemVer, errGo = semver.NewVersion(ver.String())
 	if errGo != nil {
 		md.SemVer = nil
-		return nil, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+		return nil, kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}
 
 	return ver, nil
 }
 
-func (md *MetaData) Apply(files []string) (err errors.Error) {
+func (md *MetaData) Apply(files []string) (err kv.Error) {
 
 	if len(files) == 0 {
-		return errors.New("the apply command requires that files are specified with the -t option").With("stack", stack.Trace().TrimRuntime())
+		return kv.NewError("the apply command requires that files are specified with the -t option").With("stack", stack.Trace().TrimRuntime())
 	}
 
 	checkedFiles := make([]string, 0, len(files))
 	for _, file := range files {
 		if len(file) != 0 {
 			if _, errGo := os.Stat(file); errGo != nil {
-				return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", file)
+				return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", file)
 			}
 			checkedFiles = append(checkedFiles, file)
 		}
 	}
 
 	if len(checkedFiles) != len(files) {
-		return errors.New("no usable targets were found to apply the version to").With("stack", stack.Trace().TrimRuntime())
+		return kv.NewError("no usable targets were found to apply the version to").With("stack", stack.Trace().TrimRuntime())
 	}
 
 	// Process the files but stop on any errors
@@ -139,7 +139,7 @@ func (md *MetaData) Apply(files []string) (err errors.Error) {
 // BumpPrerelease will first bump the release, adn then write the results into
 // the file nominated as the version file
 //
-func (md *MetaData) BumpPrerelease() (result *semver.Version, err errors.Error) {
+func (md *MetaData) BumpPrerelease() (result *semver.Version, err kv.Error) {
 	if _, err := md.Prerelease(); err != nil {
 		return nil, err
 	}
@@ -150,13 +150,13 @@ func (md *MetaData) BumpPrerelease() (result *semver.Version, err errors.Error) 
 	return md.SemVer, nil
 }
 
-func (md *MetaData) Prerelease() (result *semver.Version, err errors.Error) {
+func (md *MetaData) Prerelease() (result *semver.Version, err kv.Error) {
 
 	if md.Git == nil || md.Git.Err != nil {
 		if md.Git.Err != nil {
 			return nil, md.Git.Err
 		} else {
-			return nil, errors.New("an operation that required git could not locate git information").With("stack", stack.Trace().TrimRuntime())
+			return nil, kv.NewError("an operation that required git could not locate git information").With("stack", stack.Trace().TrimRuntime())
 		}
 	}
 
@@ -179,25 +179,25 @@ func (md *MetaData) Prerelease() (result *semver.Version, err errors.Error) {
 	result = md.SemVer
 	newVer, errGo := result.SetPrerelease(fmt.Sprintf("%s-%s", cleanBranch, build))
 	if errGo != nil {
-		return nil, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+		return nil, kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 	md.SemVer = &newVer
 
 	return md.SemVer, nil
 }
 
-func (md *MetaData) Replace(fn string, dest string, substitute bool) (err errors.Error) {
+func (md *MetaData) Replace(fn string, dest string, substitute bool) (err kv.Error) {
 
 	// To prevent destructive replacements first copy the file then modify the copy
 	// and in an atomic operation copy the copy back over the original file, then
 	// delete the working file
 	origFn, errGo := filepath.Abs(fn)
 	if errGo != nil {
-		return errors.Wrap(errGo, "input file could not be resolved to an absolute file path").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+		return kv.Wrap(errGo, "input file could not be resolved to an absolute file path").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}
 	tmp, errGo := ioutil.TempFile(filepath.Dir(origFn), filepath.Base(origFn))
 	if errGo != nil {
-		return errors.Wrap(errGo, "temporary file could not be generated").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+		return kv.Wrap(errGo, "temporary file could not be generated").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}
 	defer func() {
 		defer os.Remove(tmp.Name())
@@ -207,7 +207,7 @@ func (md *MetaData) Replace(fn string, dest string, substitute bool) (err errors
 
 	file, errGo := os.OpenFile(origFn, os.O_RDWR, 0600)
 	if errGo != nil {
-		return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}
 
 	newVer := fmt.Sprintf("<repo-version>%s</repo-version>", md.SemVer.String())
@@ -229,22 +229,22 @@ func (md *MetaData) Replace(fn string, dest string, substitute bool) (err errors
 		// Overwrite the output file if it is present
 		file, errGo = os.OpenFile(dest, os.O_CREATE|os.O_RDWR, 0600)
 		if errGo != nil {
-			return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+			return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 		}
 		defer file.Close()
 	}
 
-	// Ignore errors if the rewind fails as this could be a stdout style file
+	// Ignore kv.if the rewind fails as this could be a stdout style file
 	_, _ = file.Seek(0, io.SeekStart)
 
 	if _, errGo = tmp.Seek(0, io.SeekStart); errGo != nil {
-		return errors.Wrap(errGo, "failed to rewind a temporary file").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+		return kv.Wrap(errGo, "failed to rewind a temporary file").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}
 
 	// Copy the output file on top of the original file
 	written, errGo := io.Copy(file, tmp)
 	if errGo != nil {
-		return errors.Wrap(errGo, "failed to update the output file").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+		return kv.Wrap(errGo, "failed to update the output file").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}
 	// Because we overwrote the file we need to trim off the end of the file if it shrank in size
 	file.Truncate(written)

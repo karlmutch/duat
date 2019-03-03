@@ -20,8 +20,8 @@ import (
 
 	"github.com/karlmutch/envflag" // Forked copy of https://github.com/GoBike/envfla
 
-	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
-	"github.com/karlmutch/stack"  // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
+	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
 )
 
 var (
@@ -72,7 +72,7 @@ func main() {
 		logger.SetLevel(logxi.LevelDebug)
 	}
 	if len(os.Args) < 1 {
-		fmt.Fprintln(os.Stderr, errors.New("no input file names were supplied").With("stack", stack.Trace().TrimRuntime()))
+		fmt.Fprintln(os.Stderr, kv.NewError("no input file names were supplied").With("stack", stack.Trace().TrimRuntime()))
 		os.Exit(-1)
 	}
 
@@ -81,7 +81,7 @@ func main() {
 		if fn == "-" {
 			buff, errGo := ioutil.ReadAll(os.Stdin)
 			if errGo != nil {
-				fmt.Fprintln(os.Stderr, errors.Wrap(errGo, "no input file names were supplied").With("stack", stack.Trace().TrimRuntime()))
+				fmt.Fprintln(os.Stderr, kv.Wrap(errGo, "no input file names were supplied").With("stack", stack.Trace().TrimRuntime()))
 				os.Exit(-1)
 			}
 			fns = append(fns, strings.Split(string(buff), "\n")...)
@@ -94,14 +94,14 @@ func main() {
 	for _, fn := range fns {
 		files, errGo := filepath.Glob(fn)
 		if errGo != nil {
-			fmt.Fprintln(os.Stderr, errors.Wrap(errGo, "no input file names were supplied").With("stack", stack.Trace().TrimRuntime()))
+			fmt.Fprintln(os.Stderr, kv.Wrap(errGo, "no input file names were supplied").With("stack", stack.Trace().TrimRuntime()))
 			os.Exit(-1)
 		}
 		uploads = append(uploads, files...)
 	}
 
 	if len(uploads) == 0 {
-		fmt.Fprintln(os.Stderr, errors.New("input file wildcards did not match any files").With("stack", stack.Trace().TrimRuntime()))
+		fmt.Fprintln(os.Stderr, kv.NewError("input file wildcards did not match any files").With("stack", stack.Trace().TrimRuntime()))
 		os.Exit(-1)
 	}
 

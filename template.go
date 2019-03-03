@@ -23,8 +23,8 @@ import (
 	"github.com/Masterminds/sprig"
 	"github.com/go-yaml/yaml"
 
-	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
-	"github.com/karlmutch/stack"  // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
+	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
 )
 
 func FuncMap() (f template.FuncMap) {
@@ -46,7 +46,7 @@ func FuncMap() (f template.FuncMap) {
 func toJson(v interface{}) string {
 	data, err := json.Marshal(v)
 	if err != nil {
-		// Swallow errors inside of a template.
+		// Swallow kv.inside of a template.
 		return ""
 	}
 	return string(data)
@@ -59,7 +59,7 @@ func toJson(v interface{}) string {
 func toYaml(v interface{}) string {
 	data, err := yaml.Marshal(v)
 	if err != nil {
-		// Swallow errors inside of a template.
+		// Swallow kv.inside of a template.
 		return ""
 	}
 	return string(data)
@@ -80,7 +80,7 @@ func toToml(v interface{}) string {
 }
 
 // create template context
-func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, overrideVals map[string]string) (vars map[string]interface{}, err errors.Error) {
+func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, overrideVals map[string]string) (vars map[string]interface{}, err kv.Error) {
 
 	vars = map[string]interface{}{}
 
@@ -117,7 +117,7 @@ func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, ov
 	if jsonVals != "" {
 		obj := map[string]interface{}{}
 		if errGo := json.Unmarshal([]byte(jsonVals), &obj); errGo != nil {
-			return nil, errors.Wrap(errGo, "bad json format").With("stack", stack.Trace().TrimRuntime())
+			return nil, kv.Wrap(errGo, "bad json format").With("stack", stack.Trace().TrimRuntime())
 		}
 		for k, v := range obj {
 			vars[k] = v
@@ -126,25 +126,25 @@ func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, ov
 
 	for _, file := range loadFiles {
 		if bytes, errGo := ioutil.ReadFile(file); errGo != nil {
-			return nil, errors.Wrap(errGo).With("file", file).With("stack", stack.Trace().TrimRuntime())
+			return nil, kv.Wrap(errGo).With("file", file).With("stack", stack.Trace().TrimRuntime())
 		} else {
 			obj := map[string]interface{}{}
 
 			switch filepath.Ext(file) {
 			case ".json":
 				if errGo := json.Unmarshal(bytes, &obj); errGo != nil {
-					return nil, errors.Wrap(errGo, "unrecognized json").With("file", file).With("stack", stack.Trace().TrimRuntime())
+					return nil, kv.Wrap(errGo, "unrecognized json").With("file", file).With("stack", stack.Trace().TrimRuntime())
 				}
 			case ".yaml", ".yml":
 				if errGo := yaml.Unmarshal(bytes, &obj); errGo != nil {
-					return nil, errors.Wrap(errGo, "unrecognized yaml").With("file", file).With("stack", stack.Trace().TrimRuntime())
+					return nil, kv.Wrap(errGo, "unrecognized yaml").With("file", file).With("stack", stack.Trace().TrimRuntime())
 				}
 			case ".toml":
 				if errGo := toml.Unmarshal(bytes, &obj); errGo != nil {
-					return nil, errors.Wrap(errGo, "unrecognized toml").With("file", file).With("stack", stack.Trace().TrimRuntime())
+					return nil, kv.Wrap(errGo, "unrecognized toml").With("file", file).With("stack", stack.Trace().TrimRuntime())
 				}
 			default:
-				return nil, errors.New("unsupported file type (extension)").With("file", file).With("stack", stack.Trace().TrimRuntime())
+				return nil, kv.NewError("unsupported file type (extension)").With("file", file).With("stack", stack.Trace().TrimRuntime())
 			}
 
 			for k, v := range obj {
@@ -167,20 +167,20 @@ func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, ov
 	return vars, nil
 }
 
-func templateExecute(t *template.Template, src io.Reader, dest io.Writer, ctx interface{}) (err errors.Error) {
+func templateExecute(t *template.Template, src io.Reader, dest io.Writer, ctx interface{}) (err kv.Error) {
 
 	readBytes, errGo := ioutil.ReadAll(src)
 	if errGo != nil {
-		return errors.Wrap(errGo, "pasing failed for template file(s)").With("stack", stack.Trace().TrimRuntime())
+		return kv.Wrap(errGo, "pasing failed for template file(s)").With("stack", stack.Trace().TrimRuntime())
 	}
 
 	tmpl, errGo := t.Parse(string(readBytes))
 	if errGo != nil {
-		return errors.Wrap(errGo, "pasing failed for template file(s)").With("stack", stack.Trace().TrimRuntime())
+		return kv.Wrap(errGo, "pasing failed for template file(s)").With("stack", stack.Trace().TrimRuntime())
 	}
 
 	if errGo = tmpl.Execute(dest, ctx); errGo != nil {
-		return errors.Wrap(errGo, "output file could not be created").With("stack", stack.Trace().TrimRuntime())
+		return kv.Wrap(errGo, "output file could not be created").With("stack", stack.Trace().TrimRuntime())
 	}
 	return nil
 }
@@ -197,7 +197,7 @@ type TemplateOptions struct {
 	OverrideValues map[string]string
 }
 
-func (md *MetaData) Template(opts TemplateOptions) (err errors.Error) {
+func (md *MetaData) Template(opts TemplateOptions) (err kv.Error) {
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -208,7 +208,7 @@ func (md *MetaData) Template(opts TemplateOptions) (err errors.Error) {
 	t := template.New("noname").Funcs(FuncMap())
 	if len(opts.Delimiters) != 0 {
 		if len(opts.Delimiters) != 2 {
-			return errors.New("unexpected number of delimiters, tw are expected [\"left\",\"right\"").With("stack", stack.Trace().TrimRuntime())
+			return kv.NewError("unexpected number of delimiters, tw are expected [\"left\",\"right\"").With("stack", stack.Trace().TrimRuntime())
 		}
 		t = t.Delims(opts.Delimiters[0], opts.Delimiters[1])
 	}

@@ -219,12 +219,16 @@
   revision = "d14ea06fba99483203c19d92cfcd13ebe73135f4"
 
 [[projects]]
-  digest = "1:1200d8db6297619ee900fabb7ea91e159aefe3f5c7e0e06b0164b9a74a1359d5"
+  digest = "1:39beeff263d6f49eeeb09a676d1bbc5292772b6f50ef991e07e3d7e4507dbaa2"
   name = "github.com/jjeffery/kv"
-  packages = ["."]
+  packages = [
+    ".",
+    "internal/logfmt",
+    "internal/parse",
+    "internal/pool",
+  ]
   pruneopts = "UT"
-  revision = "e16ed12583c8a365f8ae714c7564eeef173447dc"
-  version = "v1.0"
+  revision = "86a724473171d9ea8f64c821ae04bf326f85d910"
 
 [[projects]]
   digest = "1:e22af8c7518e1eab6f2eab2b7d7558927f816262586cd6ed9f349c97a6c285c4"
@@ -256,14 +260,6 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "ae3268980a293939fc31d786fe86f1453333d386"
-
-[[projects]]
-  digest = "1:6a3aabb4de1f9e85c7ae2bb8ae97eb87b7d5e6ca39b1648251e0f11b34f4232f"
-  name = "github.com/karlmutch/errors"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "a34a51e66ce34c250486f85f1822c884f8dee966"
-  version = "v1.0.1"
 
 [[projects]]
   digest = "1:b311407991ca82ea46706557aef8d32b56e96c2f95481754b5a5d34a984a3af3"
@@ -552,10 +548,10 @@
     "github.com/docker/docker/client",
     "github.com/go-test/deep",
     "github.com/go-yaml/yaml",
+    "github.com/jjeffery/kv",
     "github.com/karlmutch/amicontained/container",
     "github.com/karlmutch/base62",
     "github.com/karlmutch/envflag",
-    "github.com/karlmutch/errors",
     "github.com/karlmutch/semver",
     "github.com/karlmutch/stack",
     "github.com/mattn/go-colorable",

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/karlmutch/errors"
+	"github.com/jjeffery/kv"
 	"github.com/karlmutch/stack"
 )
 
@@ -39,10 +39,10 @@ func TestUserTemplate(t *testing.T) {
 
 	usr, errGo := user.Current()
 	if errGo != nil {
-		t.Fatal(errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()))
+		t.Fatal(kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()))
 	}
 	expected := usr.Uid + usr.Username + usr.Gid
 	if expected != writer.String() {
-		t.Fatal(errors.New("templated user details incorrect").With("expected", expected, "actual", writer.String()).With("stack", stack.Trace().TrimRuntime()))
+		t.Fatal(kv.NewError("templated user details incorrect").With("expected", expected, "actual", writer.String()).With("stack", stack.Trace().TrimRuntime()))
 	}
 }

@@ -7,11 +7,12 @@ package main
 
 import (
 	"C"
-	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
-	"github.com/karlmutch/stack"  // Forked copy of https://github.com/go-stack/stack
+
+	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
+	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
 )
 
 //export Check
 func Check() (err string) {
-	return errors.New("custom error").With("stack", stack.Trace().TrimRuntime()).Error()
+	return kv.NewError("custom error").With("stack", stack.Trace().TrimRuntime()).Error()
 }
