@@ -27,18 +27,18 @@ import (
 
 	"github.com/karlmutch/amicontained/container" // Forked from https://github.com/jessfraz/amicontained.git
 
-	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
-	"github.com/karlmutch/stack"  // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
+	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
 )
 
 var (
-	ErrInContainer = errors.New("operation not support while within a running container")
+	ErrInContainer = kv.NewError("operation not support while within a running container")
 )
 
 // ScrubRepository is used to transform module names into docker image name compliant strings.
 // The definition of a repository name string can be found at https://github.com/moby/moby/blob/master/image/spec/v1.2.md
 //
-func (*MetaData) ScrubDockerRepo(name string) (repoName string, err errors.Error) {
+func (*MetaData) ScrubDockerRepo(name string) (repoName string, err kv.Error) {
 	for _, aChar := range name {
 		if aChar < '0' || aChar > 'z' || (aChar > '9' && aChar < 'A') || (aChar > 'Z' && aChar < 'a') {
 			if aChar != '.' && aChar != '_' && aChar != '-' {
@@ -53,13 +53,13 @@ func (*MetaData) ScrubDockerRepo(name string) (repoName string, err errors.Error
 }
 
 // IsDocker is used to determine if we are running within a container runtime
-func (*MetaData) ContainerRuntime() (containerType string, err errors.Error) {
+func (*MetaData) ContainerRuntime() (containerType string, err kv.Error) {
 	name, errGo := container.DetectRuntime()
 	if errGo != nil {
 		if errGo == container.ErrContainerRuntimeNotFound {
 			return "", nil
 		}
-		return "", errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+		return "", kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 	if name == "not-found" {
 		return "", nil
@@ -73,12 +73,12 @@ func (*MetaData) ContainerRuntime() (containerType string, err errors.Error) {
 // See if an existing release is locally present, which is OK but make sure the id is the same.
 // Tag the pre-release with the clean release, if requested using erasePrerelease.
 // Prepend and push
-func (md *MetaData) ImageRelease(remote string, erasePrerelease bool) (images []string, err errors.Error) {
+func (md *MetaData) ImageRelease(remote string, erasePrerelease bool) (images []string, err kv.Error) {
 
 	images = []string{}
 
 	if len(remote) != 0 && !strings.HasSuffix(remote, ".amazonaws.com") {
-		return images, errors.New("an external repo was specified but was not recognized as being from AWS").With("repo", remote).With("stack", stack.Trace().TrimRuntime())
+		return images, kv.NewError("an external repo was specified but was not recognized as being from AWS").With("repo", remote).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	// Make sure the original image exists for the current version before processing
@@ -88,7 +88,7 @@ func (md *MetaData) ImageRelease(remote string, erasePrerelease bool) (images []
 		return images, err
 	}
 	if !exists {
-		return images, errors.New("a pre-release image must exist before calling release").With("stack", stack.Trace().TrimRuntime())
+		return images, kv.NewError("a pre-release image must exist before calling release").With("stack", stack.Trace().TrimRuntime())
 	}
 
 	curRepo, curVersion, _, err := md.GenerateImageName()
@@ -103,7 +103,7 @@ func (md *MetaData) ImageRelease(remote string, erasePrerelease bool) (images []
 	}
 	newVersion, errGo := semver.NewVersion(version)
 	if errGo != nil {
-		return images, errors.Wrap(errGo, "could not parse the new release").With("version", version).With("stack", stack.Trace().TrimRuntime())
+		return images, kv.Wrap(errGo, "could not parse the new release").With("version", version).With("stack", stack.Trace().TrimRuntime())
 	}
 	exists, relID, err := md.imageExists(newVersion)
 	if err != nil {
@@ -111,13 +111,13 @@ func (md *MetaData) ImageRelease(remote string, erasePrerelease bool) (images []
 	}
 	if exists {
 		if relID != id {
-			return images, errors.New("the released image already exists, with a different image ID").With("stack", stack.Trace().TrimRuntime())
+			return images, kv.NewError("the released image already exists, with a different image ID").With("stack", stack.Trace().TrimRuntime())
 		}
 	}
 
 	dock, errGo := client.NewEnvClient()
 	if errGo != nil {
-		return images, errors.Wrap(errGo, "docker unavailable").With("stack", stack.Trace().TrimRuntime())
+		return images, kv.Wrap(errGo, "docker unavailable").With("stack", stack.Trace().TrimRuntime())
 	}
 	tag := fmt.Sprintf("%s:%s", repo, version)
 	if !exists {
@@ -126,29 +126,30 @@ func (md *MetaData) ImageRelease(remote string, erasePrerelease bool) (images []
 
 		errGo = dock.ImageTag(context.Background(), curTag, tag)
 		if errGo != nil {
-			return images, errors.Wrap(errGo).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
+			return images, kv.Wrap(errGo).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
 		}
 	}
 	images = append(images, tag)
 
 	if len(remote) != 0 {
 		if err = CreateECRRepo(repo); err != nil {
-
-			if aerr, ok := errors.Cause(err).(awserr.Error); ok {
-				switch aerr.Code() {
-				case ecr.ErrCodeRepositoryAlreadyExistsException:
-					break
-				default:
-					return []string{}, errors.Wrap(err).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
+			causer, canCause := err.(interface{ Cause() error })
+			if !canCause {
+				if aerr, ok := causer.Cause().(awserr.Error); ok {
+					switch aerr.Code() {
+					case ecr.ErrCodeRepositoryAlreadyExistsException:
+						break
+					default:
+						return []string{}, kv.Wrap(err).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
+					}
 				}
-			} else {
-				return []string{}, errors.Wrap(err).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
 			}
+			return []string{}, kv.Wrap(err).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
 		}
 
 		tag = fmt.Sprintf("%s/%s:%s", remote, repo, version)
 		if errGo := dock.ImageTag(context.Background(), curTag, tag); errGo != nil {
-			return images, errors.Wrap(errGo).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
+			return images, kv.Wrap(errGo).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
 		}
 
 		token, err := GetECRToken()
@@ -176,17 +177,17 @@ func (md *MetaData) ImageRelease(remote string, erasePrerelease bool) (images []
 
 		resp, errGo := dock.ImagePush(context.Background(), tag, pushOptions)
 		if errGo != nil {
-			return images, errors.Wrap(errGo).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
+			return images, kv.Wrap(errGo).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
 		}
 		if _, errGo = ioutil.ReadAll(resp); errGo != nil {
-			return images, errors.Wrap(errGo).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
+			return images, kv.Wrap(errGo).With("curTag", curTag).With("newTag", tag).With("stack", stack.Trace().TrimRuntime())
 		}
 		images = append(images, tag)
 	}
 	return images, nil
 }
 
-func (md *MetaData) generateImageName(semVer *semver.Version) (repo string, version string, prerelease bool, err errors.Error) {
+func (md *MetaData) generateImageName(semVer *semver.Version) (repo string, version string, prerelease bool, err kv.Error) {
 	// Get the git repo name and the parent which will have been used to name the
 	// containers being created during our build process
 	gitParts := strings.Split(md.Git.URL.EscapedPath(), "/")
@@ -214,13 +215,13 @@ func (md *MetaData) generateImageName(semVer *semver.Version) (repo string, vers
 // caller should
 // Clean the semver and save the new one after the push
 
-func (md *MetaData) GenerateImageName() (repo string, version string, prerelease bool, err errors.Error) {
+func (md *MetaData) GenerateImageName() (repo string, version string, prerelease bool, err kv.Error) {
 	return md.generateImageName(md.SemVer)
 }
 
 // DockerPrune will wipe the images from the local registry, the all option can be used to leave the latest image present
 //
-func (md *MetaData) DockerPrune(all bool) (err errors.Error) {
+func (md *MetaData) DockerPrune(all bool) (err kv.Error) {
 
 	repo, ver, pre, err := md.GenerateImageName()
 	if err != nil {
@@ -239,12 +240,12 @@ func (md *MetaData) DockerPrune(all bool) (err errors.Error) {
 	// Now get our local docker images
 	dock, errGo := client.NewEnvClient()
 	if errGo != nil {
-		return errors.Wrap(errGo, "docker unavailable").With("stack", stack.Trace().TrimRuntime())
+		return kv.Wrap(errGo, "docker unavailable").With("stack", stack.Trace().TrimRuntime())
 	}
 
 	images, errGo := dock.ImageList(context.Background(), types.ImageListOptions{})
 	if errGo != nil {
-		return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	// filter the image repo and version tags into a collection of strings that can
@@ -297,20 +298,20 @@ func (md *MetaData) DockerPrune(all bool) (err errors.Error) {
 			continue
 		}
 		if _, errGo = dock.ImageRemove(context.Background(), image, types.ImageRemoveOptions{Force: true}); errGo != nil {
-			return errors.Wrap(errGo).With("imageID").With("stack", stack.Trace().TrimRuntime())
+			return kv.Wrap(errGo).With("imageID").With("stack", stack.Trace().TrimRuntime())
 		}
 		removed[image] = true
 	}
 	return nil
 }
 
-func (md *MetaData) imageExists(ver *semver.Version) (exists bool, id string, err errors.Error) {
+func (md *MetaData) imageExists(ver *semver.Version) (exists bool, id string, err kv.Error) {
 	runtime, err := md.ContainerRuntime()
 	if err != nil {
 		return false, "", err
 	}
 	if len(runtime) > 0 {
-		return false, "", errors.Wrap(ErrInContainer).With("stack", stack.Trace().TrimRuntime())
+		return false, "", kv.Wrap(ErrInContainer).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	repoName, tag, _, err := md.generateImageName(ver)
@@ -322,12 +323,12 @@ func (md *MetaData) imageExists(ver *semver.Version) (exists bool, id string, er
 	// Now get our local docker images
 	dock, errGo := client.NewEnvClient()
 	if errGo != nil {
-		return false, "", errors.Wrap(errGo, "docker unavailable").With("stack", stack.Trace().TrimRuntime())
+		return false, "", kv.Wrap(errGo, "docker unavailable").With("stack", stack.Trace().TrimRuntime())
 	}
 
 	images, errGo := dock.ImageList(context.Background(), types.ImageListOptions{})
 	if errGo != nil {
-		return false, "", errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+		return false, "", kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 	for _, image := range images {
 		for _, repo := range image.RepoTags {
@@ -340,40 +341,40 @@ func (md *MetaData) imageExists(ver *semver.Version) (exists bool, id string, er
 	return false, "", nil
 }
 
-func (md *MetaData) ImageExists() (exists bool, id string, err errors.Error) {
+func (md *MetaData) ImageExists() (exists bool, id string, err kv.Error) {
 	return md.imageExists(md.SemVer)
 }
 
-func (md *MetaData) ImageCreate(out io.Writer) (err errors.Error) {
+func (md *MetaData) ImageCreate(out io.Writer) (err kv.Error) {
 
 	runtime, err := md.ContainerRuntime()
 	if err != nil {
 		return err
 	}
 	if len(runtime) > 0 {
-		return errors.Wrap(ErrInContainer).With("stack", stack.Trace().TrimRuntime())
+		return kv.Wrap(ErrInContainer).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	// Now prepare a temporary Dockerfile that has been processed using the semver injection
 	fn, errGo := ioutil.TempFile(".", "Dockerfile.")
 	if errGo != nil {
-		return errors.Wrap(errGo, "a temporary Dockerfile could not be created in your working directory").With("stack", stack.Trace().TrimRuntime())
+		return kv.Wrap(errGo, "a temporary Dockerfile could not be created in your working directory").With("stack", stack.Trace().TrimRuntime())
 	}
 	fn.Close()
 	defer os.Remove(fn.Name())
 
 	if err = md.Replace("./Dockerfile", fn.Name(), true); err != nil {
-		return errors.Wrap(errGo, "a temporary Dockerfile was not generated").With("tempFile", fn).With("stack", stack.Trace().TrimRuntime())
+		return kv.Wrap(errGo, "a temporary Dockerfile was not generated").With("tempFile", fn).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	repoName, tag, _, err := md.GenerateImageName()
 	if err != nil {
-		return errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	user := os.Getenv("USER")
 	if len(user) == 0 {
-		return errors.New("could not retrieve user ID from env vars").With("stack", stack.Trace().TrimRuntime())
+		return kv.NewError("could not retrieve user ID from env vars").With("stack", stack.Trace().TrimRuntime())
 	}
 
 	buildArgs := fmt.Sprintf("--build-arg USER=%s --build-arg USER_ID=`id -u %s` --build-arg USER_GROUP_ID=`id -g %s`", user, user, user)
@@ -386,12 +387,12 @@ func (md *MetaData) ImageCreate(out io.Writer) (err errors.Error) {
 	cmd.Stderr = out
 
 	if errGo := cmd.Start(); errGo != nil {
-		fmt.Fprintln(os.Stderr, errors.Wrap(errGo, "unable to run the compiler").With("stack", stack.Trace().TrimRuntime()).Error())
+		fmt.Fprintln(os.Stderr, kv.Wrap(errGo, "unable to run the compiler").With("stack", stack.Trace().TrimRuntime()).Error())
 		os.Exit(-3)
 	}
 
 	if errGo := cmd.Wait(); errGo != nil {
-		return errors.Wrap(errGo, "unable to run the compiler").With("stack", stack.Trace().TrimRuntime())
+		return kv.Wrap(errGo, "unable to run the compiler").With("stack", stack.Trace().TrimRuntime())
 	}
 
 	return nil

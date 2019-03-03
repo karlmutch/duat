@@ -11,3 +11,8 @@ The Go kit `Logger` interface is a great example of  the power of
 simplicity, and was a key source of inspiration for this package.
  I've borrowed some words from the Go kit  documentation. 
 Thanks to the authors.
+
+https://comail.io/go/colog
+
+The idea for the `kvlog` package is inspired by the `colog` package.
+Thanks to the authors.

@@ -13,9 +13,9 @@ import (
 	"github.com/karlmutch/duat/version"
 	colorable "github.com/mattn/go-colorable"
 
-	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
-	"github.com/karlmutch/stack"  // Forked copy of https://github.com/go-stack/stack
-	"github.com/mgutz/logxi"      // Using a forked copy of this package results in build issues
+	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
+	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
+	"github.com/mgutz/logxi"     // Using a forked copy of this package results in build issues
 
 	"github.com/karlmutch/envflag" // Forked copy of https://github.com/GoBike/envflag
 )
@@ -66,7 +66,7 @@ func main() {
 	rootDirs := strings.Split(*userDirs, ",")
 	dirs := []string{}
 
-	err := errors.New("")
+	err := kv.NewError("")
 
 	// If this is a recursive build scan all inner directories looking for go code
 	// and build it if there is code found
@@ -108,13 +108,13 @@ func main() {
 // runBuild is used to restore the current working directory after the build itself
 // has switch directories
 //
-func runBuild(dir string, verFn string) (outputs []string, err errors.Error) {
+func runBuild(dir string, verFn string) (outputs []string, err kv.Error) {
 
 	logger.Info(fmt.Sprintf("building in %s", dir))
 
 	cwd, errGo := os.Getwd()
 	if errGo != nil {
-		return outputs, errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+		return outputs, kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	outputs, err = build(dir, verFn, *imageOnly, *prune)
@@ -122,7 +122,7 @@ func runBuild(dir string, verFn string) (outputs []string, err errors.Error) {
 	if errGo = os.Chdir(cwd); errGo != nil {
 		logger.Warn("The original directory could not be restored after the build completed")
 		if err == nil {
-			err = errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+			err = kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 		}
 	}
 
@@ -131,7 +131,7 @@ func runBuild(dir string, verFn string) (outputs []string, err errors.Error) {
 
 // build performs the default build for the component within the directory specified
 //
-func build(dir string, verFn string, imageOnly bool, prune bool) (outputs []string, err errors.Error) {
+func build(dir string, verFn string, imageOnly bool, prune bool) (outputs []string, err kv.Error) {
 
 	outputs = []string{}
 

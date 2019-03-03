@@ -28,9 +28,9 @@
   branch = "master"
   name = "github.com/karlmutch/envflag"
 
-[[constraint]]
-  name = "github.com/karlmutch/errors"
-  version = "1.0.1"
+[[override]]
+  name = "github.com/jjeffery/kv"
+  revision = "86a724473171d9ea8f64c821ae04bf326f85d910"
 
 [[override]]
   name = "github.com/Sirupsen/logrus"

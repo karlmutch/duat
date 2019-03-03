@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/karlmutch/errors" // Forked copy of https://github.com/jjeffery/errors
-	"github.com/karlmutch/stack"  // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
+	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
 
 	"gopkg.in/src-d/go-git.v4" // Not forked due to depency tree being too complex, src-d however are a serious org so I dont expect the repo to disappear
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -15,15 +15,15 @@ import (
 
 // This file contains some utility functions for extracting and using git information
 
-func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
+func (md *MetaData) LoadGit(dir string, scanParents bool) (err kv.Error) {
 
 	if md.Git != nil {
-		return errors.New("git info already loaded, set Git member to nil if new information desired").With("stack", stack.Trace().TrimRuntime())
+		return kv.NewError("git info already loaded, set Git member to nil if new information desired").With("stack", stack.Trace().TrimRuntime())
 	}
 
 	gitDir, errGo := filepath.Abs(dir)
 	if errGo != nil {
-		md.Git.Err = errors.Wrap(errGo, "directory could not be resolved").With("dir", dir).With("stack", stack.Trace().TrimRuntime()).With("git", gitDir)
+		md.Git.Err = kv.Wrap(errGo, "directory could not be resolved").With("dir", dir).With("stack", stack.Trace().TrimRuntime()).With("git", gitDir)
 		return md.Git.Err
 	}
 
@@ -32,11 +32,11 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 			break
 		}
 		if !scanParents {
-			return errors.Wrap(errGo, "does not appear to be the top directory of a git repo").With("stack", stack.Trace().TrimRuntime()).With("git", gitDir)
+			return kv.Wrap(errGo, "does not appear to be the top directory of a git repo").With("stack", stack.Trace().TrimRuntime()).With("git", gitDir)
 		}
 		gitDir = filepath.Dir(gitDir)
 		if len(gitDir) < 2 {
-			return errors.Wrap(errGo, "could not locate a git repo in the directory heirarchy").With("stack", stack.Trace().TrimRuntime()).With("dir", dir)
+			return kv.Wrap(errGo, "could not locate a git repo in the directory heirarchy").With("stack", stack.Trace().TrimRuntime()).With("dir", dir)
 		}
 	}
 
@@ -46,12 +46,12 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 
 	repo, errGo := git.PlainOpen(gitDir)
 	if errGo != nil {
-		md.Git.Err = errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("git", gitDir)
+		md.Git.Err = kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("git", gitDir)
 		return md.Git.Err
 	}
 	ref, errGo := repo.Head()
 	if errGo != nil {
-		md.Git.Err = errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("git", gitDir)
+		md.Git.Err = kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("git", gitDir)
 		return md.Git.Err
 	}
 
@@ -71,7 +71,7 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 	md.Git.Repo = repo
 	refs, errGo := repo.Remotes()
 	if errGo != nil {
-		md.Git.Err = errors.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("git", gitDir).With("repo", repo)
+		md.Git.Err = kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("git", gitDir).With("repo", repo)
 		return md.Git.Err
 	}
 
@@ -81,7 +81,7 @@ func (md *MetaData) LoadGit(dir string, scanParents bool) (err errors.Error) {
 	}
 	gitURL, errGo := url.Parse(urlLoc)
 	if errGo != nil {
-		md.Git.Err = errors.Wrap(errGo).With("url", urlLoc).With("git", gitDir).With("stack", stack.Trace().TrimRuntime())
+		md.Git.Err = kv.Wrap(errGo).With("url", urlLoc).With("git", gitDir).With("stack", stack.Trace().TrimRuntime())
 		return md.Git.Err
 	}
 	md.Git.URL = *gitURL
