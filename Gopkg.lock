@@ -238,14 +238,6 @@
   revision = "0b12d6b5"
 
 [[projects]]
-  digest = "1:002d7b5e5f6d983edda990eb93b6a994e8878471d5b30bfb4d7d844f9eec8f6f"
-  name = "github.com/karlmutch/amicontained"
-  packages = ["container"]
-  pruneopts = "UT"
-  revision = "72c60c0768004eb97c5f5c1d625fe6ed3b3b8561"
-  version = "v0.3.0"
-
-[[projects]]
   branch = "master"
   digest = "1:2e9dc3598263154a610a7abfe5b51ec3e439b52fe894e3a3a7a48cd33d6552cd"
   name = "github.com/karlmutch/base62"
@@ -380,14 +372,6 @@
   pruneopts = "UT"
   revision = "f187355171c936ac84a82793659ebb4936bc1c23"
   version = "v1.3.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:e865a1cd94806d1bb0eaa0bffba2ccb5e25ac42e1f55328c83d5e3399c9961a4"
-  name = "github.com/syndtr/gocapability"
-  packages = ["capability"]
-  pruneopts = "UT"
-  revision = "33e07d32887e1e06b7c025f27ce52f62c7990bc0"
 
 [[projects]]
   digest = "1:afc0b8068986a01e2d8f449917829753a54f6bd4d1265c2b4ad9cba75560020f"
@@ -544,12 +528,10 @@
     "github.com/aws/aws-sdk-go/aws/awserr",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/ecr",
-    "github.com/docker/docker/api/types",
     "github.com/docker/docker/client",
     "github.com/go-test/deep",
     "github.com/go-yaml/yaml",
     "github.com/jjeffery/kv",
-    "github.com/karlmutch/amicontained/container",
     "github.com/karlmutch/base62",
     "github.com/karlmutch/envflag",
     "github.com/karlmutch/semver",
