@@ -100,7 +100,7 @@ func NewMetaData(dir string, verFile string) (md *MetaData, err kv.Error) {
 	}
 
 	// Ensure that the module name is made docker compatible
-	if md.Module, err = md.ScrubDockerRepo(md.Module); err != nil {
+	if md.Module, err = md.ScrubForDocker(md.Module); err != nil {
 		return nil, err
 	}
 	return md, nil

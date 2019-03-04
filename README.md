@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat)  Alpha
 
-Version : <repo-version>0.10.0-feature-79-remove-docker-tooling-1h0Wm9</repo-version>
+Version : <repo-version>0.10.0-feature-79-remove-docker-tooling-1h0bZN</repo-version>
 
 duat is a set of tools useful for automating workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go to manage the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and deploying software.
 
@@ -256,34 +256,6 @@ Options:
 
             log levels are handled by the LOGXI env variables, these are documented at https://github.com/mgutz/logxi
 </code></pre>
-
-## docker-groom
-
-## image-release
-
-<code><pre>
-image-release is used to tag a pre-release image version, as a released semantic version, and then optionally push the resulting image to an AWS ECR repository.  The pre-release version will also be cleared, if no pushes failed, from the README.md file resulting in an offical release.  Exit codes are used to denote success or failure of this command to tag then push an image.
-
-age:  image-release [options]       docker image release tool (image-release)       a0412bff1a2de2ed92ef548a79f76a65d64d720e      2018-03-20_21:22:22-0700
-
-Options:
-
-  -f string
-        The file to be used as the source of truth for the existing, and future, version (default "README.md")
-  -module string
-        The name of the component that is being used to identify the container image, this will default to the current working directory (default ".")
-  -production
-        When enabled will generate tools etc as production releases by removing pre-release version markers
-  -release-repo string
-        The name of a remote image repository, this will default to no remote repo
-  -v    When enabled will print internal logging for this tool
-
-Environment Variables:
-
-options can also be extracted from environment variables by changing dashes '-' to underscores and using upper case.
-
-log levels are handled by the LOGXI env variables, these are documented at https://github.com/mgutz/logxi
-</pre></code>
 
 ## github-release
 
