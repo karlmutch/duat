@@ -93,7 +93,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:01537329a33ac85d623213a2df6575fd88c7061fd68cc0fbc4238384e912e105"
+  digest = "1:be0ae990bf2453ff8687e4c5764780c8b8ffe5db8850a41f81f6234c38d6c11b"
   name = "github.com/docker/docker"
   packages = [
     "api",
@@ -116,7 +116,7 @@
     "errdefs",
   ]
   pruneopts = "UT"
-  revision = "62739828d0bdf75b6dfc38e43d9d496c3da3db96"
+  revision = "42987cab19d93f08dbc29a9b13f177e00ba7c170"
   source = "github.com/moby/moby"
 
 [[projects]]
@@ -410,11 +410,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:58cb5fbdf85e1f468c749aa31773ff102866831106f52762b2823ae235ca11e7"
+  digest = "1:72c614df418a5c5c10c9f162fa703d948334f13747117baffc509fe770603063"
   name = "golang.org/x/net"
   packages = [
     "context",
-    "context/ctxhttp",
     "internal/socks",
     "proxy",
   ]
