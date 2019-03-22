@@ -247,6 +247,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:8fa03cb74ac5c89555750948a9f225a73bf34c9aa87ee9202b8e88c9f3b5d6fb"
+  name = "github.com/karlmutch/deepcopier"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ca99b135e50f526fde9cd88705f0ff2f3f95b77c"
+
+[[projects]]
+  branch = "master"
   digest = "1:bc16e81c4c66522e1af53f0c4372622a3a9bae4cea75e70716c41bb1810e5ec9"
   name = "github.com/karlmutch/envflag"
   packages = ["."]
@@ -533,6 +541,7 @@
     "github.com/go-yaml/yaml",
     "github.com/jjeffery/kv",
     "github.com/karlmutch/base62",
+    "github.com/karlmutch/deepcopier",
     "github.com/karlmutch/envflag",
     "github.com/karlmutch/semver",
     "github.com/karlmutch/stack",
@@ -540,6 +549,7 @@
     "github.com/mgutz/logxi",
     "gopkg.in/src-d/go-git.v4",
     "gopkg.in/src-d/go-git.v4/plumbing",
+    "gopkg.in/src-d/go-git.v4/plumbing/transport/http",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
