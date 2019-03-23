@@ -119,7 +119,7 @@ func (gw *GitWatcher) watcher(ctx context.Context, interval time.Duration, logge
 					reportError(errGo, loggerC)
 					continue
 				}
-				if len(v.Branch) != 0 {
+				if len(v.Branch) == 0 {
 					v.Branch = "master"
 				}
 
@@ -129,34 +129,46 @@ func (gw *GitWatcher) watcher(ctx context.Context, interval time.Duration, logge
 					continue
 				}
 
-				ref := path.Join("refs", "heads", v.Branch)
-				errGo = tree.Checkout(
-					&git.CheckoutOptions{
-						Branch: plumbing.ReferenceName(ref),
-						Create: false,
-						Force:  true,
-					})
+				refs, errGo := repo.References()
 				if errGo != nil {
 					reportError(errGo, loggerC)
 					continue
 				}
 
-				errGo = tree.Pull(
-					&git.PullOptions{
-						ReferenceName: plumbing.ReferenceName(path.Join("refs", "heads", v.Branch)),
-					})
+				gitHash := plumbing.Hash{}
+				branchRef := path.Join("refs", "remotes", "origin", v.Branch)
+				errGo = refs.ForEach(func(ref *plumbing.Reference) error {
+					if ref.Name().String() == branchRef {
+						gitHash = ref.Hash()
+					}
+					return nil
+				})
+				if errGo != nil {
+					reportError(errGo, loggerC)
+					continue
+				}
+				refHash := gitHash.String()
+
+				options := &git.CheckoutOptions{
+					Branch: "",
+					Hash:   gitHash,
+					Create: false,
+					Force:  true,
+				}
+				if errGo = tree.Checkout(options); errGo != nil {
+					reportError(errGo, loggerC)
+					continue
+				}
+
+				errGo = tree.PullContext(ctx, &git.PullOptions{
+					ReferenceName: plumbing.ReferenceName(path.Join("refs", "heads", v.Branch)),
+					Force:         true,
+				})
 				if errGo != nil && errGo != git.NoErrAlreadyUpToDate {
 					reportError(errGo, loggerC)
 					continue
 				}
 
-				head, errGo := repo.Head()
-				if errGo != nil {
-					reportError(errGo, loggerC)
-					continue
-				}
-
-				refHash := head.Hash().String()
 				lastKnownHash := ""
 
 				update := false
@@ -164,10 +176,11 @@ func (gw *GitWatcher) watcher(ctx context.Context, interval time.Duration, logge
 				// Check for updates on any of the repositories by looking at the
 				// URL hash file inside the main working directory manifest file
 				manifestFN := filepath.Join(gw.Dir, k+".last")
-				if _, errGo := os.Stat(manifestFN); os.IsNotExist(errGo) {
+				if _, errGo = os.Stat(manifestFN); os.IsNotExist(errGo) {
 					update = true
 				} else {
-					if content, errGo := ioutil.ReadFile(manifestFN); errGo != nil || len(content) != 0 {
+					if content, errGo := ioutil.ReadFile(manifestFN); errGo != nil {
+						reportError(errGo, loggerC)
 						update = true
 					} else {
 						lastKnownHash = string(content)
