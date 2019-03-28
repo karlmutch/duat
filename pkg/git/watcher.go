@@ -1,4 +1,4 @@
-package duatgit
+package git
 
 // This file contains the implementation of serveral functions that are
 // useful for monitoring git repositories.  This is useful for when
@@ -23,7 +23,7 @@ import (
 	"github.com/karlmutch/deepcopier"
 	"github.com/karlmutch/stack"
 
-	"gopkg.in/src-d/go-git.v4" // Not forked due to depency tree being too complex, src-d however are a serious org so I dont expect the repo to disappear
+	gogit "gopkg.in/src-d/go-git.v4" // Not forked due to depency tree being too complex, src-d however are a serious org so I dont expect the repo to disappear
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
@@ -33,6 +33,21 @@ var (
 
 	initWatcher sync.Once
 )
+
+type GitOptions struct {
+	CloneOptions *gogit.CloneOptions
+	Branch       string
+}
+
+type GitWatcher struct {
+	Dir     string
+	Repos   map[string]monitored
+	Remove  bool
+	Ctx     context.Context
+	Cancel  context.CancelFunc
+	Stopped chan struct{}
+	sync.Mutex
+}
 
 func getDirHash(repoURL string) (encodedHash string) {
 	h := sha256.New()
@@ -82,6 +97,17 @@ func reportError(errGo error, loggerC chan<- *LoggerSink) {
 	}
 }
 
+type Change struct {
+	URL    string
+	Dir    string
+	Commit string
+}
+
+type monitored struct {
+	options  *GitOptions
+	triggerC chan Change
+}
+
 func (gw *GitWatcher) watcher(ctx context.Context, interval time.Duration, loggerC chan<- *LoggerSink) {
 
 	defer close(gw.Stopped)
@@ -96,31 +122,34 @@ func (gw *GitWatcher) watcher(ctx context.Context, interval time.Duration, logge
 		case <-ticker.C:
 			// Copy the list of repositories that are to be checked
 			gw.Lock()
-			checkRepos := make(map[string]*GitOptions, len(gw.Repos))
+			checkRepos := make(map[string]monitored, len(gw.Repos))
 			for k, v := range gw.Repos {
 				copied := &GitOptions{}
-				deepcopier.Copy(v).To(copied)
-				checkRepos[k] = copied
+				deepcopier.Copy(v.options).To(copied)
+				checkRepos[k] = monitored{
+					options:  copied,
+					triggerC: v.triggerC,
+				}
 			}
 			gw.Unlock()
 			for k, v := range checkRepos {
 				dirName := filepath.Join(gw.Dir, k)
 				if _, errGo := os.Stat(dirName); os.IsNotExist(errGo) {
 					// Git clone into this name
-					if _, errGo = git.PlainCloneContext(ctx, dirName, false, v.CloneOptions); errGo != nil {
+					if _, errGo = gogit.PlainCloneContext(ctx, dirName, false, v.options.CloneOptions); errGo != nil {
 						reportError(errGo, loggerC)
 						continue
 					}
 				}
 
 				// Opens a cloned repository
-				repo, errGo := git.PlainOpen(dirName)
+				repo, errGo := gogit.PlainOpen(dirName)
 				if errGo != nil {
 					reportError(errGo, loggerC)
 					continue
 				}
-				if len(v.Branch) == 0 {
-					v.Branch = "master"
+				if len(v.options.Branch) == 0 {
+					v.options.Branch = "master"
 				}
 
 				tree, errGo := repo.Worktree()
@@ -136,7 +165,7 @@ func (gw *GitWatcher) watcher(ctx context.Context, interval time.Duration, logge
 				}
 
 				gitHash := plumbing.Hash{}
-				branchRef := path.Join("refs", "remotes", "origin", v.Branch)
+				branchRef := path.Join("refs", "remotes", "origin", v.options.Branch)
 				errGo = refs.ForEach(func(ref *plumbing.Reference) error {
 					if ref.Name().String() == branchRef {
 						gitHash = ref.Hash()
@@ -149,7 +178,7 @@ func (gw *GitWatcher) watcher(ctx context.Context, interval time.Duration, logge
 				}
 				refHash := gitHash.String()
 
-				options := &git.CheckoutOptions{
+				options := &gogit.CheckoutOptions{
 					Branch: "",
 					Hash:   gitHash,
 					Create: false,
@@ -160,11 +189,11 @@ func (gw *GitWatcher) watcher(ctx context.Context, interval time.Duration, logge
 					continue
 				}
 
-				errGo = tree.PullContext(ctx, &git.PullOptions{
-					ReferenceName: plumbing.ReferenceName(path.Join("refs", "heads", v.Branch)),
+				errGo = tree.PullContext(ctx, &gogit.PullOptions{
+					ReferenceName: plumbing.ReferenceName(path.Join("refs", "heads", v.options.Branch)),
 					Force:         true,
 				})
-				if errGo != nil && errGo != git.NoErrAlreadyUpToDate {
+				if errGo != nil && errGo != gogit.NoErrAlreadyUpToDate {
 					reportError(errGo, loggerC)
 					continue
 				}
@@ -191,15 +220,21 @@ func (gw *GitWatcher) watcher(ctx context.Context, interval time.Duration, logge
 				}
 
 				if update {
+					if v.triggerC == nil {
+						reportError(kv.NewError("no trigger channel"), loggerC)
+						continue
+					}
+					change :=
+						Change{URL: v.options.CloneOptions.URL,
+							Dir:    dirName,
+							Commit: refHash,
+						}
+					// Block on sending the notification to the listener, or the system
+					// is shutdown
 					select {
-					case loggerC <- &LoggerSink{
-						Msg: fmt.Sprintf("updating to %v", refHash),
-						Args: []interface{}{
-							"stack",
-							stack.Trace().TrimRuntime(),
-						},
-					}:
-					case <-time.After(time.Second):
+					case v.triggerC <- change:
+					case <-ctx.Done():
+						return
 					}
 					if errGo = ioutil.WriteFile(manifestFN, []byte(refHash), 0600); errGo != nil {
 						reportError(errGo, loggerC)
@@ -221,26 +256,11 @@ func (gw *GitWatcher) watcher(ctx context.Context, interval time.Duration, logge
 	}
 }
 
-type GitOptions struct {
-	CloneOptions *git.CloneOptions
-	Branch       string
-}
-
-type GitWatcher struct {
-	Dir     string
-	Repos   map[string]*GitOptions
-	Remove  bool
-	Ctx     context.Context
-	Cancel  context.CancelFunc
-	Stopped chan struct{}
-	sync.Mutex
-}
-
 func NewGitWatcher(ctx context.Context, baseDir string, loggerC chan<- *LoggerSink) (watcher *GitWatcher, err kv.Error) {
 
 	watcher = &GitWatcher{
 		Dir:     baseDir,
-		Repos:   map[string]*GitOptions{},
+		Repos:   map[string]monitored{},
 		Remove:  false,
 		Stopped: make(chan struct{}, 1),
 	}
@@ -264,11 +284,14 @@ func NewGitWatcher(ctx context.Context, baseDir string, loggerC chan<- *LoggerSi
 	return watcher, nil
 }
 
-func (gw *GitWatcher) Add(url string, branch string, token string) (err kv.Error) {
+// Add is used to register a repository to watch for changes.  Changes detected on the
+// users specified branch will be notified using a channel that is returned by this method.
+//
+func (gw *GitWatcher) Add(url string, branch string, token string, triggerC chan Change) (err kv.Error) {
 	gitOptions := &GitOptions{
-		CloneOptions: &git.CloneOptions{
+		CloneOptions: &gogit.CloneOptions{
 			URL:               url,
-			RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+			RecurseSubmodules: gogit.DefaultSubmoduleRecursionDepth,
 		},
 		Branch: branch,
 	}
@@ -293,7 +316,13 @@ func (gw *GitWatcher) Add(url string, branch string, token string) (err kv.Error
 
 	}
 
-	gw.Repos[urlHash] = gitOptions
+	if triggerC == nil {
+		return kv.NewError("watcher notification channel not specified").With("url", url, "hash", urlHash, "stack", stack.Trace().TrimRuntime())
+	}
+	gw.Repos[urlHash] = monitored{
+		options:  gitOptions,
+		triggerC: triggerC,
+	}
 
 	return nil
 }
@@ -306,7 +335,14 @@ func (gw *GitWatcher) Stop(ctx context.Context) (orderly bool) {
 	defer gw.Unlock()
 
 	// Signal the desire that things be stopped
-	gw.Cancel()
+	func() {
+		defer func() {
+			recover()
+		}()
+		if gw.Cancel != nil {
+			gw.Cancel()
+		}
+	}()
 
 	// Wait for a second for an orderly shutdown and then continue
 	// regardless

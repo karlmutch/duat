@@ -24,12 +24,15 @@ import (
 	"os/signal"
 	"path"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/jjeffery/kv"
 	"github.com/karlmutch/duat/pkg/git"
+	"github.com/karlmutch/duat/pkg/kubernetes"
 	"github.com/karlmutch/duat/version"
+
 	"github.com/karlmutch/stack"
 	colorable "github.com/mattn/go-colorable"
 
@@ -41,13 +44,19 @@ import (
 	"github.com/karlmutch/envflag" // Forked copy of https://github.com/GoBike/envflag
 
 	"github.com/mgutz/logxi" // Using a forked copy of this package results in build issues
+
+	"github.com/google/uuid"
 )
 
 var (
 	logger = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "git-watch")
 
-	githubToken = flag.String("github_token", "", "A github token that can be used to access the repositories that will be watched")
+	githubToken = flag.String("github-token", "", "A github token that can be used to access the repositories that will be watched")
 	verbose     = flag.Bool("v", false, "When enabled will print internal logging for this tool")
+
+	triggerScript    = flag.String("script", "", "The name of a shell script file that will be run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the activated script")
+	triggerJob       = flag.String("job-template", "", "The regular expression used to locate the Kubernetes job specification that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the activated script")
+	triggerNamespace = flag.String("namespace", "", "Overrides the defaulted namespace for pods and other resources that are spawned by this command")
 
 	gitRepos    = flag.String("urls", "", "One of more git repositories to monitor for changes")
 	gitBranches = flag.String("branches", "", "A branch for each repository to needs watching, defaults to using 'master' for all repositories")
@@ -66,6 +75,34 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "options can also be extracted from environment variables by changing dashes '-' to underscores and using upper case.")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "log levels are handled by the LOGXI env variables, these are documented at https://github.com/mgutz/logxi")
+}
+
+type JobTracker struct {
+	jobs map[string]kubernetes.StartJob
+	sync.Mutex
+}
+
+// extractMap is used to turn a list of interfaces with alternating keys and values as individual items
+// into a map for cases where the items in the list could be dealth with as strings.  The use case for this
+// function is in relation to the kv package with lists.
+//
+func extractMap(list []interface{}) (withs map[string]string) {
+	withs = map[string]string{}
+	for i, v := range list {
+		if i%2 != 0 {
+			continue
+		}
+		key, ok := v.(string)
+		if !ok {
+			continue
+		}
+		value, ok := list[i+1].(string)
+		if !ok {
+			continue
+		}
+		withs[key] = value
+	}
+	return withs
 }
 
 func main() {
@@ -97,7 +134,7 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	reportC := make(chan *duatgit.LoggerSink, 1)
+	reportC := make(chan *git.LoggerSink, 1)
 	go func() {
 		for {
 			select {
@@ -109,7 +146,7 @@ func main() {
 		}
 	}()
 
-	watcher, err := duatgit.NewGitWatcher(ctx, stateDir, reportC)
+	watcher, err := git.NewGitWatcher(ctx, stateDir, reportC)
 	if err != nil {
 		logger.Info(err.Error())
 	}
@@ -129,13 +166,87 @@ func main() {
 		os.Exit(-1)
 	}
 
+	jobTriggerC := make(chan kubernetes.StartJob, 1)
+	defer close(jobTriggerC)
+
+	jobTracking := &JobTracker{
+		jobs: map[string]kubernetes.StartJob{},
+	}
+
+	// Create a channel that receives notifications of repo changes, and also
+	// the handler function that deals with the notifications
+	trackingC := make(chan git.Change, 1)
+	go func(ctx context.Context, triggerC chan git.Change) {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case msg := <-triggerC:
+				start := kubernetes.StartJob{
+					ID:         uuid.New().String(),
+					Dir:        msg.Dir,
+					Dockerfile: "",
+					Env:        map[string]string{},
+				}
+
+				switch *triggerNamespace {
+				case "":
+					start.Namespace = start.ID
+				case "generated":
+					start.Namespace = uuid.New().String()
+				default:
+					start.Namespace = *triggerNamespace
+				}
+
+				jobTracking.Lock()
+				jobTracking.jobs[start.ID] = start
+				jobTracking.Unlock()
+
+				jobTriggerC <- start
+			}
+		}
+	}(ctx, trackingC)
+
+	doneC := make(chan *kubernetes.Status, 128)
+	go func() {
+		for {
+			select {
+			case msg := <-doneC:
+				text, list := kv.Parse([]byte(msg.Msg.Error()))
+				withs := extractMap(list)
+
+				if msg.Level == logxi.LevelNotice && string(text) == "success" {
+					jobTracking.Lock()
+					job, isPresent := jobTracking.jobs[msg.ID]
+					jobTracking.Unlock()
+					if isPresent {
+						logger.Info("job completed", "id", msg.ID, "dir", job.Dir, "namespace", withs["namespace"])
+					} else {
+						logger.Info("job completed", "id", msg.ID, "namespace", withs["namespace"])
+					}
+					continue
+				}
+				logged := []interface{}{"id", msg.ID, "text", string(text)}
+				for k, v := range withs {
+					logged = append(logged, k)
+					logged = append(logged, v)
+				}
+				logger.Info("job update", logged...)
+			case <-ctx.Done():
+				break
+			}
+		}
+	}()
+
+	kubernetes.JobStarter(ctx, jobTriggerC, doneC)
+
 	// Add any configured repositories to the list that need to be watched
 	for i, url := range repos {
 		branch := "master"
 		if i < len(branches) && len(branches[i]) > 0 {
 			branch = branches[i]
 		}
-		watcher.Add(url, branch, *githubToken)
+		err = watcher.Add(url, branch, *githubToken, trackingC)
 	}
 
 	stopC := make(chan os.Signal, 1)
