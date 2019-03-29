@@ -139,6 +139,9 @@ func main() {
 		for {
 			select {
 			case report := <-reportC:
+				if report == nil {
+					continue
+				}
 				logger.Warn(report.Msg, report.Args...)
 			case <-ctx.Done():
 				return
@@ -175,8 +178,8 @@ func main() {
 
 	// Create a channel that receives notifications of repo changes, and also
 	// the handler function that deals with the notifications
-	trackingC := make(chan git.Change, 1)
-	go func(ctx context.Context, triggerC chan git.Change) {
+	trackingC := make(chan *git.Change, 1)
+	go func(ctx context.Context, triggerC chan *git.Change) {
 		for {
 			select {
 			case <-ctx.Done():
@@ -212,6 +215,9 @@ func main() {
 		for {
 			select {
 			case msg := <-doneC:
+				if msg == nil {
+					continue
+				}
 				text, list := kv.Parse([]byte(msg.Msg.Error()))
 				withs := extractMap(list)
 

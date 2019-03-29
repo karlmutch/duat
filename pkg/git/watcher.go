@@ -105,7 +105,7 @@ type Change struct {
 
 type monitored struct {
 	options  *GitOptions
-	triggerC chan Change
+	triggerC chan *Change
 }
 
 func (gw *GitWatcher) watcher(ctx context.Context, interval time.Duration, loggerC chan<- *LoggerSink) {
@@ -225,7 +225,7 @@ func (gw *GitWatcher) watcher(ctx context.Context, interval time.Duration, logge
 						continue
 					}
 					change :=
-						Change{URL: v.options.CloneOptions.URL,
+						&Change{URL: v.options.CloneOptions.URL,
 							Dir:    dirName,
 							Commit: refHash,
 						}
@@ -287,7 +287,7 @@ func NewGitWatcher(ctx context.Context, baseDir string, loggerC chan<- *LoggerSi
 // Add is used to register a repository to watch for changes.  Changes detected on the
 // users specified branch will be notified using a channel that is returned by this method.
 //
-func (gw *GitWatcher) Add(url string, branch string, token string, triggerC chan Change) (err kv.Error) {
+func (gw *GitWatcher) Add(url string, branch string, token string, triggerC chan *Change) (err kv.Error) {
 	gitOptions := &GitOptions{
 		CloneOptions: &gogit.CloneOptions{
 			URL:               url,

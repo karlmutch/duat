@@ -11,7 +11,6 @@ import (
 
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// MIT License
 )
 
 // This file contains the implementation of functions used to start and run
@@ -47,6 +46,11 @@ func (job *Job) sendStatus(ctx context.Context, statusC chan *Status, level int,
 }
 
 func (job *Job) initialize(ctx context.Context, logger chan *Status) (err kv.Error) {
+
+	if err = job.createNamespace(job.start.Namespace, true, logger); err != nil {
+		return err
+	}
+
 	// Create a persistent volume claim
 	if err = job.initVolume(logger); err != nil {
 		return err
@@ -59,12 +63,21 @@ func (job *Job) initialize(ctx context.Context, logger chan *Status) (err kv.Err
 	}
 
 	// Start a pod and mount the freshly created volume
-	if err = job.startMinimalPod(ctx, "copy-pod", job.volume, logger); err != nil {
+	podName := "copy-pod"
+	if err = job.startMinimalPod(ctx, podName, job.volume, logger); err != nil {
 		return err
 	}
 
 	// Copy the cloned github repo into using a mount for the persistent volume
+	if err = job.filePod(ctx, podName, false, "/tmp/karl", "/data/karl", logger); err != nil {
+		return err
+	}
+
 	// Get rid of the temporary pod
+	//if err = job.stopPod(ctx, podName, logger); err != nil {
+	//	return err
+	//}
+
 	// Start the templated deployment and allow it to create its own container
 	return nil
 }

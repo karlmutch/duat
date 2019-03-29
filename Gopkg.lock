@@ -148,6 +148,17 @@
   version = "v0.3.3"
 
 [[projects]]
+  branch = "master"
+  digest = "1:ecdc8e0fe3bc7d549af1c9c36acf3820523b707d6c071b6d0c3860882c6f7b42"
+  name = "github.com/docker/spdystream"
+  packages = [
+    ".",
+    "spdy",
+  ]
+  pruneopts = "UT"
+  revision = "6480d4af844c189cf5dd913db24ddd339d3a4f85"
+
+[[projects]]
   digest = "1:de4a74b504df31145ffa8ca0c4edbffa2f3eb7f466753962184611b618fa5981"
   name = "github.com/emirpasic/gods"
   packages = [
@@ -744,7 +755,7 @@
   version = "kubernetes-1.13.5"
 
 [[projects]]
-  digest = "1:f7b5be884005454ed66a2baf43f799c81f36655fe68fb12503174212e3d1d3ec"
+  digest = "1:ae65384e7335542d9ab6ebde80ba69e5306193ff9d8572299306cbcaee877fbe"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -770,10 +781,13 @@
     "pkg/util/clock",
     "pkg/util/errors",
     "pkg/util/framer",
+    "pkg/util/httpstream",
+    "pkg/util/httpstream/spdy",
     "pkg/util/intstr",
     "pkg/util/json",
     "pkg/util/naming",
     "pkg/util/net",
+    "pkg/util/remotecommand",
     "pkg/util/runtime",
     "pkg/util/sets",
     "pkg/util/validation",
@@ -781,6 +795,7 @@
     "pkg/util/yaml",
     "pkg/version",
     "pkg/watch",
+    "third_party/forked/golang/netutil",
     "third_party/forked/golang/reflect",
   ]
   pruneopts = "UT"
@@ -788,7 +803,7 @@
   version = "kubernetes-1.13.5"
 
 [[projects]]
-  digest = "1:8d5e51e119546ab831ba781660edf2806356ea39fb47d62c6c016e514b8c8a2b"
+  digest = "1:dda9d55464c56eb3308d54b2a6a4df26773801065ab7255e280946abd7ae9cac"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -840,9 +855,12 @@
     "tools/clientcmd/api/v1",
     "tools/metrics",
     "tools/reference",
+    "tools/remotecommand",
     "transport",
+    "transport/spdy",
     "util/cert",
     "util/connrotation",
+    "util/exec",
     "util/flowcontrol",
     "util/homedir",
     "util/integer",
@@ -893,13 +911,15 @@
     "gopkg.in/src-d/go-git.v4",
     "gopkg.in/src-d/go-git.v4/plumbing",
     "gopkg.in/src-d/go-git.v4/plumbing/transport/http",
-    "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
+    "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/util/remotecommand",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
+    "k8s.io/client-go/tools/remotecommand",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
