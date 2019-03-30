@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"time"
@@ -118,7 +119,7 @@ func (job *Job) startMinimalPod(ctx context.Context, name string, volume string,
 // https://medium.com/nuvo-group-tech/copy-files-and-directories-between-kubernetes-and-s3-d290ded9a5e0
 // https://gist.github.com/kyroy/8453a0c4e075e91809db9749e0adcff2
 //
-func (job *Job) filePod(ctx context.Context, name string, retrieve bool, localFile string, remoteFile string, logger chan *Status) (err kv.Error) {
+func (job *Job) filePod(ctx context.Context, name string, container string, retrieve bool, localFile string, remoteFile string, logger chan *Status) (err kv.Error) {
 
 	restConfig := &rest.Config{}
 	restClient := Client().CoreV1().RESTClient()
@@ -128,7 +129,7 @@ func (job *Job) filePod(ctx context.Context, name string, retrieve bool, localFi
 		Resource("pods").
 		Name(name).
 		SubResource("exec").
-		Param("container", "alpine").
+		Param("container", container).
 		Param("stdout", "true").
 		Param("stderr", "true")
 
@@ -182,6 +183,48 @@ func (job *Job) filePod(ctx context.Context, name string, retrieve bool, localFi
 	} else {
 		streamOpts.Stdin = localF
 	}
+	if errGo = executor.Stream(streamOpts); errGo != nil {
+		job.failed = kv.Wrap(errGo).With("namespace", job.start.Namespace, "pod", name, "stack", stack.Trace().TrimRuntime())
+		return job.failed
+	}
+	return nil
+}
+
+func (job *Job) runInPod(ctx context.Context, name string, container string, cmdArgs []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, logger chan *Status) (err kv.Error) {
+	restConfig := &rest.Config{}
+	restClient := Client().CoreV1().RESTClient()
+
+	req := restClient.Post().
+		Namespace(job.start.Namespace).
+		Resource("pods").
+		Name(name).
+		SubResource("exec").
+		Param("container", container).
+		Param("stdout", "true").
+		Param("stderr", "true")
+
+	if stdin != nil {
+		req.Param("stdin", "true")
+	}
+
+	for _, cmd := range cmdArgs {
+		req.Param("command", cmd)
+	}
+
+	executor, errGo := remotecommand.NewSPDYExecutor(restConfig, http.MethodPost, req.URL())
+	if errGo != nil {
+		job.failed = kv.Wrap(errGo).With("namespace", job.start.Namespace, "pod", name, "stack", stack.Trace().TrimRuntime())
+		return job.failed
+	}
+
+	streamOpts := remotecommand.StreamOptions{
+		Stdin:             stdin,
+		Stdout:            stdout,
+		Stderr:            stderr,
+		Tty:               false,
+		TerminalSizeQueue: nil,
+	}
+
 	if errGo = executor.Stream(streamOpts); errGo != nil {
 		job.failed = kv.Wrap(errGo).With("namespace", job.start.Namespace, "pod", name, "stack", stack.Trace().TrimRuntime())
 		return job.failed

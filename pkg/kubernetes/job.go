@@ -1,12 +1,19 @@
 package kubernetes
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/jjeffery/kv"
+	"github.com/karlmutch/stack"
 	"github.com/mgutz/logxi"
 
 	"k8s.io/api/core/v1"
@@ -45,6 +52,64 @@ func (job *Job) sendStatus(ctx context.Context, statusC chan *Status, level int,
 	fmt.Println("ID", job.start.ID, spew.Sdump(msg))
 }
 
+func (job *Job) createArchive(src string, dst string) (err kv.Error) {
+
+	file, errGo := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if errGo != nil {
+		return kv.Wrap(errGo).With("fn", dst, "stack", stack.Trace().TrimRuntime())
+	}
+	defer file.Close()
+
+	gw := gzip.NewWriter(file)
+	defer gw.Close()
+	tw := tar.NewWriter(gw)
+	defer tw.Close()
+
+	errGo = filepath.Walk(src, func(file string, fi os.FileInfo, err error) error {
+
+		if err != nil {
+			return err
+		}
+
+		header, err := tar.FileInfoHeader(fi, fi.Name())
+		if err != nil {
+			return err
+		}
+
+		// update the name to correctly reflect the desired destination when untaring, that is
+		// a relative location
+		header.Name = strings.TrimPrefix(strings.Replace(file, src, "", -1), string(filepath.Separator))
+
+		// write the header
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+
+		// return on non-regular files which adds the header but expects no content
+		if !fi.Mode().IsRegular() {
+			return nil
+		}
+
+		// open files for taring
+		f, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		// copy file data into tar writer
+		if _, err := io.Copy(tw, f); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if errGo != nil {
+		return kv.Wrap(errGo).With("destination", dst, "stack", stack.Trace().TrimRuntime())
+	}
+	return nil
+}
+
 func (job *Job) initialize(ctx context.Context, logger chan *Status) (err kv.Error) {
 
 	if err = job.createNamespace(job.start.Namespace, true, logger); err != nil {
@@ -62,6 +127,14 @@ func (job *Job) initialize(ctx context.Context, logger chan *Status) (err kv.Err
 		return err
 	}
 
+	// Create an archive containing the snapshot of the code to be ossified within a build
+	// image
+	archiveName := job.start.Dir + ".tar.gz"
+	if err = job.createArchive(job.start.Dir, archiveName); err != nil {
+		return err
+	}
+	defer os.Remove(archiveName)
+
 	// Start a pod and mount the freshly created volume
 	podName := "copy-pod"
 	if err = job.startMinimalPod(ctx, podName, job.volume, logger); err != nil {
@@ -69,14 +142,20 @@ func (job *Job) initialize(ctx context.Context, logger chan *Status) (err kv.Err
 	}
 
 	// Copy the cloned github repo into using a mount for the persistent volume
-	if err = job.filePod(ctx, podName, false, "/tmp/karl", "/data/karl", logger); err != nil {
+	if err = job.filePod(ctx, podName, "alpine", false, archiveName, "/data/tmp.gz", logger); err != nil {
 		return err
 	}
 
-	// Get rid of the temporary pod
-	//if err = job.stopPod(ctx, podName, logger); err != nil {
-	//	return err
-	//}
+	os.Stdout.Sync()
+	os.Stderr.Sync()
+	if err = job.runInPod(ctx, podName, "alpine", []string{"tar", "-xf", "/data/tmp.gz", "-C", "/data"}, nil, os.Stdout, os.Stderr, logger); err != nil {
+		return err
+	}
+
+	// Get rid of the temporary pod used for copying data
+	if err = job.stopPod(ctx, podName, logger); err != nil {
+		return err
+	}
 
 	// Start the templated deployment and allow it to create its own container
 	return nil
