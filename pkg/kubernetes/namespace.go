@@ -8,12 +8,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (job *Job) Namespaces() (namespaces map[string]string, err kv.Error) {
+func (job *Task) Namespaces() (namespaces map[string]string, err kv.Error) {
 	namespaces = map[string]string{}
 	return namespaces, nil
 }
 
-func (job *Job) createNamespace(ns string, overwrite bool, logger chan *Status) (err kv.Error) {
+func (job *Task) createNamespace(ns string, overwrite bool, logger chan *Status) (err kv.Error) {
 	nsSpec := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}}
 
 	if _, errGo := Client().CoreV1().Namespaces().Create(nsSpec); errGo != nil {

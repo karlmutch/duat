@@ -16,7 +16,7 @@ import (
 	"github.com/mgutz/logxi"
 )
 
-func (job *Job) initVolume(logger chan *Status) (err kv.Error) {
+func (job *Task) initVolume(logger chan *Status) (err kv.Error) {
 
 	volume, errGo := uuid.NewRandom()
 	if errGo != nil {
@@ -57,7 +57,7 @@ func (job *Job) initVolume(logger chan *Status) (err kv.Error) {
 	return nil
 }
 
-func (job *Job) waitOnVolume(ctx context.Context, logger chan *Status) (err kv.Error) {
+func (job *Task) waitOnVolume(ctx context.Context, logger chan *Status) (err kv.Error) {
 	api := Client().CoreV1()
 	watcher, errGo := api.PersistentVolumeClaims(job.start.Namespace).Watch(metav1.ListOptions{})
 	if errGo != nil {

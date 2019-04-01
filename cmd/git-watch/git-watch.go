@@ -84,7 +84,7 @@ func usage() {
 }
 
 type JobTracker struct {
-	jobs map[string]kubernetes.StartJob
+	tasks map[string]kubernetes.TaskSpec
 	sync.Mutex
 }
 
@@ -175,11 +175,11 @@ func main() {
 		os.Exit(-1)
 	}
 
-	jobTriggerC := make(chan kubernetes.StartJob, 1)
-	defer close(jobTriggerC)
+	taskTriggerC := make(chan kubernetes.TaskSpec, 1)
+	defer close(taskTriggerC)
 
-	jobTracking := &JobTracker{
-		jobs: map[string]kubernetes.StartJob{},
+	taskTracking := &JobTracker{
+		tasks: map[string]kubernetes.TaskSpec{},
 	}
 
 	doc, errGo := os.Open(*jobTemplate)
@@ -235,7 +235,7 @@ func main() {
 			case <-ctx.Done():
 				return
 			case msg := <-triggerC:
-				start := kubernetes.StartJob{
+				start := kubernetes.TaskSpec{
 					ID:         uuid.New().String(),
 					Dir:        msg.Dir,
 					Dockerfile: "",
@@ -252,11 +252,11 @@ func main() {
 					start.Namespace = *triggerNamespace
 				}
 
-				jobTracking.Lock()
-				jobTracking.jobs[start.ID] = start
-				jobTracking.Unlock()
+				taskTracking.Lock()
+				taskTracking.tasks[start.ID] = start
+				taskTracking.Unlock()
 
-				jobTriggerC <- start
+				taskTriggerC <- start
 			}
 		}
 	}(ctx, trackingC)
@@ -273,13 +273,13 @@ func main() {
 				withs := extractMap(list)
 
 				if msg.Level == logxi.LevelNotice && string(text) == "success" {
-					jobTracking.Lock()
-					job, isPresent := jobTracking.jobs[msg.ID]
-					jobTracking.Unlock()
+					taskTracking.Lock()
+					task, isPresent := taskTracking.tasks[msg.ID]
+					taskTracking.Unlock()
 					if isPresent {
-						logger.Info("job completed", "id", msg.ID, "dir", job.Dir, "namespace", withs["namespace"])
+						logger.Info("task completed", "id", msg.ID, "dir", task.Dir, "namespace", withs["namespace"])
 					} else {
-						logger.Info("job completed", "id", msg.ID, "namespace", withs["namespace"])
+						logger.Info("task completed", "id", msg.ID, "namespace", withs["namespace"])
 					}
 					continue
 				}
@@ -288,14 +288,14 @@ func main() {
 					logged = append(logged, k)
 					logged = append(logged, v)
 				}
-				logger.Info("job update", logged...)
+				logger.Info("task update", logged...)
 			case <-ctx.Done():
 				break
 			}
 		}
 	}()
 
-	kubernetes.JobStarter(ctx, jobTriggerC, doneC)
+	kubernetes.TasksStart(ctx, taskTriggerC, doneC)
 
 	// Add any configured repositories to the list that need to be watched
 	for i, url := range repos {

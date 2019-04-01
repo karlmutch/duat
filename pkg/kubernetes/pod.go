@@ -20,7 +20,7 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-func (job *Job) startMinimalPod(ctx context.Context, name string, volume string, logger chan *Status) (err kv.Error) {
+func (job *Task) startMinimalPod(ctx context.Context, name string, volume string, logger chan *Status) (err kv.Error) {
 
 	api := Client().CoreV1()
 
@@ -119,7 +119,7 @@ func (job *Job) startMinimalPod(ctx context.Context, name string, volume string,
 // https://medium.com/nuvo-group-tech/copy-files-and-directories-between-kubernetes-and-s3-d290ded9a5e0
 // https://gist.github.com/kyroy/8453a0c4e075e91809db9749e0adcff2
 //
-func (job *Job) filePod(ctx context.Context, name string, container string, retrieve bool, localFile string, remoteFile string, logger chan *Status) (err kv.Error) {
+func (job *Task) filePod(ctx context.Context, name string, container string, retrieve bool, localFile string, remoteFile string, logger chan *Status) (err kv.Error) {
 
 	restConfig := &rest.Config{}
 	restClient := Client().CoreV1().RESTClient()
@@ -190,7 +190,7 @@ func (job *Job) filePod(ctx context.Context, name string, container string, retr
 	return nil
 }
 
-func (job *Job) runInPod(ctx context.Context, name string, container string, cmdArgs []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, logger chan *Status) (err kv.Error) {
+func (job *Task) runInPod(ctx context.Context, name string, container string, cmdArgs []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, logger chan *Status) (err kv.Error) {
 	restConfig := &rest.Config{}
 	restClient := Client().CoreV1().RESTClient()
 
@@ -232,7 +232,7 @@ func (job *Job) runInPod(ctx context.Context, name string, container string, cmd
 	return nil
 }
 
-func (job *Job) stopPod(ctx context.Context, name string, logger chan *Status) (err kv.Error) {
+func (job *Task) stopPod(ctx context.Context, name string, logger chan *Status) (err kv.Error) {
 
 	api := Client().CoreV1()
 
