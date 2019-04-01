@@ -7,12 +7,10 @@ import (
 
 	"github.com/jjeffery/kv"
 	"github.com/mgutz/logxi"
-	batchv1 "k8s.io/api/batch/v1"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/jjeffery/kv"
-	"github.com/mgutz/logxi"
 
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
