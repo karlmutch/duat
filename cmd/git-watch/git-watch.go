@@ -17,6 +17,7 @@ package main
 // across restarts, for example persistent volumes in Kubernetes.
 //
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -29,9 +30,14 @@ import (
 	"time"
 
 	"github.com/jjeffery/kv"
+	"github.com/karlmutch/duat"
 	"github.com/karlmutch/duat/pkg/git"
 	"github.com/karlmutch/duat/pkg/kubernetes"
 	"github.com/karlmutch/duat/version"
+
+	"k8s.io/api/batch/v1"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/karlmutch/stack"
 	colorable "github.com/mattn/go-colorable"
@@ -54,8 +60,8 @@ var (
 	githubToken = flag.String("github-token", "", "A github token that can be used to access the repositories that will be watched")
 	verbose     = flag.Bool("v", false, "When enabled will print internal logging for this tool")
 
-	triggerScript    = flag.String("script", "", "The name of a shell script file that will be run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the activated script")
-	triggerJob       = flag.String("job-template", "", "The regular expression used to locate the Kubernetes job specification that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the activated script")
+	triggerScript    = flag.String("script", "", "The name of a shell script file that will be run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository")
+	jobTemplate      = flag.String("job-template", "", "The regular expression used to locate the Kubernetes job specification that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository")
 	triggerNamespace = flag.String("namespace", "", "Overrides the defaulted namespace for pods and other resources that are spawned by this command")
 
 	gitRepos    = flag.String("urls", "", "One of more git repositories to monitor for changes")
@@ -176,6 +182,50 @@ func main() {
 		jobs: map[string]kubernetes.StartJob{},
 	}
 
+	doc, errGo := os.Open(*jobTemplate)
+	if errGo != nil {
+		fmt.Fprintf(os.Stderr, "%v\n",
+			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+		os.Exit(-1)
+	}
+	writer := new(bytes.Buffer)
+
+	// Run the job template through stencil
+	opts := duat.TemplateOptions{
+		IOFiles: []duat.TemplateIOFiles{{
+			In:  doc,
+			Out: writer,
+		}},
+		OverrideValues: map[string]string{},
+	}
+
+	md, errGo := duat.NewMetaData(".", "README.md")
+	if errGo != nil {
+		fmt.Fprintf(os.Stderr, "%v\n",
+			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+		os.Exit(-1)
+	}
+
+	if errGo = md.Template(opts); errGo != nil {
+		fmt.Fprintf(os.Stderr, "%v\n",
+			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+		os.Exit(-1)
+	}
+
+	// Create a YAML serializer.  JSON is a subset of YAML, so is supported too.
+	s := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme)
+
+	// Decode the YAML to an object.
+	jobSpec := &v1.Job{}
+	if _, _, errGo = s.Decode(writer.Bytes(), nil, jobSpec); errGo != nil {
+		fmt.Fprintf(os.Stderr, "%v\n",
+			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+		os.Exit(-1)
+	}
+	if len(jobSpec.ObjectMeta.Namespace) != 0 && len(*triggerNamespace) == 0 {
+		*triggerNamespace = jobSpec.ObjectMeta.Namespace
+	}
+
 	// Create a channel that receives notifications of repo changes, and also
 	// the handler function that deals with the notifications
 	trackingC := make(chan *git.Change, 1)
@@ -190,6 +240,7 @@ func main() {
 					Dir:        msg.Dir,
 					Dockerfile: "",
 					Env:        map[string]string{},
+					JobSpec:    jobSpec,
 				}
 
 				switch *triggerNamespace {

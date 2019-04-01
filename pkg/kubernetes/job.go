@@ -16,6 +16,7 @@ import (
 	"github.com/karlmutch/stack"
 	"github.com/mgutz/logxi"
 
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -29,6 +30,7 @@ type StartJob struct {
 	Dir        string
 	Dockerfile string
 	Env        map[string]string
+	JobSpec    *batchv1.Job
 }
 
 type Status struct {

@@ -235,26 +235,29 @@ Options:
   -t=&lt;target-file&gt;,...   A comma seperated list of files that will be examined for version tags and modified based upon the input-file version<p>
 </code></doc-opt>
 
-## image-exists
+## git-watch
 
-A tool for testing if a local docker image exists for the given module, and version.  This tool would typically be run within a source directory for a cmd.  It extracts the module name from the directory name, along with the git information, and version and then tests to determine if a local docker image is present that matches the code version.
+A tool for polling a github repository and when commits are observed capture the github repo as a Kubernetes volume and dispatch a Kubernetes jobs, for example an Uber Mikasu based docker image build, within an accessible Kubernetes cluster against the capture volume.
 
-Output for this command is exit code 1 for when there is not matching image, and exit code 0 for when an image exists.
+This tool can be run externally to a Kubernetes cluster, or inside a cluster.
+
+This tool is useful for first capturing a release or git versioned artifact into an image and then triggering down stream CI/CD operations.  It uses polling in order that publically accessible hosts are not needed and the costs of handling CI/CD pipelines are minimal.  This tool is designed to place private CI/CD pipelines into the hands of smaller teams sensitive to the costs of using a SaaS solution such as Travis, and tools such as Jenkins that require a full time role.
 
 <pre><code>
-usage:  ../../cmd/image-exists/image-exists.go [options]       image exists test tool (image-exists)       unknown      unknown
-
-Options:
-
-  -module string
-          The name of the component that is being used to identify the container image, this will default to the current working directory (default ".")
-            -v    When enabled will print internal logging for this tool
-
-            Environment Variables:
-
-            options can also be extracted from environment variables by changing dashes '-' to underscores and using upper case.
-
-            log levels are handled by the LOGXI env variables, these are documented at https://github.com/mgutz/logxi
+Usage of git-watch:
+  -branches string
+        A branch for each repository to needs watching, defaults to using 'master' for all repositories                                                       
+  -github-token string
+        A github token that can be used to access the repositories that will be watched                                                                       
+  -job-template string
+        The regular expression used to locate the Kubernetes job specification that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository
+  -namespace string
+        Overrides the defaulted namespace for pods and other resources that are spawned by this command                                                       
+  -script string
+        The name of a shell script file that will be run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the activated script
+  -urls string
+        One of more git repositories to monitor for changes
+  -v    When enabled will print internal logging for this tool
 </code></pre>
 
 ## github-release
