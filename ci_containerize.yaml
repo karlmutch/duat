@@ -19,10 +19,6 @@ spec:
         - -t=karlmutch/duat:{{.duat.version}}
         - --registry-config=/registry-config/registry.yaml
         - /makisu-context
-        lifecycle:
-          preStop:
-            exec:
-              command: ["/bin/sh", "-c", "ls / -alcrt ; ls /makisu-context -alcrt" ]
         volumeMounts:
         - name: context
           mountPath: /makisu-context
