@@ -43,7 +43,7 @@ func (job *Task) startMinimalPod(ctx context.Context, name string, volume string
 					Env:             []apiv1.EnvVar{},
 					VolumeMounts: []apiv1.VolumeMount{
 						apiv1.VolumeMount{
-							Name:      volume,
+							Name:      "data",
 							MountPath: "/data",
 						},
 					},
@@ -55,10 +55,10 @@ func (job *Task) startMinimalPod(ctx context.Context, name string, volume string
 			ImagePullSecrets: []apiv1.LocalObjectReference{},
 			Volumes: []apiv1.Volume{
 				apiv1.Volume{
-					Name: volume,
+					Name: "data",
 					VolumeSource: apiv1.VolumeSource{
-						HostPath: &apiv1.HostPathVolumeSource{
-							Path: "/data",
+						PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
+							ClaimName: volume,
 						},
 					},
 				},

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jjeffery/kv"
 	"github.com/karlmutch/stack"
+	"github.com/mgutz/logxi"
 
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,26 +57,29 @@ func (task *Task) runJob(ctx context.Context, logger chan *Status) (err kv.Error
 
 	api := Client().BatchV1().Jobs(task.start.Namespace)
 
-	job, errGo := api.Create(task.start.JobSpec)
+	_, errGo := api.Create(task.start.JobSpec)
 	if errGo != nil {
 		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
-	fmt.Println(spew.Sdump(job))
 
 	watch, errGo := Client().CoreV1().Pods(task.start.Namespace).Watch(metav1.ListOptions{LabelSelector: labelK + "=" + label})
 	if errGo != nil {
 		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
+	lastPhase := ""
 	for event := range watch.ResultChan() {
-		fmt.Printf("Type: %v\n", event.Type)
 		p, ok := event.Object.(*v1.Pod)
 		if !ok {
 			continue
 		}
-		fmt.Println(spew.Sdump(p))
-		fmt.Println(p.Status.ContainerStatuses)
-		fmt.Println(p.Status.Phase)
+		if lastPhase != string(p.Status.Phase) {
+			lastPhase = string(p.Status.Phase)
+			task.sendStatus(ctx, logger, logxi.LevelInfo, kv.NewError("pod update").With("id", task.start.ID, "namespace", task.start.Namespace, "phase", lastPhase))
+		}
+		if p.Status.Phase == v1.PodSucceeded || p.Status.Phase == v1.PodFailed {
+			break
+		}
 	}
 	return nil
 }

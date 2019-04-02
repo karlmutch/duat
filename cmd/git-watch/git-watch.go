@@ -162,7 +162,7 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
 		os.Exit(-1)
 	}
-	fmt.Println(writer.String())
+
 	ns := *triggerNamespace
 	if start.JobSpec.GetNamespace() != "<no value>" && len(ns) == 0 {
 		ns = start.JobSpec.GetNamespace()
