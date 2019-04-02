@@ -121,7 +121,7 @@ func (task *Task) runWatchedJob(ctx context.Context, statusC chan *Status) {
 	task.sendStatus(statusCtx, statusC, logxi.LevelNotice, kv.NewError("success").With("msg", spew.Sdump(task), "namespace", task.start.Namespace, "dir", task.start.Dir))
 }
 
-func TasksRunner(ctx context.Context, triggerC chan TaskSpec, statusC chan *Status) {
+func TasksRunner(ctx context.Context, triggerC chan *TaskSpec, statusC chan *Status) {
 	defer close(statusC)
 	for {
 		select {
@@ -129,7 +129,7 @@ func TasksRunner(ctx context.Context, triggerC chan TaskSpec, statusC chan *Stat
 			return
 		case msg := <-triggerC:
 			task := &Task{
-				start: msg,
+				start: *msg,
 			}
 
 			if err := task.initialize(ctx, statusC); err != nil {
@@ -141,6 +141,6 @@ func TasksRunner(ctx context.Context, triggerC chan TaskSpec, statusC chan *Stat
 	}
 }
 
-func TasksStart(ctx context.Context, triggerC chan TaskSpec, statusC chan *Status) {
+func TasksStart(ctx context.Context, triggerC chan *TaskSpec, statusC chan *Status) {
 	go TasksRunner(ctx, triggerC, statusC)
 }

@@ -60,17 +60,25 @@ var (
 	githubToken = flag.String("github-token", "", "A github token that can be used to access the repositories that will be watched")
 	verbose     = flag.Bool("v", false, "When enabled will print internal logging for this tool")
 
-	triggerScript    = flag.String("script", "", "The name of a shell script file that will be run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository")
-	jobTemplate      = flag.String("job-template", "", "The regular expression used to locate the Kubernetes job specification that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository")
+	jobTemplate      = flag.String("job-template", "", "The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository")
 	triggerNamespace = flag.String("namespace", "", "Overrides the defaulted namespace for pods and other resources that are spawned by this command")
-
-	gitRepos    = flag.String("urls", "", "One of more git repositories to monitor for changes")
-	gitBranches = flag.String("branches", "", "A branch for each repository to needs watching, defaults to using 'master' for all repositories")
+	stateDir         = flag.String("persistent-state-dir", "/tmp/git-watcher", "Overrides the default directory used to store state information for the last known commit of the repositories being watched")
 )
 
-func usage() {
+func Usage() {
 	fmt.Fprintln(os.Stderr, path.Base(os.Args[0]))
-	fmt.Fprintln(os.Stderr, "usage: ", os.Args[0], "[options]       Git Commit watcher and trigger (git-watch)      ", version.GitHash, "    ", version.BuildTime)
+	fmt.Fprintln(os.Stderr, "usage: ", os.Args[0], "[options] [arguments]      Git Commit watcher and trigger (git-watch)      ", version.GitHash, "    ", version.BuildTime)
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "Arguments:")
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "git-watch arguments take the form of a web URL containing the URL for the repository followed")
+	fmt.Fprintln(os.Stderr, "by an optional caret '^' and branch name.  If the caret and branch name are not specified then the")
+	fmt.Fprintln(os.Stderr, "branch name is assumed to be master.")
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "Example of valid arguments include:")
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "  https://github.com/karlmutch/duat.git")
+	fmt.Fprintln(os.Stderr, "  https://github.com/karlmutch/duat.git^master")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Options:")
 	fmt.Fprintln(os.Stderr, "")
@@ -84,7 +92,7 @@ func usage() {
 }
 
 type JobTracker struct {
-	tasks map[string]kubernetes.TaskSpec
+	tasks map[string]*kubernetes.TaskSpec
 	sync.Mutex
 }
 
@@ -111,7 +119,71 @@ func extractMap(list []interface{}) (withs map[string]string) {
 	return withs
 }
 
+func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.TaskSpec) {
+	doc, errGo := os.Open(*jobTemplate)
+	if errGo != nil {
+		fmt.Fprintf(os.Stderr, "%v\n",
+			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+		os.Exit(-1)
+	}
+	writer := new(bytes.Buffer)
+
+	start = &kubernetes.TaskSpec{
+		ID:         uuid.New().String(),
+		Dir:        msg.Dir,
+		Dockerfile: "",
+		Env:        map[string]string{},
+		JobSpec:    &v1.Job{},
+	}
+
+	// Run the job template through stencil
+	opts := duat.TemplateOptions{
+		IOFiles: []duat.TemplateIOFiles{{
+			In:  doc,
+			Out: writer,
+		}},
+		OverrideValues: map[string]string{
+			"ID": start.ID,
+		},
+	}
+
+	if errGo = md.Template(opts); errGo != nil {
+		fmt.Fprintf(os.Stderr, "%v\n",
+			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+		os.Exit(-1)
+	}
+
+	// Create a YAML serializer.  JSON is a subset of YAML, so is supported too.
+	s := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme)
+
+	// Decode the YAML to an object.
+	if _, _, errGo = s.Decode(writer.Bytes(), nil, start.JobSpec); errGo != nil {
+		fmt.Fprintf(os.Stderr, "%v\n",
+			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+		os.Exit(-1)
+	}
+	fmt.Println(writer.String())
+	ns := *triggerNamespace
+	if start.JobSpec.GetNamespace() != "<no value>" && len(ns) == 0 {
+		ns = start.JobSpec.GetNamespace()
+	}
+
+	switch ns {
+	case "":
+		start.Namespace = start.ID
+	case "generated":
+		start.Namespace = uuid.New().String()
+	default:
+		start.Namespace = ns
+	}
+	start.JobSpec.SetNamespace(start.Namespace)
+
+	return start
+}
+
 func main() {
+
+	flag.Usage = Usage
 
 	if !flag.Parsed() {
 		envflag.Parse()
@@ -126,17 +198,6 @@ func main() {
 	}
 
 	logger.Debug(fmt.Sprintf("%s built at %s, against commit id %s\n", os.Args[0], version.BuildTime, version.GitHash))
-
-	if len(flag.Args()) > 2 {
-		usage()
-		fmt.Fprintf(os.Stderr, "too many (%d - %v), arguments.\n", len(flag.Args()), flag.Args())
-		os.Exit(-1)
-	}
-
-	stateDir := "/tmp/git-watcher"
-	if len(flag.Args()) == 2 {
-		stateDir = flag.Arg(1)
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -155,13 +216,30 @@ func main() {
 		}
 	}()
 
-	watcher, err := git.NewGitWatcher(ctx, stateDir, reportC)
+	watcher, err := git.NewGitWatcher(ctx, *stateDir, reportC)
 	if err != nil {
 		logger.Info(err.Error())
 	}
 
-	repos := strings.Split(*gitRepos, ",")
-	branches := strings.Split(*gitBranches, ",")
+	if len(flag.Args()) == 0 {
+		fmt.Fprintf(os.Stderr, "%v\n",
+			kv.NewError("no github repositories were specified").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+		os.Exit(-1)
+
+	}
+
+	repos := []string{}
+	branches := []string{}
+
+	for _, arg := range flag.Args() {
+		urlBranch := strings.Split(arg, "^")
+		repos = append(repos, urlBranch[0])
+		if len(urlBranch) == 1 {
+			branches = append(branches, "master")
+			continue
+		}
+		branches = append(branches, urlBranch[1])
+	}
 
 	// Check that we have at least one repository that is to be monitored
 	if len(repos) == 0 {
@@ -175,28 +253,11 @@ func main() {
 		os.Exit(-1)
 	}
 
-	taskTriggerC := make(chan kubernetes.TaskSpec, 1)
+	taskTriggerC := make(chan *kubernetes.TaskSpec, 1)
 	defer close(taskTriggerC)
 
 	taskTracking := &JobTracker{
-		tasks: map[string]kubernetes.TaskSpec{},
-	}
-
-	doc, errGo := os.Open(*jobTemplate)
-	if errGo != nil {
-		fmt.Fprintf(os.Stderr, "%v\n",
-			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
-		os.Exit(-1)
-	}
-	writer := new(bytes.Buffer)
-
-	// Run the job template through stencil
-	opts := duat.TemplateOptions{
-		IOFiles: []duat.TemplateIOFiles{{
-			In:  doc,
-			Out: writer,
-		}},
-		OverrideValues: map[string]string{},
+		tasks: map[string]*kubernetes.TaskSpec{},
 	}
 
 	md, errGo := duat.NewMetaData(".", "README.md")
@@ -204,26 +265,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n",
 			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
 		os.Exit(-1)
-	}
-
-	if errGo = md.Template(opts); errGo != nil {
-		fmt.Fprintf(os.Stderr, "%v\n",
-			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
-		os.Exit(-1)
-	}
-
-	// Create a YAML serializer.  JSON is a subset of YAML, so is supported too.
-	s := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme)
-
-	// Decode the YAML to an object.
-	jobSpec := &v1.Job{}
-	if _, _, errGo = s.Decode(writer.Bytes(), nil, jobSpec); errGo != nil {
-		fmt.Fprintf(os.Stderr, "%v\n",
-			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
-		os.Exit(-1)
-	}
-	if len(jobSpec.ObjectMeta.Namespace) != 0 && len(*triggerNamespace) == 0 {
-		*triggerNamespace = jobSpec.ObjectMeta.Namespace
 	}
 
 	// Create a channel that receives notifications of repo changes, and also
@@ -235,22 +276,7 @@ func main() {
 			case <-ctx.Done():
 				return
 			case msg := <-triggerC:
-				start := kubernetes.TaskSpec{
-					ID:         uuid.New().String(),
-					Dir:        msg.Dir,
-					Dockerfile: "",
-					Env:        map[string]string{},
-					JobSpec:    jobSpec,
-				}
-
-				switch *triggerNamespace {
-				case "":
-					start.Namespace = start.ID
-				case "generated":
-					start.Namespace = uuid.New().String()
-				default:
-					start.Namespace = *triggerNamespace
-				}
+				start := generateStartMsg(md, msg)
 
 				taskTracking.Lock()
 				taskTracking.tasks[start.ID] = start

@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jjeffery/kv"
 
 	"k8s.io/api/core/v1"
@@ -18,12 +17,7 @@ import (
 
 func (job *Task) initVolume(logger chan *Status) (err kv.Error) {
 
-	volume, errGo := uuid.NewRandom()
-	if errGo != nil {
-		job.failed = kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
-		return job.failed
-	}
-	job.volume = volume.String()
+	job.volume = job.start.ID
 
 	fs := v1.PersistentVolumeFilesystem
 	createOpts := &v1.PersistentVolumeClaim{
@@ -50,7 +44,7 @@ func (job *Task) initVolume(logger chan *Status) (err kv.Error) {
 	}
 
 	api := Client().CoreV1()
-	if _, errGo = api.PersistentVolumeClaims(job.start.Namespace).Create(createOpts); errGo != nil {
+	if _, errGo := api.PersistentVolumeClaims(job.start.Namespace).Create(createOpts); errGo != nil {
 		job.failed = kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 		return job.failed
 	}

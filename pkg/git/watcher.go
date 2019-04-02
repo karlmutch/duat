@@ -272,6 +272,14 @@ func NewGitWatcher(ctx context.Context, baseDir string, loggerC chan<- *LoggerSi
 		}
 		watcher.Dir = tmp
 		watcher.Remove = true
+	} else {
+		stat, errGo := os.Stat(baseDir)
+		if os.IsNotExist(errGo) {
+			return nil, kv.Wrap(errGo).With("baseDir", baseDir, "stack", stack.Trace().TrimRuntime())
+		}
+		if !stat.IsDir() {
+			return nil, kv.NewError("file name specified is not a directory").With("baseDir", baseDir, "stack", stack.Trace().TrimRuntime())
+		}
 	}
 
 	defer func() {

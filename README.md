@@ -235,31 +235,6 @@ Options:
   -t=&lt;target-file&gt;,...   A comma seperated list of files that will be examined for version tags and modified based upon the input-file version<p>
 </code></doc-opt>
 
-## git-watch
-
-A tool for polling a github repository and when commits are observed capture the github repo as a Kubernetes volume and dispatch a Kubernetes jobs, for example an Uber Mikasu based docker image build, within an accessible Kubernetes cluster against the capture volume.
-
-This tool can be run externally to a Kubernetes cluster, or inside a cluster.
-
-This tool is useful for first capturing a release or git versioned artifact into an image and then triggering down stream CI/CD operations.  It uses polling in order that publically accessible hosts are not needed and the costs of handling CI/CD pipelines are minimal.  This tool is designed to place private CI/CD pipelines into the hands of smaller teams sensitive to the costs of using a SaaS solution such as Travis, and tools such as Jenkins that require a full time role.
-
-<pre><code>
-Usage of git-watch:
-  -branches string
-        A branch for each repository to needs watching, defaults to using 'master' for all repositories                                                       
-  -github-token string
-        A github token that can be used to access the repositories that will be watched                                                                       
-  -job-template string
-        The regular expression used to locate the Kubernetes job specification that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository
-  -namespace string
-        Overrides the defaulted namespace for pods and other resources that are spawned by this command                                                       
-  -script string
-        The name of a shell script file that will be run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the activated script
-  -urls string
-        One of more git repositories to monitor for changes
-  -v    When enabled will print internal logging for this tool
-</code></pre>
-
 ## github-release
 
 This tool can be used to push binaries and other files upto github using the current version as the tag for the release.
@@ -286,3 +261,85 @@ stencil support go templating for substitution of variables inside the input fil
 ```
 
 Templates also support functions from masterminds.github.io/sprig.  Please refer to that github website for more information.
+
+## git-watch
+
+The primary use case for git-watch is to be able to build CI/CD docker images from git repositories when commits occur.  git-watch meets an unaddressed need for ad-hoc git client integration to container centric CI/CD pipelines that can run within a Kubernetes cluster.
+
+### audience
+
+The primary audience for performing CI/CD bootstrapping are individual, or small teams of developers with shared and/or limited resources who wish to implement CI/CD pipelines.
+
+This tool is useful for first capturing a release or git versioned artifact into an image and then triggering down stream CI/CD operations.  It uses polling in order that publically accessible hosts are not needed and the costs of handling CI/CD pipelines are minimal.  This tool is designed to place private CI/CD pipelines into the hands of smaller teams sensitive to the costs of using a SaaS solution such as Travis, and tools such as Jenkins that require a full time role.
+
+### introduction
+
+The git-watch tool will poll a github repository and when commits are observed, clones the github repo into a Kubernetes volume, and then dispatch a Kubernetes job, for example an Uber Mikasu based docker image build.  This can be done within an accessible Kubernetes cluster against the cloned repository volume.
+
+git-watch is intended to run as the primordial step in a downstream pipeline.  The git commit and push to the git origin repository acts as the trigger for git-watch to begin the process of packaging the source code at a specific commit into a Kubernetes volume.  git-watch will then take the packaged volume and run it against a Kubernetes batch Job for your choice.  Ubers Mikasu is used by the authors as the Job for processing the packaged code.  Mikasu is used to produce a docker image containing the source code and the results of the docker build using a nominated Dockerfile within the packaged volume suitable for CI/CD actions.  Mikasu will then push the docker image to a registry of the users choice as supported by Mikasu.
+
+The trigger to the downstream pipeline is a combination of git-watch and Uber Mikasu pushing a docker image to an image registry for example docker hub, or Amazon ECR.  The use of image registries is common for several CI/CD platforms as triggers.  For the minmalist case the author makes use of https://keel.sh/ to monitor for the artifacts produced by the tools under discussion to trigger actions related to the builds, test, release lifecycle of choice.
+
+This document describes by example the git-watch tool using a combination of github, dockerhub, and keel.sh for the downstream CI.
+
+### github
+
+git-watch can be configured to watch git repositories using the git clone url, and optionally can be configured to watch specific branches.i  In order to have git-watch run continuously it can be used in combination with a Kubernetes Deployment and a containerized version of this application.
+
+The --github-token option is used by the watcher to access any configured repositories.  Having an environment variable GITHUB_TOKEN is also supported.
+
+The --state-persistence-dir option is used to specify where the files that track the last seen commit ID for the github repositories is kept.
+
+The repositories are specified as arguments to the command.  Each argument represents a git repository URL and can be suffixed with a caret character, '^', and the branch name to further specify the repository to be watched.
+
+The --job-template option is used to specify a template following the golang/Kubernetes style that will be used to initiate jobs as commits are detected.  An exmaple of a template is provided in the duat code repository called 'ci_containerize.yaml'.  This Kubernetes Job specification uses the Makisu container build image from Uber to read a Dockerfile from the code base and deploy an image containing all of the source code associated with the commit.  Mikasu will then push that image to a 3rd party image repository using a Kubernetes secret populated by the user.
+
+### registry
+
+In order to perform builds with stable code throughout the process the Mikasu job template will build a Docker image using the default Dockerfile inside the code repository being watched.  After the build image has obtained the needed compilation tooling and source code to be useful during CI/CD operations it will need to be stored for access by the downstream CI/CD pipeline.  The Mikasu builder uses Kubernetes secrets to retrieve the user name and password for the registry credentials.  The user is responsible for loading the credentials using a private file and applying the secret to the cluster in which the Mikasu container is going to be run, and which optionally the git-watch is deployed too as well.
+
+Before using the registry setting you should copy registry-template.yaml to registry.yaml, and modify the contents so that they contain your docker user name and password.  You can then apply the secrets to your cluster using commands such as the following:
+
+```
+export Registry=`cat registry.yaml`
+export K8S_NAMESPACE=ci-duat-`petname`
+stencil -input ci_secret.yaml -values Registry=${Registry},Namespace=$K8S_NAMESPACE | kubectl apply -f -
+```
+
+
+
+### downstream CI/CD (keel.sh)
+
+<pre><code>
+Usage of git-watch: [options] [arguments]      Git Commit watcher and trigger (git-watch)
+
+Arguments:
+
+git-watch arguments take the form of a web URL containing the URL for the repository followed
+by an optional caret '^' and branch name.  If the caret and branch name are not specified then the
+branch name is assumed to be master.
+
+Example of valid arguments include:
+
+  https://github.com/karlmutch/duat.git
+  https://github.com/karlmutch/duat.git^master
+
+Options:
+
+  -github-token string
+        A github token that can be used to access the repositories that will be watched
+  -job-template string
+        The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of
+the captured repository
+  -namespace string
+        Overrides the defaulted namespace for pods and other resources that are spawned by this command
+  -persistent-state-dir string
+        Overrides the default directory used to store state information for the last known commit of the repositories being watched (default "/tmp/git-watcher")
+  -v    When enabled will print internal logging for this tool
+
+Environment Variables:
+
+options can also be extracted from environment variables by changing dashes '-' to underscores and using upper case.
+
+log levels are handled by the LOGXI env variables, these are documented at https://github.com/mgutz/logxi
+</code></pre>
