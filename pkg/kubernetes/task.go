@@ -89,6 +89,10 @@ func (task *Task) initialize(ctx context.Context, logger chan *Status) (err kv.E
 		return err
 	}
 
+	if err = task.deleteNamespace(task.start.Namespace, logger); err != nil {
+		return err
+	}
+
 	return nil
 }
 

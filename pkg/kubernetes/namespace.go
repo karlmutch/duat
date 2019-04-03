@@ -24,3 +24,11 @@ func (job *Task) createNamespace(ns string, overwrite bool, logger chan *Status)
 	}
 	return nil
 }
+
+func (job *Task) deleteNamespace(ns string, logger chan *Status) (err kv.Error) {
+	if errGo := Client().CoreV1().Namespaces().Delete(ns, &metav1.DeleteOptions{}); errGo != nil {
+		job.failed = kv.Wrap(errGo).With("namespace", ns, "stack", stack.Trace().TrimRuntime())
+		return job.failed
+	}
+	return nil
+}

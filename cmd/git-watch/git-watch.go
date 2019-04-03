@@ -29,6 +29,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jjeffery/kv"
 	"github.com/karlmutch/duat"
 	"github.com/karlmutch/duat/pkg/git"
@@ -51,19 +52,17 @@ import (
 	"github.com/karlmutch/envflag" // Forked copy of https://github.com/GoBike/envflag
 
 	"github.com/mgutz/logxi" // Using a forked copy of this package results in build issues
-
-	"github.com/google/uuid"
 )
 
 var (
-	logger = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "git-watch")
+	defStateDir = "/tmp/git-watcher"
+	logger      = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "git-watch")
 
 	githubToken = flag.String("github-token", "", "A github token that can be used to access the repositories that will be watched")
 	verbose     = flag.Bool("v", false, "When enabled will print internal logging for this tool")
 
-	jobTemplate      = flag.String("job-template", "", "The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository")
-	triggerNamespace = flag.String("namespace", "", "Overrides the defaulted namespace for pods and other resources that are spawned by this command")
-	stateDir         = flag.String("persistent-state-dir", "/tmp/git-watcher", "Overrides the default directory used to store state information for the last known commit of the repositories being watched")
+	jobTemplate = flag.String("job-template", "", "The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository")
+	stateDir    = flag.String("persistent-state-dir", defStateDir[:], "Overrides the default directory used to store state information for the last known commit of the repositories being watched")
 )
 
 func Usage() {
@@ -129,27 +128,16 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 	}
 	writer := new(bytes.Buffer)
 
+	id := uuid.New().String()
+
 	start = &kubernetes.TaskSpec{
-		ID:         uuid.New().String(),
+		ID:         id,
+		Namespace:  "gw-" + strings.Replace(md.SemVer.String(), ".", "-", -1),
 		Dir:        msg.Dir,
 		Dockerfile: "",
 		Env:        map[string]string{},
 		JobSpec:    &batchv1.Job{},
 		SecretSpec: &corev1.Secret{},
-	}
-
-	ns := *triggerNamespace
-	if start.JobSpec.GetNamespace() != "<no value>" && len(ns) == 0 {
-		ns = start.JobSpec.GetNamespace()
-	}
-
-	switch ns {
-	case "":
-		start.Namespace = start.ID
-	case "generated":
-		start.Namespace = uuid.New().String()
-	default:
-		start.Namespace = ns
 	}
 
 	// Run the job template through stencil
@@ -238,6 +226,17 @@ func main() {
 			}
 		}
 	}()
+
+	// If the stateDir was defaulted then create it if it does not exist otherwise
+	// if the user specified a value then that directory must actually exist
+	if *stateDir == defStateDir {
+		os.MkdirAll(*stateDir, 0700)
+	}
+	if _, errGo := os.Stat(*stateDir); errGo != nil && !os.IsNotExist(errGo) {
+		fmt.Fprintf(os.Stderr, "%v\n",
+			kv.NewError("the state presistence directory must already exist").With("dir", *stateDir, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+		os.Exit(-1)
+	}
 
 	watcher, err := git.NewGitWatcher(ctx, *stateDir, reportC)
 	if err != nil {
