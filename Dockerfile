@@ -24,7 +24,8 @@ RUN mkdir -p /project/src/github.com/karlmutch/duat && \
     go get github.com/erning/gorun
 
 RUN pwd && \
-    ls
+    ls && \
+    export
 
 COPY . /project/src/github.com/karlmutch/duat
 WORKDIR /project/src/github.com/karlmutch/duat
