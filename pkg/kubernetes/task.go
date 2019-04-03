@@ -33,6 +33,11 @@ type Task struct {
 
 func (task *Task) initialize(ctx context.Context, logger chan *Status) (err kv.Error) {
 
+	if initFailure != nil {
+		task.sendStatus(ctx, logger, logxi.LevelFatal, initFailure)
+		return initFailure
+	}
+
 	if err = task.createNamespace(task.start.Namespace, true, logger); err != nil {
 		return err
 	}
