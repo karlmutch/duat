@@ -25,7 +25,7 @@ RUN mkdir -p /project/src/github.com/karlmutch/duat && \
     pwd && \
     echo "*" && \
     ls && \
-    cp -r . /project/src/github.com/karlmutch/duat/. && \
+    cp -r /makisu-context/. /project/src/github.com/karlmutch/duat/. && \
     echo "*" && \
     cd /makisu-context && \
     echo "*" && \
