@@ -19,11 +19,12 @@ ENV GOPATH=/project
 ENV GOROOT=/usr/lib/go-1.11
 ENV PATH=$PATH:/usr/lib/go-1.11/bin:$GOPATH/bin
 
+WORKDIR /project/src/github.com/karlmutch/duat
+
 RUN mkdir -p /project/src/github.com/karlmutch/duat && \
     go get -u github.com/golang/dep/cmd/dep && \
     go get github.com/erning/gorun
 
-COPY /makisu-context /project/src/github.com/karlmutch/duat
-WORKDIR /project/src/github.com/karlmutch/duat
+COPY . .
 
 CMD go run ./build.go -dirs cmd,example -r
