@@ -35,7 +35,8 @@ import (
 	"github.com/karlmutch/duat/pkg/kubernetes"
 	"github.com/karlmutch/duat/version"
 
-	"k8s.io/api/batch/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes/scheme"
 
@@ -133,34 +134,8 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 		Dir:        msg.Dir,
 		Dockerfile: "",
 		Env:        map[string]string{},
-		JobSpec:    &v1.Job{},
-	}
-
-	// Run the job template through stencil
-	opts := duat.TemplateOptions{
-		IOFiles: []duat.TemplateIOFiles{{
-			In:  doc,
-			Out: writer,
-		}},
-		OverrideValues: map[string]string{
-			"ID": start.ID,
-		},
-	}
-
-	if errGo = md.Template(opts); errGo != nil {
-		fmt.Fprintf(os.Stderr, "%v\n",
-			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
-		os.Exit(-1)
-	}
-
-	// Create a YAML serializer.  JSON is a subset of YAML, so is supported too.
-	s := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme)
-
-	// Decode the YAML to an object.
-	if _, _, errGo = s.Decode(writer.Bytes(), nil, start.JobSpec); errGo != nil {
-		fmt.Fprintf(os.Stderr, "%v\n",
-			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
-		os.Exit(-1)
+		JobSpec:    &batchv1.Job{},
+		SecretSpec: &corev1.Secret{},
 	}
 
 	ns := *triggerNamespace
@@ -176,7 +151,55 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 	default:
 		start.Namespace = ns
 	}
+
+	// Run the job template through stencil
+	opts := duat.TemplateOptions{
+		IOFiles: []duat.TemplateIOFiles{{
+			In:  doc,
+			Out: writer,
+		}},
+		OverrideValues: map[string]string{
+			"ID":        start.ID,
+			"Namespace": start.Namespace,
+		},
+	}
+
+	if errGo = md.Template(opts); errGo != nil {
+		fmt.Fprintf(os.Stderr, "%v\n",
+			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+		os.Exit(-1)
+	}
+
+	allRes := string(writer.Bytes()[:])
+	resources := strings.Split(allRes, "---")
+	for _, rsc := range resources {
+		if len(rsc) == 0 {
+			continue
+		}
+		// Create a YAML serializer.  JSON is a subset of YAML, so is supported too.
+		s := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme)
+
+		// Decode the YAML to a Job object.
+		obj, kind, errGo := s.Decode([]byte(rsc), nil, start.JobSpec)
+		if errGo != nil {
+			fmt.Fprintf(os.Stderr, "%v\n",
+				kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+			os.Exit(-1)
+		}
+		switch kind.Kind {
+		case "Job":
+			start.JobSpec = obj.(*batchv1.Job)
+		case "Secret":
+			start.SecretSpec = obj.(*corev1.Secret)
+		default:
+			fmt.Fprintf(os.Stderr, "%v\n",
+				kv.NewError("kubernetes object kind not recognized").With("kind", kind.Kind, "template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+			os.Exit(-1)
+		}
+	}
+
 	start.JobSpec.SetNamespace(start.Namespace)
+	start.SecretSpec.SetNamespace(start.Namespace)
 
 	return start
 }

@@ -296,14 +296,12 @@ The --job-template option is used to specify a template following the golang/Kub
 
 ### registry
 
-In order to perform builds with stable code throughout the process the Mikasu job template will build a Docker image using the default Dockerfile inside the code repository being watched.  After the build image has obtained the needed compilation tooling and source code to be useful during CI/CD operations it will need to be stored for access by the downstream CI/CD pipeline.  The Mikasu builder uses Kubernetes secrets to retrieve the user name and password for the registry credentials.  The user is responsible for loading the credentials using a private file and applying the secret to the cluster in which the Mikasu container is going to be run, and which optionally the git-watch is deployed too as well.
+In order to perform builds with stable code throughout the process the Mikasu job template will build a Docker image using the default Dockerfile inside the code repository being watched.  After the build image has obtained the needed compilation tooling and source code to be useful during CI/CD operations it will need to be stored for access by the downstream CI/CD pipeline.  The Mikasu builder uses Kubernetes secrets to retrieve the user name and password for the registry credentials.  The user is responsible for definition of the Registry environment variable to hold the credentials.  When the Job in which the Mikasu container is run the environment variable will be substituted into the Job template.
 
-Before using the registry setting you should copy registry-template.yaml to registry.yaml, and modify the contents so that they contain your docker user name and password.  You can then apply the secrets to your cluster using commands such as the following:
+Before using the registry setting you should copy registry-template.yaml to registry.yaml, and modify the contents so that they contain your docker user name and password.  You can then apply the secrets to your environment variables using commands such as the following:
 
 ```
 export Registry=`cat registry.yaml`
-export K8S_NAMESPACE=ci-duat-`petname`
-stencil -input ci_secret.yaml -values Registry=${Registry},Namespace=$K8S_NAMESPACE | kubectl apply -f -
 ```
 
 

@@ -77,7 +77,10 @@ func (task *Task) runJob(ctx context.Context, logger chan *Status) (err kv.Error
 			lastPhase = string(p.Status.Phase)
 			task.sendStatus(ctx, logger, logxi.LevelInfo, kv.NewError("pod update").With("id", task.start.ID, "namespace", task.start.Namespace, "phase", lastPhase))
 		}
-		if p.Status.Phase == v1.PodSucceeded || p.Status.Phase == v1.PodFailed {
+		if p.Status.Phase == v1.PodFailed {
+			break
+		}
+		if p.Status.Phase == v1.PodSucceeded {
 			break
 		}
 	}

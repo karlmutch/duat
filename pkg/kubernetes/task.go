@@ -22,6 +22,7 @@ type TaskSpec struct {
 	Dockerfile string
 	Env        map[string]string
 	JobSpec    *batchv1.Job
+	SecretSpec *v1.Secret
 }
 
 type Task struct {
@@ -33,6 +34,11 @@ type Task struct {
 func (task *Task) initialize(ctx context.Context, logger chan *Status) (err kv.Error) {
 
 	if err = task.createNamespace(task.start.Namespace, true, logger); err != nil {
+		return err
+	}
+
+	// Populate secrets
+	if err = task.initSecrets(logger); err != nil {
 		return err
 	}
 

@@ -6,7 +6,7 @@ import (
 
 	"github.com/jjeffery/kv"
 
-	"k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -19,26 +19,26 @@ func (job *Task) initVolume(logger chan *Status) (err kv.Error) {
 
 	job.volume = job.start.ID
 
-	fs := v1.PersistentVolumeFilesystem
-	createOpts := &v1.PersistentVolumeClaim{
+	fs := corev1.PersistentVolumeFilesystem
+	createOpts := &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      job.volume,
 			Namespace: job.start.Namespace,
 		},
-		Spec: v1.PersistentVolumeClaimSpec{
-			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteMany},
-			Resources: v1.ResourceRequirements{
-				Requests: v1.ResourceList{
-					v1.ResourceName(v1.ResourceStorage): resource.MustParse("10Gi"),
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("10Gi"),
 				},
 			},
 			VolumeMode: &fs,
 		},
-		Status: v1.PersistentVolumeClaimStatus{
-			Phase:       v1.ClaimBound,
-			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteMany},
-			Capacity: v1.ResourceList{
-				v1.ResourceName(v1.ResourceStorage): resource.MustParse("10Gi"),
+		Status: corev1.PersistentVolumeClaimStatus{
+			Phase:       corev1.ClaimBound,
+			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteMany},
+			Capacity: corev1.ResourceList{
+				corev1.ResourceName(corev1.ResourceStorage): resource.MustParse("10Gi"),
 			},
 		},
 	}
@@ -63,7 +63,7 @@ func (job *Task) waitOnVolume(ctx context.Context, logger chan *Status) (err kv.
 	for {
 		select {
 		case event := <-watcher.ResultChan():
-			pvc, ok := event.Object.(*v1.PersistentVolumeClaim)
+			pvc, ok := event.Object.(*corev1.PersistentVolumeClaim)
 			if !ok {
 				continue
 			}
@@ -75,7 +75,7 @@ func (job *Task) waitOnVolume(ctx context.Context, logger chan *Status) (err kv.
 			if state, isPresent := pvc.ObjectMeta.Annotations["pv.kubernetes.io/bind-completed"]; isPresent == false || state != "yes" {
 				continue
 			}
-			if pvc.Status.Phase != v1.ClaimBound {
+			if pvc.Status.Phase != corev1.ClaimBound {
 				continue
 			}
 

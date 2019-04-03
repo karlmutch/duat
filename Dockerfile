@@ -23,6 +23,9 @@ RUN mkdir -p /project/src/github.com/karlmutch/duat && \
     go get -u github.com/golang/dep/cmd/dep && \
     go get github.com/erning/gorun
 
+RUN pwd && \
+    ls
+
 COPY . /project/src/github.com/karlmutch/duat
 WORKDIR /project/src/github.com/karlmutch/duat
 

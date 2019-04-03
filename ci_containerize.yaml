@@ -36,3 +36,12 @@ spec:
           secretName: docker-registry-config
       - name: storage
         emptyDir: {}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: docker-registry-config
+  namespace: {{ .Namespace }}
+type: Opaque
+data:
+    registry.yaml: '{{ expandenv "$Registry" | b64enc }}'
