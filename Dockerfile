@@ -22,14 +22,7 @@ ENV PATH=$PATH:/usr/lib/go-1.11/bin:$GOPATH/bin
 RUN mkdir -p /project/src/github.com/karlmutch/duat && \
     go get -u github.com/golang/dep/cmd/dep && \
     go get github.com/erning/gorun && \
-    pwd && \
-    echo "*" && \
-    ls && \
-    cp -r /makisu-context/. /project/src/github.com/karlmutch/duat/. && \
-    echo "*" && \
-    cd /makisu-context && \
-    echo "*" && \
-    ls
+    cp -r /makisu-context/. /project/src/github.com/karlmutch/duat/.
 
 WORKDIR /project/src/github.com/karlmutch/duat
 
