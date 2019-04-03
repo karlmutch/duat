@@ -31,6 +31,6 @@ RUN go get -u github.com/golang/dep/cmd/dep && \
     echo "*" && \
     ls
 
-COPY /makisu-context .
+COPY . .
 
 CMD go run ./build.go -dirs cmd,example -r
