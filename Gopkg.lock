@@ -174,14 +174,6 @@
   version = "v1.9.0"
 
 [[projects]]
-  digest = "1:2cd7915ab26ede7d95b8749e6b1f933f1c6d5398030684e6505940a10f31cfda"
-  name = "github.com/ghodss/yaml"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
-  version = "v1.0.0"
-
-[[projects]]
   digest = "1:fe8a03a8222d5b913f256972933d26d24ad7c8286692a42943bc01633cc8fce3"
   name = "github.com/go-ini/ini"
   packages = ["."]
@@ -335,6 +327,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "b80cdc656a7a61702f293555d54777d6ff617eb7"
+
+[[projects]]
+  digest = "1:9dd07599524c6a9e4316f76512271c7a9fb5c214d67788245dafaf4624fbe981"
+  name = "github.com/karlmutch/basex"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "8c16d1cfd7c84e830da85091ad46cb1e36cd44a3"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -905,12 +905,12 @@
     "github.com/aws/aws-sdk-go/service/ecr",
     "github.com/davecgh/go-spew/spew",
     "github.com/docker/docker/client",
-    "github.com/ghodss/yaml",
     "github.com/go-test/deep",
     "github.com/go-yaml/yaml",
     "github.com/google/uuid",
     "github.com/jjeffery/kv",
     "github.com/karlmutch/base62",
+    "github.com/karlmutch/basex",
     "github.com/karlmutch/deepcopier",
     "github.com/karlmutch/envflag",
     "github.com/karlmutch/semver",
@@ -925,7 +925,9 @@
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/runtime/serializer/json",
     "k8s.io/client-go/kubernetes",
+    "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/remotecommand",

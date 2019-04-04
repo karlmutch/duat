@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat)  Alpha
 
-Version : <repo-version>0.11.0-feature-91-git-builder-ops-1hBole</repo-version>
+Version : <repo-version>0.11.0-feature-91-git-builder-ops-aaaagjecpnf</repo-version>
 
 duat is a set of tools useful for automating workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go to manage the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and deploying software.
 
@@ -58,7 +58,7 @@ The tools and packages within this project rely on a couple of conventions and a
 
     using prefix characters are not semver compliant and are not used
 
-    semver pre-release versions are sortable and are ordered
+    semver pre-release versions are sortable, are ordered, are reversable for a time stamp, and obey DNS character rules
 
 4. containerization
 
@@ -304,7 +304,17 @@ Before using the registry setting you should copy registry-template.yaml to regi
 export Registry=`cat registry.yaml`
 ```
 
+When the git-watch command is run environment variables set by the user can be substituted into your job template.  The supplied example uses the Registry env variable to do exactly this.
 
+### bootstrapping
+
+Having setup the git-watch process the [--stat-persistence-dir] is used to store information about the last commit seen and acted on by the watcher.
+
+The watcher will check the git repositories on a regular basis to poll for new commits and will initiate Kubernetes jobs on the lastest observed commit ID.
+
+As each job is run git-watch will generate a namespace based upon the current semantic version set in the README.md file at the root of your repository.  Information about the version tags used can be found in the semver section of this document.  Importantly the semver utility in this package only generates pre-release tags that obey DNS naming rules and this allows Kubernetes to use these identifiers as DNS compliant namespaces.
+
+The example ci_containerize.yaml example file illustrates a job that will build a docker image containing the source code at the detected commit ID and will push this code to the docker hub repository.  The docker-registry-config secret in this file is used to store the user name and password as described above for completing the docker push operation once the Makisu build is done.
 
 ### downstream CI/CD (keel.sh)
 
@@ -327,10 +337,7 @@ Options:
   -github-token string
         A github token that can be used to access the repositories that will be watched
   -job-template string
-        The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of
-the captured repository
-  -namespace string
-        Overrides the defaulted namespace for pods and other resources that are spawned by this command
+        The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository
   -persistent-state-dir string
         Overrides the default directory used to store state information for the last known commit of the repositories being watched (default "/tmp/git-watcher")
   -v    When enabled will print internal logging for this tool
