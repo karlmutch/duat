@@ -1,32 +1,34 @@
-# Developer utilities and tools (duat)  Alpha
+# Developer utilities and tools (duat)  Beta
 
-Version : <repo-version>0.11.0-feature-91-git-builder-ops-aaaagjecpnf</repo-version>
+Version : <repo-version>0.11.0-feature-91-git-builder-ops-aaaagjecvxp</repo-version>
 
-duat is a set of tools useful for automating workflows operating on common software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go to manage the entire software lifecycle removing scripting and other DSLs typically used for building, releasing, and deploying software.
+duat is a set of tools useful for automating the bootstrapping of containerized workflows.  duat includes tools for working with software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go, and Kubernetes to manage portions of container centric software lifecycles, helping to remove proprietary tooling, scripting, and other DSLs typically used for building, releasing, and deploying software.
 
-This repository also delivers go import packages for handling meta data and artifacts associated with software development activities.
+This repository also includes go import packages for handling meta data and artifacts associated with software development activities.
 
-duat make assumptions about naming of docker images, and semantic versioning.  duat provides tools and assistance specifically for go based development, but intentionally does not impose an end-to-end automation solution, for CI/CD.
+duat is opinionated about naming of docker images, and semantic versioning.  duat provides tools and assistance specifically for go based development, but intentionally does not impose an end-to-end CI/CD automation solution.  Downstream workflow choices are determined by the user not duat specifically.
 
 # About
 
-This project was started as a means of experimenting with continuous integration using go as the primary langage I now use for software implemention also as my primary means of automatting build and release processes.  Other projects such as mage, https://magefile.org/, also do the same.  This project was started with the intention of working with go libraries primarily for handling versioning, git source control, and containerization.  Mage in contrast leverages a strategy of wrapping shell commands to achieve this.
+This project was started as a means of experimenting with continuous integration using go as the primary langage used for software implemention also as my primary means of automatting build and release processes.  Other projects such as mage, https://magefile.org/, also do the same.  This project was started with the intention of working with go libraries primarily for handling versioning, git source control, and containerization.  Mage in contrast leverages a strategy of wrapping shell commands to achieve this.
 
-duat is an attempt to determine the impact of using a set of conventions and using direct implementations of functionality that would otherwise have been invoked via a shell.  The sole shell script that does exist for the build is used to make invocation of docker commands easier until the logic to deal with user identity for container based builds is done.
+Overtime the objective of duat has changed from being used across the entire workflow to filling in the gaps for existing containerized CI/CD solutions in relation to deployments that wish to avoid hard dependencies on vulnerable public infrastructure.
 
-The issue of configuration management for developer environments where docker is seen as a barrier to fast build, test, debug cycles due to sped is best addressed using tools such as Ansible for which I have a seperate github project, github.com/karlmutch/DevBoot.  The Dockerfiles however that a developer creates for their development projects act as a the last word in regards to the supported environments for projects.  Because of the importance of software configuration managementr release builds should be done using containers and reference images.
+The issue of configuration management for developer environments where docker is seen as a barrier to fast build, test, debug cycles due to speed is best addressed using tools such as Ansible for which I have a seperate github project, github.com/karlmutch/DevBoot.  The Dockerfiles however that a developer creates for their development projects act as a the last word in regards to the supported environments for projects.  Because of the importance of software configuration management release builds should be done using containers and reference images.
 
 # The name duat
 
-Duat was the name given by the ancient egyptians to the underworld.  As the sun set each day and travelled through the underworld being regenerated it would cast light on to the souls nearby bringing them to life for a period of time as it passed by.  While passing through the duat these tools hope to light each of the hours in your build pipeline.
+Duat was the name given by the ancient egyptians to the underworld.  As the sun set each day and travelled through the underworld being regenerated it would cast light on to the souls nearby bringing them to life for a period of time as it passed by.  While passing through the duat the hope is that these tools help to light each of the hours in your build pipeline.
 
 # Motivating use-cases
 
-A user of duat wishes to develop and build software producing distinct tagged docker images for every build and, clean up built docker images of previous development versions as development progresses.
+A users self hosted Kubernetes hosted CI/CD pipeline is used to shed external dependencies on service providers such as Travis or Quay.io.
+
+A user wishes to develop and build software producing distinct tagged docker images for every build and, clean up built docker images of previous development versions as development progresses.
 
 A user wishes to deliver software packaged using docker images to an AWS ECR image repository.
 
-A user wishes to deploy containerized software into an Istio, or other k8s based service mesh.
+A user wishes to deploy containerized software into an Istio, or other Kubernetes based service mesh.
 
 Many existing cloud based platforms exist today to address requirements such as the above.  This has led to divided islands of functionality, such as Travis, that require integration with each other so that credentials and other artifacts required by workflow automation is shared between these platform. Costly and fragile integration falls to the developer and users which is time consuming and complex.  duat builds upon the observation that many developers are already operating in a cloud based environment and what is needed is a simple set of tools, if a set of simplifing assumptions is made for addressing the above use cases, especially if you already have containerized builds, and tests.
 
@@ -46,7 +48,7 @@ The tools and packages within this project rely on a couple of conventions and a
 
     git is the primary source code management tool
 
-    git tags are semver 2 compliant
+    git tags are semver 2.0 compliant
 
 2. release targets
 
@@ -89,16 +91,16 @@ By default the version number of the current repo is stored within the README.md
 duat generates and software under management using the semantic versioning 2.0 and uses the additional semver pre-release label.  For example:
 
 ```
-karlmutch/no-code/noserver:0.1.0-89-bzip2-1eqpVy
+karlmutch/no-code/noserver:0.1.0-89-bzip2-aaaagjecpnf
 ```
 
-represents a docker image from the github.com/karlmutch/no-code repository, and the noserver component, that is a pre-release of 0.1.0 and was generated from the 89_bzip2, or 89-bzip2 branch with the pre-release timestamp of 1eqpVy.
+represents a docker image from the github.com/karlmutch/no-code repository, and the noserver component, that is a pre-release of 0.1.0 and was generated from the 89_bzip2, or 89-bzip2 branch with the pre-release timestamp of aaaagjecpnf.
 
 The git repository name is obtained by the git package
 
 The version portion of the semver is wrangled by the semver package using the README.md file as the authortative source.
 
-The pre-release portion is obtained from git using the branch name, and the trailing portion '1eqpVy' is a Base 62 encoding, modified to allow sorting is date time order of the string, pre-release stamped within the README.md file.
+The pre-release portion is obtained from git using the branch name, and the trailing portion 'aaaagjecpnf' is a Base 24 encoding, modified to allow sorting is date time order of the string, pre-release stamped within the README.md file.
 
 ## Versioning Workflow
 
@@ -113,7 +115,7 @@ $ git checkout 00_new_feature
 $ semver patch
 0.0.2
 $ semver pre
-0.0.2-00-new-feature-1eqGTxa
+0.0.2-00-new-feature-aaaagjecrgf
 ```
 Development is done and testing carried out
 A decision is made to release and PR is approved
@@ -139,9 +141,11 @@ Using Go to automate CI/CD style activities is an attempt to address the followi
 
 The individual tools this projects provides can be run in multiple ways:
 
-1. as standalone utilities to do very discret actions when invoked by bash scripts for the command line.
+1. as standalone utilities to do very discret actions when invoked by bash scripts or on the command line.
 
 2. as packages inside go source files, the source files being executed in the same manner as shell scripts.
+
+3. As builds that are triggered by pushed commits in a shared git repository.
 
 The go packages this project implements are intended to be employed when using Go as a scripting language, as an alternative to bash scripts.  Information about using Go as a shell scripting language can be found at, https://blog.cloudflare.com/using-go-as-a-scripting-language-in-linux/.
 
@@ -159,8 +163,8 @@ duat is go gettable with the command tools compiled using the go tools.  The fol
 go get github.com/karlmutch/duat
 go install github.com/karlmutch/duat/cmd/semver
 go install github.com/karlmutch/duat/cmd/github-release
-go install github.com/karlmutch/duat/cmd/image-release
 go install github.com/karlmutch/duat/cmd/stencil
+go install github.com/karlmutch/duat/cmd/git-watch
 ```
 
 # Building duat from source
@@ -316,7 +320,7 @@ As each job is run git-watch will generate a namespace based upon the current se
 
 The example ci_containerize.yaml example file illustrates a job that will build a docker image containing the source code at the detected commit ID and will push this code to the docker hub repository.  The docker-registry-config secret in this file is used to store the user name and password as described above for completing the docker push operation once the Makisu build is done.
 
-### downstream CI/CD (keel.sh)
+### usage
 
 <pre><code>
 Usage of git-watch: [options] [arguments]      Git Commit watcher and trigger (git-watch)
@@ -348,3 +352,6 @@ options can also be extracted from environment variables by changing dashes '-' 
 
 log levels are handled by the LOGXI env variables, these are documented at https://github.com/mgutz/logxi
 </code></pre>
+
+### downstream CI/CD (keel.sh)
+
