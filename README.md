@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat) Beta
 
-Version : <repo-version>0.11.0-feature-91-git-builder-ops-aaaagjecvxp</repo-version>
+Version : <repo-version>0.11.0-feature-91-git-builder-ops-aaaagjeivao</repo-version>
 
 duat is a set of tools useful for automating the bootstrapping of containerized workflows.  duat includes tools for working with software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go, and Kubernetes to manage portions of container centric software lifecycles, helping to remove proprietary tooling, scripting, and other DSLs typically used for building, releasing, and deploying software.
 
@@ -189,6 +189,8 @@ echo ':golang:E::go::/usr/local/bin/gorun:OC' | sudo tee /proc/sys/fs/binfmt_mis
 ### Docker based Release builds
 
 Using build.sh
+
+If you have the environment variable GITHUB_TOKEN defined then this will be imported into the build container and used for perform releases of the software at the semver for the project.
 
 ### Development builds
 
