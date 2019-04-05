@@ -162,7 +162,7 @@ The general idea is to produce both libraries for development artifact handling 
 
 # Installation using Github binaries
 
-duat has regular releases of the stable head of the git repo.  The release consists at this time of precompiled Linux x86_64 binaries that can be found at https://github.com/karlmutch/duat/releases.
+duat has regular releases of the stable head of the git repo.  The release consists at this time of precompiled Linux x86\_64 binaries that can be found at https://github.com/karlmutch/duat/releases.
 
 # Installation using go get
 
@@ -190,7 +190,7 @@ echo ':golang:E::go::/usr/local/bin/gorun:OC' | sudo tee /proc/sys/fs/binfmt_mis
 
 Using build.sh
 
-If you have the environment variable GITHUB_TOKEN defined then this will be imported into the build container and used for perform releases of the software at the semver for the project.
+If you have the environment variable GITHUB\_TOKEN defined then this will be imported into the build container and used for perform releases of the software at the semver for the project.
 
 ### Development builds
 
@@ -301,7 +301,7 @@ This document describes by example the git-watch tool using a combination of git
 
 git-watch can be configured to watch git repositories using the git clone url, and optionally can be configured to watch specific branches.i  In order to have git-watch run continuously it can be used in combination with a Kubernetes Deployment and a containerized version of this application.
 
-The --github-token option is used by the watcher to access any configured repositories.  Having an environment variable GITHUB_TOKEN is also supported.
+The --github-token option is used by the watcher to access any configured repositories.  Having an environment variable GITHUB\_TOKEN is also supported.
 
 The --state-persistence-dir option is used to specify where the files that track the last seen commit ID for the github repositories is kept.
 
@@ -323,7 +323,7 @@ When the git-watch command is run environment variables set by the user can be s
 
 ### Kubernetes and microk8s
 
-In order to make use of Kubernetes a KUBE_CONFIG environment variable should be set that contains the configuration items needed to access your cluster.  When using microk8s the configuration can be extracted from the microk8s tool as follows:
+In order to make use of Kubernetes a KUBE\_CONFIG environment variable should be set that contains the configuration items needed to access your cluster.  When using microk8s the configuration can be extracted from the microk8s tool as follows:
 
 ```
 microk8s.kubectl config view --raw > $HOME/.kube/microk8s.config
@@ -340,7 +340,7 @@ The watcher will check the git repositories on a regular basis to poll for new c
 
 As each job is run git-watch will generate a namespace based upon the current semantic version set in the README.md file at the root of your repository.  Information about the version tags used can be found in the semver section of this document.  Importantly the semver utility in this package only generates pre-release tags that obey DNS naming rules and this allows Kubernetes to use these identifiers as DNS compliant namespaces.
 
-The example ci_containerize.yaml example file illustrates a job that will build a docker image containing the source code at the detected commit ID and will push this code to the docker hub repository.  The docker-registry-config secret in this file is used to store the user name and password as described above for completing the docker push operation once the Makisu build is done.
+The example ci\_containerize.yaml example file illustrates a job that will build a docker image containing the source code at the detected commit ID and will push this code to the docker hub repository.  The docker-registry-config secret in this file is used to store the user name and password as described above for completing the docker push operation once the Makisu build is done.
 
 In order to enable console output the following commands are useful:
 
