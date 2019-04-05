@@ -1,4 +1,4 @@
-# Developer utilities and tools (duat)  Beta
+# Developer utilities and tools (duat) Beta
 
 Version : <repo-version>0.11.0-feature-91-git-builder-ops-aaaagjecvxp</repo-version>
 
@@ -6,15 +6,17 @@ duat is a set of tools useful for automating the bootstrapping of containerized 
 
 This repository also includes go import packages for handling meta data and artifacts associated with software development activities.
 
-duat is opinionated about naming of docker images, and semantic versioning.  duat provides tools and assistance specifically for go based development, but intentionally does not impose an end-to-end CI/CD automation solution.  Downstream workflow choices are determined by the user not duat specifically.
+duat is opinionated about naming of docker images, and semantic versioning.  duat provides tools and assistance specifically for go based development, but intentionally does not impose an end-to-end CI/CD automation solution.  Downstream workflow choices are determined by the user not duat.
+
+The duat git-watch bootstrapping tool elevates the platform layer from an OS host using docker, to using Kubernetes as the platform.  This includes the ability to build docker images.
 
 # About
 
-This project was started as a means of experimenting with continuous integration using go as the primary langage used for software implemention also as my primary means of automatting build and release processes.  Other projects such as mage, https://magefile.org/, also do the same.  This project was started with the intention of working with go libraries primarily for handling versioning, git source control, and containerization.  Mage in contrast leverages a strategy of wrapping shell commands to achieve this.
+This project was started as a means of experimenting with continuous integration using go as the primary implemention language also as my primary means of automatting build and release processes.  Other projects such as mage, https://magefile.org/, also do the same.  This project was started with the intention of working with go libraries primarily for handling versioning, git source control, and containerization.  Mage in contrast leverages a strategy of wrapping shell commands to achieve this.
 
 Overtime the objective of duat has changed from being used across the entire workflow to filling in the gaps for existing containerized CI/CD solutions in relation to deployments that wish to avoid hard dependencies on vulnerable public infrastructure.
 
-The issue of configuration management for developer environments where docker is seen as a barrier to fast build, test, debug cycles due to speed is best addressed using tools such as Ansible for which I have a seperate github project, github.com/karlmutch/DevBoot.  The Dockerfiles however that a developer creates for their development projects act as a the last word in regards to the supported environments for projects.  Because of the importance of software configuration management release builds should be done using containers and reference images.
+The issue of operating system configuration management for developer environments where docker is seen as a barrier to fast build, test, debug cycles due to speed is best addressed using tools such as Ansible for which I have a seperate github project, github.com/karlmutch/DevBoot.  The Dockerfiles however that a developer creates for their development projects act as a the last word in regards to the supported environments for projects.  Because of the importance of software configuration management release builds should be done using containers and reference images.
 
 # The name duat
 
@@ -22,7 +24,7 @@ Duat was the name given by the ancient egyptians to the underworld.  As the sun 
 
 # Motivating use-cases
 
-A users self hosted Kubernetes hosted CI/CD pipeline is used to shed external dependencies on service providers such as Travis or Quay.io.
+A users self hosted Kubernetes hosted CI/CD pipeline is used to remove the need for external dependencies on service providers such as Travis or Quay.io.
 
 A user wishes to develop and build software producing distinct tagged docker images for every build and, clean up built docker images of previous development versions as development progresses.
 
@@ -30,7 +32,7 @@ A user wishes to deliver software packaged using docker images to an AWS ECR ima
 
 A user wishes to deploy containerized software into an Istio, or other Kubernetes based service mesh.
 
-Many existing cloud based platforms exist today to address requirements such as the above.  This has led to divided islands of functionality, such as Travis, that require integration with each other so that credentials and other artifacts required by workflow automation is shared between these platform. Costly and fragile integration falls to the developer and users which is time consuming and complex.  duat builds upon the observation that many developers are already operating in a cloud based environment and what is needed is a simple set of tools, if a set of simplifing assumptions is made for addressing the above use cases, especially if you already have containerized builds, and tests.
+Many existing cloud based platforms exist today to address requirements such as the above.  This has led to divided islands of functionality, such as Travis, that require integration with each other so that credentials and other artifacts required by workflow automation is shared between these platform. Costly and fragile integration falls to the developer and users which is time consuming and complex.  duat builds upon the observation that many developers are already operating in a cloud based environmenti, or other Kubernetes capable offering and what is needed is a simple set of tools, if a set of simplifing assumptions is made for addressing the above use cases, especially if you already have containerized builds, and tests.
 
 For example the following workflow might be used to compile duat itself:
 
@@ -62,9 +64,16 @@ The tools and packages within this project rely on a couple of conventions and a
 
     semver pre-release versions are sortable, are ordered, are reversable for a time stamp, and obey DNS character rules
 
-4. containerization
+4. containerization and Kubernetes
 
     builds are performed using containers
+
+    container orchestration for pielines and image creation is done using Kubernetes for both host and workstation scenarios
+
+Deployment concerns for the pipeline support is addressed on hosts through the use of standard Kubernetes distributions.  
+
+OSX based laptops and PC Workstations can use the Ubuntu distribution deployed using VirtualBox, WSL on Windows 10 Professional, or using the multipass project for OSX and Windows 10 Professional.  All of these allow the microk8s Kubernetes distribution to run, differentiated from minikube via support for GPUs, an Istio distribution built in, along with a image registry and other tools.
+
 
 # duat configuration
 
