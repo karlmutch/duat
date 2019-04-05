@@ -319,6 +319,17 @@ export Registry=`cat registry.yaml`
 
 When the git-watch command is run environment variables set by the user can be substituted into your job template.  The supplied example uses the Registry env variable to do exactly this.
 
+### Kubernetes and microk8s
+
+In order to make use of Kubernetes a KUBE_CONFIG environment variable should be set that contains the configuration items needed to access your cluster.  When using microk8s the configuration can be extracted from the microk8s tool as follows:
+
+```
+microk8s.kubectl config view --raw > $HOME/.kube/microk8s.config
+export KUBE_CONFIG=$HOME/.kube/microk8s.config
+```
+
+The documentation on the README.md github page is very useful and a recommended read for users using a laptop or workstation style configuration.
+
 ### bootstrapping
 
 Having setup the git-watch process the [--stat-persistence-dir] is used to store information about the last commit seen and acted on by the watcher.
@@ -328,6 +339,15 @@ The watcher will check the git repositories on a regular basis to poll for new c
 As each job is run git-watch will generate a namespace based upon the current semantic version set in the README.md file at the root of your repository.  Information about the version tags used can be found in the semver section of this document.  Importantly the semver utility in this package only generates pre-release tags that obey DNS naming rules and this allows Kubernetes to use these identifiers as DNS compliant namespaces.
 
 The example ci_containerize.yaml example file illustrates a job that will build a docker image containing the source code at the detected commit ID and will push this code to the docker hub repository.  The docker-registry-config secret in this file is used to store the user name and password as described above for completing the docker push operation once the Makisu build is done.
+
+In order to enable console output the following commands are useful:
+
+```
+LOGXI='*=INF'
+LOGXI_FORMAT='happy,maxcol=1024'
+```
+
+Please review https://github.com/mgutz/logxi for more information on logging levels and environment variables.
 
 ### usage
 
