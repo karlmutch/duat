@@ -11,10 +11,13 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	batchv1 "k8s.io/api/batch/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// TaskSpec encapsulates the information used when initating the bootstrapping
+// pods and jobs involved in generation of images etc
+//
 type TaskSpec struct {
 	Namespace  string
 	ID         string
@@ -25,6 +28,10 @@ type TaskSpec struct {
 	SecretSpec *v1.Secret
 }
 
+// Task encapsulates the entire context of a Kubernetes batch job/pod, including the
+// persistent volume that is being used to transport the state related to the pipeline
+// actions being undertaken, for example a git cloned repository.
+//
 type Task struct {
 	start  TaskSpec
 	failed kv.Error
@@ -136,6 +143,9 @@ func (task *Task) runWatchedJob(ctx context.Context, statusC chan *Status) {
 	task.sendStatus(statusCtx, statusC, logxi.LevelNotice, kv.NewError("success").With("msg", spew.Sdump(task), "namespace", task.start.Namespace, "dir", task.start.Dir))
 }
 
+// TasksRunner will listen for changes to a git repository and trigger downstream tasks that will process and consume
+// the change
+//
 func TasksRunner(ctx context.Context, triggerC chan *TaskSpec, statusC chan *Status) {
 	defer close(statusC)
 	for {
@@ -156,6 +166,8 @@ func TasksRunner(ctx context.Context, triggerC chan *TaskSpec, statusC chan *Sta
 	}
 }
 
+// TasksStart is used to initate a git change notification processing go routine
+//
 func TasksStart(ctx context.Context, triggerC chan *TaskSpec, statusC chan *Status) {
 	go TasksRunner(ctx, triggerC, statusC)
 }
