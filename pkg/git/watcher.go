@@ -34,11 +34,16 @@ var (
 	initWatcher sync.Once
 )
 
+// GitOptions encapsulates the parameters describing a clone repositories branch etc
+//
 type GitOptions struct {
 	CloneOptions *gogit.CloneOptions
 	Branch       string
 }
 
+// GitWatcher encapsulates the state and control structures around a single clone repository that
+// is being watched and processed
+//
 type GitWatcher struct {
 	Dir     string
 	Repos   map[string]monitored
@@ -59,6 +64,8 @@ func getDirHash(repoURL string) (encodedHash string) {
 	return base62.EncodeBigInt(i)
 }
 
+// IsDirEmpty validates the existance of a directory and checks if it has any contents
+//
 func IsDirEmpty(name string) (empty bool, errGo error) {
 	f, errGo := os.Open(name)
 	if errGo != nil {
@@ -73,6 +80,9 @@ func IsDirEmpty(name string) (empty bool, errGo error) {
 	return errGo == io.EOF, errGo
 }
 
+// LoggerSink encapsulates information and context for a message sent to a logging listener
+// within a server
+//
 type LoggerSink struct {
 	Msg  string
 	Args []interface{}
@@ -97,6 +107,9 @@ func reportError(errGo error, loggerC chan<- *LoggerSink) {
 	}
 }
 
+// Change is a data structure that cpatures a git repository and commit ID for any observed
+// pushed commits
+//
 type Change struct {
 	URL    string
 	Dir    string
@@ -256,6 +269,10 @@ func (gw *GitWatcher) watcher(ctx context.Context, interval time.Duration, logge
 	}
 }
 
+// NewGitWatcher will initiate a git repositry watching go routine and struct that
+// will process git activity in a goroutine.  New repositories can be added to the
+// watcher using the returned watcher structure and channels.
+//
 func NewGitWatcher(ctx context.Context, baseDir string, loggerC chan<- *LoggerSink) (watcher *GitWatcher, err kv.Error) {
 
 	watcher = &GitWatcher{
@@ -335,6 +352,8 @@ func (gw *GitWatcher) Add(url string, branch string, token string, triggerC chan
 	return nil
 }
 
+// Stop will stop the listening go routine that was initialized by the NewGitWatcher function.
+//
 func (gw *GitWatcher) Stop(ctx context.Context) (orderly bool) {
 
 	orderly = true

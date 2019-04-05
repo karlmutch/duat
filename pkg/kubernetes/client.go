@@ -86,23 +86,9 @@ func init() {
 	}
 }
 
-func SetNamespace(namespace string) (err kv.Error) {
-	if initFailure != nil {
-		return initFailure
-	}
-	clientNamespace = namespace
-
-	// TODO Check the namespace exists
-	return nil
-}
-
-func Namespace() (namespace string, err kv.Error) {
-	if initFailure != nil {
-		return "", initFailure
-	}
-	return clientNamespace, nil
-}
-
+// Client returns the clientset used to access the Kubernetes cluster that is being used to
+// run our pods within the CI/CD pipeline
+//
 func Client() (client *kubernetes.Clientset) {
 	return clientSet
 }

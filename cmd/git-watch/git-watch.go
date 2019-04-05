@@ -65,6 +65,9 @@ var (
 	stateDir    = flag.String("persistent-state-dir", defStateDir[:], "Overrides the default directory used to store state information for the last known commit of the repositories being watched")
 )
 
+// Usage will print the options and help screen when the flag package sees the help option
+// specified by the user or when there is an issue with unrecognized flags
+//
 func Usage() {
 	fmt.Fprintln(os.Stderr, path.Base(os.Args[0]))
 	fmt.Fprintln(os.Stderr, "usage: ", os.Args[0], "[options] [arguments]      Git Commit watcher and trigger (git-watch)      ", version.GitHash, "    ", version.BuildTime)
@@ -91,6 +94,8 @@ func Usage() {
 	fmt.Fprintln(os.Stderr, "log levels are handled by the LOGXI env variables, these are documented at https://github.com/mgutz/logxi")
 }
 
+// JobTracker is used by the watcher to maintain a record of all of the tasks started until their completion
+//
 type JobTracker struct {
 	tasks map[string]*kubernetes.TaskSpec
 	sync.Mutex

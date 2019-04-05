@@ -8,12 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (job *Task) Namespaces() (namespaces map[string]string, err kv.Error) {
-	namespaces = map[string]string{}
-	return namespaces, nil
-}
-
-func (job *Task) createNamespace(ns string, overwrite bool, logger chan *Status) (err kv.Error) {
+func (task *Task) createNamespace(ns string, overwrite bool, logger chan *Status) (err kv.Error) {
 	nsSpec := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: ns,
@@ -21,17 +16,17 @@ func (job *Task) createNamespace(ns string, overwrite bool, logger chan *Status)
 
 	if _, errGo := Client().CoreV1().Namespaces().Create(nsSpec); errGo != nil {
 		if !errors.IsAlreadyExists(errGo) || !overwrite {
-			job.failed = kv.Wrap(errGo).With("namespace", ns, "stack", stack.Trace().TrimRuntime())
-			return job.failed
+			task.failed = kv.Wrap(errGo).With("namespace", ns, "stack", stack.Trace().TrimRuntime())
+			return task.failed
 		}
 	}
 	return nil
 }
 
-func (job *Task) deleteNamespace(ns string, logger chan *Status) (err kv.Error) {
+func (task *Task) deleteNamespace(ns string, logger chan *Status) (err kv.Error) {
 	if errGo := Client().CoreV1().Namespaces().Delete(ns, &metav1.DeleteOptions{}); errGo != nil {
-		job.failed = kv.Wrap(errGo).With("namespace", ns, "stack", stack.Trace().TrimRuntime())
-		return job.failed
+		task.failed = kv.Wrap(errGo).With("namespace", ns, "stack", stack.Trace().TrimRuntime())
+		return task.failed
 	}
 	return nil
 }
