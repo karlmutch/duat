@@ -2,6 +2,7 @@ package duat
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"html"
 	"io"
@@ -11,7 +12,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/karlmutch/base62" // Fork of https://github.com/mattheath/base62
+	"github.com/karlmutch/basex" // Fork of "github.com/eknkc/basex", MIT License
 	"github.com/karlmutch/duat/version"
 
 	// The following packages are forked to retain copies in the event github accounts are shutdown
@@ -150,6 +151,14 @@ func (md *MetaData) BumpPrerelease() (result *semver.Version, err kv.Error) {
 	return md.SemVer, nil
 }
 
+var (
+	alphaEncoder = &basex.Encoding{}
+)
+
+func init() {
+	alphaEncoder, _ = basex.NewEncoding("abcdefghijkmnopqrstuvwxyz")
+}
+
 func (md *MetaData) Prerelease() (result *semver.Version, err kv.Error) {
 
 	if md.Git == nil || md.Git.Err != nil {
@@ -161,10 +170,13 @@ func (md *MetaData) Prerelease() (result *semver.Version, err kv.Error) {
 	}
 
 	// Generate a pre-release suffix for semver that uses a mixture of the branch name
-	// with nothing but hyphens and alpha numerics, followed by a teimstamp encoded using
-	// semver compatible Base62 in a way that preserves sort ordering
+	// with nothing but hyphens and alpha numerics, followed by a timestamp encoded using
+	// semver compatible Base24 in a way that preserves sort ordering and that uses all
+	// lower case letters only to respect DNS naming standards
 	//
-	build := base62.EncodeInt64(time.Now().Unix())
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(time.Now().Unix()))
+	build := alphaEncoder.Encode(b)
 
 	// Git branch names can contain characters that would confuse semver including the
 	// _ (underscore), and + (plus) characters, https://www.kernel.org/pub/software/scm/git/docs/git-check-ref-format.html

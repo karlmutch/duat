@@ -1,0 +1,114 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ default "ci-duat-{{.duat.gitHash}}" .Namespace }}
+---
+# The following role allows the runner under test to interact with the working state config map
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: run-cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: {{ .Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: build-env
+  namespace: {{ .Namespace }}
+data:
+  KeelCI: "KeelCI"
+  LOGXI: "*=INF"
+---
+# Run the integration build as a deployment, the lifecycle will be dealt with by the CMD entry
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: build
+  namespace: {{ .Namespace }}
+  labels:
+      keel.sh/policy: force
+      keel.sh/match-tag: "true"
+      keel.sh/trigger: poll
+spec:
+  template:
+    metadata:
+      labels:
+        # Label is used as selector in the service.
+        app: build
+    spec:
+      volumes:
+        - name: podinfo
+          downwardAPI:
+            items:
+              - path: "namespace"
+                fieldRef:
+                  fieldPath: metadata.namespace
+              - path: "annotations"
+                fieldRef:
+                  fieldPath: metadata.annotations
+              - path: "labels"
+                fieldRef:
+                  fieldPath: metadata.labels
+      containers:
+      - name: build
+        env:
+          - name: GITHUB_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: release-github-token
+                key: github_token
+          - name: K8S_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: K8S_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        envFrom:
+        - configMapRef:
+            name: build-env
+        image: {{ $branch := .duat.gitBranch | replace "/" "_" | replace "-" "_"}}{{ .Image | empty | ternary "karlmutch/duat:" ""}}{{ .Image | empty | ternary $branch .Image }}
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "1024Mi"
+            cpu: 4
+        volumeMounts:
+          - name: podinfo
+            mountPath: /etc/podinfo
+            readOnly: false
+        lifecycle:
+          postStart:
+            exec:
+              command:
+                - "/bin/bash"
+                - "-c"
+                - >
+                  set -euo pipefail ;
+                  IFS=$'\n\t' ;
+                  echo "Starting the keel modifications" $K8S_POD_NAME ;
+                  kubectl label deployment build keel.sh/policy- --namespace=$K8S_NAMESPACE ;
+                  curl -v --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer $(cat /var/runsecrets/kubernetes.io/serviceaccount/token)" https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_PORT_443_TCP_PORT/api/v1/namespaces/$K8S_NAMESPACE/pods/$K8S_POD_NAME
+          preStop:
+            exec:
+              command:
+                - "/bin/bash"
+                - "-c"
+                - >
+                  set -euo pipefail ;
+                  IFS=$'\n\t' ;
+                  echo "Starting the namespace injections etc" $K8S_POD_NAME ;
+                  kubectl label deployment build keel.sh/policy=force --namespace=$K8S_NAMESPACE ;
+                  for (( ; ; )) ;
+                  do ;
+                      sleep 10 ;
+                  done
