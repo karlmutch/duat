@@ -38,11 +38,15 @@ type Task struct {
 	volume string
 }
 
-func (task *Task) initialize(ctx context.Context, logger chan *Status) (err kv.Error) {
+func (task *Task) initialize(ctx context.Context, debugMode bool, logger chan *Status) (err kv.Error) {
 
 	if initFailure != nil {
 		task.sendStatus(ctx, logger, logxi.LevelFatal, initFailure)
 		return initFailure
+	}
+
+	if debugMode {
+		task.deleteNamespace(task.start.Namespace, logger)
 	}
 
 	if err = task.createNamespace(task.start.Namespace, true, logger); err != nil {
@@ -84,16 +88,15 @@ func (task *Task) initialize(ctx context.Context, logger chan *Status) (err kv.E
 		return err
 	}
 
-	os.Stdout.Sync()
-	os.Stderr.Sync()
-
 	if err = task.runInPod(ctx, podName, "alpine", []string{"tar", "-xf", "/data/tmp.gz", "-C", "/data"}, nil, os.Stdout, os.Stderr, logger); err != nil {
 		return err
 	}
 
-	// Get rid of the temporary pod used for copying data
-	if err = task.stopPod(ctx, podName, logger); err != nil {
-		return err
+	if !debugMode {
+		// Get rid of the temporary pod used for copying data
+		if err = task.stopPod(ctx, podName, logger); err != nil {
+			return err
+		}
 	}
 
 	// Start the templated deployment and allow it to create its own container
@@ -101,8 +104,10 @@ func (task *Task) initialize(ctx context.Context, logger chan *Status) (err kv.E
 		return err
 	}
 
-	if err = task.deleteNamespace(task.start.Namespace, logger); err != nil {
-		return err
+	if !debugMode {
+		if err = task.deleteNamespace(task.start.Namespace, logger); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -146,7 +151,7 @@ func (task *Task) runWatchedJob(ctx context.Context, statusC chan *Status) {
 // TasksRunner will listen for changes to a git repository and trigger downstream tasks that will process and consume
 // the change
 //
-func TasksRunner(ctx context.Context, triggerC chan *TaskSpec, statusC chan *Status) {
+func TasksRunner(ctx context.Context, debugMode bool, triggerC chan *TaskSpec, statusC chan *Status) {
 	defer close(statusC)
 	for {
 		select {
@@ -157,7 +162,7 @@ func TasksRunner(ctx context.Context, triggerC chan *TaskSpec, statusC chan *Sta
 				start: *msg,
 			}
 
-			if err := task.initialize(ctx, statusC); err != nil {
+			if err := task.initialize(ctx, debugMode, statusC); err != nil {
 				task.sendStatus(ctx, statusC, logxi.LevelFatal, err)
 				continue
 			}
@@ -168,6 +173,6 @@ func TasksRunner(ctx context.Context, triggerC chan *TaskSpec, statusC chan *Sta
 
 // TasksStart is used to initate a git change notification processing go routine
 //
-func TasksStart(ctx context.Context, triggerC chan *TaskSpec, statusC chan *Status) {
-	go TasksRunner(ctx, triggerC, statusC)
+func TasksStart(ctx context.Context, debugMode bool, triggerC chan *TaskSpec, statusC chan *Status) {
+	go TasksRunner(ctx, debugMode, triggerC, statusC)
 }

@@ -51,7 +51,7 @@ func homeDir() string {
 }
 
 func kubeConfigGet() (kubeConfig string) {
-	kubeConfig = os.Getenv("KUBE_CONFIG")
+	kubeConfig = os.Getenv("KUBECONFIG")
 
 	if len(kubeConfig) == 0 {
 		if home := homeDir(); home != "" {

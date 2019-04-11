@@ -323,11 +323,11 @@ When the git-watch command is run environment variables set by the user can be s
 
 ### Kubernetes and microk8s
 
-In order to make use of Kubernetes a KUBE\_CONFIG environment variable should be set that contains the configuration items needed to access your cluster.  When using microk8s the configuration can be extracted from the microk8s tool as follows:
+In order to make use of Kubernetes a KUBECONFIG environment variable should be set that contains the configuration items needed to access your cluster.  When using microk8s the configuration can be extracted from the microk8s tool as follows:
 
 ```
 microk8s.kubectl config view --raw > $HOME/.kube/microk8s.config
-export KUBE_CONFIG=$HOME/.kube/microk8s.config
+export KUBECONFIG=$HOME/.kube/microk8s.config
 ```
 
 The documentation on the README.md github page is very useful and a recommended read for users using a laptop or workstation style configuration.

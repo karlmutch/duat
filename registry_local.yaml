@@ -1,0 +1,7 @@
+localhost:
+  .*:
+    security:
+      tls:
+        client:
+          disabled: true
+
