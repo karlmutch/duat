@@ -1,6 +1,9 @@
 package kubernetes
 
 import (
+	"context"
+	"time"
+
 	"github.com/jjeffery/kv"
 	"github.com/karlmutch/stack"
 	corev1 "k8s.io/api/core/v1"
@@ -23,10 +26,39 @@ func (task *Task) createNamespace(ns string, overwrite bool, logger chan *Status
 	return nil
 }
 
-func (task *Task) deleteNamespace(ns string, logger chan *Status) (err kv.Error) {
-	if errGo := Client().CoreV1().Namespaces().Delete(ns, &metav1.DeleteOptions{}); errGo != nil {
+func (task *Task) deleteNamespace(ctx context.Context, ns string, logger chan *Status) (err kv.Error) {
+
+	deletePolicy := metav1.DeletePropagationForeground
+	opts := &metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	}
+
+	api := Client().CoreV1().Namespaces()
+	errGo := api.Delete(ns, opts)
+	if errGo != nil {
 		task.failed = kv.Wrap(errGo).With("namespace", ns, "stack", stack.Trace().TrimRuntime())
 		return task.failed
 	}
-	return nil
+
+	if _, ok := ctx.Deadline(); !ok {
+		// No timeout or deadline was set so simply return with no error
+		return nil
+	}
+
+	for {
+		if _, errGo = api.Get(ns, metav1.GetOptions{}); errGo != nil {
+			if errors.IsNotFound(errGo) {
+				return nil
+			}
+
+			task.failed = kv.Wrap(errGo).With("namespace", ns, "stack", stack.Trace().TrimRuntime())
+			return task.failed
+		}
+
+		select {
+		case <-ctx.Done():
+			return kv.NewError("could not verify the the namespace was deleted").With("namespace", ns, "stack", stack.Trace().TrimRuntime())
+		case <-time.After(time.Second):
+		}
+	}
 }

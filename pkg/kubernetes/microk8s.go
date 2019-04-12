@@ -36,7 +36,7 @@ func (*MicroK8s) GetRegistryPod(ctx context.Context) (pod *apiv1.Pod, err kv.Err
 	if len(selectedPods) > 1 {
 		return nil, kv.NewError("too many unexpected pods inside the microk8s container-registry namespace").With("namespace", namespace, "stack", stack.Trace().TrimRuntime())
 	}
-	if len(selectedPods) > 1 {
+	if len(selectedPods) < 1 {
 		return nil, kv.NewError("microk8s container-registry namespace missing expected pod").With("namespace", namespace, "stack", stack.Trace().TrimRuntime())
 	}
 

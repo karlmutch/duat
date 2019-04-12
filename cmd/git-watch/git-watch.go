@@ -128,16 +128,8 @@ func extractMap(list []interface{}) (withs map[string]string) {
 
 func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.TaskSpec) {
 
-	microK8s := &kubernetes.MicroK8s{}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	registry, err := microK8s.GetRegistryPod(ctx)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(-1)
-	}
 
 	doc, errGo := os.Open(*jobTemplate)
 	if errGo != nil {
@@ -171,9 +163,17 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 		},
 	}
 
-	if registry != nil {
-		opts.OverrideValues["RegistryPort"] = strconv.FormatInt(int64(registry.Spec.Containers[0].Ports[0].ContainerPort), 10)
-		opts.OverrideValues["RegistryIP"] = registry.Status.PodIP
+	microK8s := &kubernetes.MicroK8s{}
+
+	// Allow the optional features for microk8s to fail and then later we can test for nil on the registry
+	if microk8sRegistry, _ := microK8s.GetRegistryPod(ctx); microk8sRegistry != nil {
+		opts.OverrideValues["RegistryPort"] = strconv.FormatInt(int64(microk8sRegistry.Spec.Containers[0].Ports[0].ContainerPort), 10)
+		opts.OverrideValues["RegistryIP"] = microk8sRegistry.Status.PodIP
+	}
+
+	if isMinikube, _ := kubernetes.IsMinikube(); isMinikube {
+		opts.OverrideValues["RegistryPort"] = "2375"
+		opts.OverrideValues["RegistryIP"] = "127.0.0.1"
 	}
 
 	if errGo = md.Template(opts); errGo != nil {

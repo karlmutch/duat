@@ -15,7 +15,6 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
@@ -118,13 +117,12 @@ func (job *Task) startMinimalPod(ctx context.Context, name string, volume string
 // https://medium.com/nuvo-group-tech/copy-files-and-directories-between-kubernetes-and-s3-d290ded9a5e0
 // https://gist.github.com/kyroy/8453a0c4e075e91809db9749e0adcff2
 //
-func (job *Task) filePod(ctx context.Context, name string, container string, retrieve bool, localFile string, remoteFile string, logger chan *Status) (err kv.Error) {
+func (task *Task) filePod(ctx context.Context, name string, container string, retrieve bool, localFile string, remoteFile string, logger chan *Status) (err kv.Error) {
 
-	restConfig := &rest.Config{}
 	restClient := Client().CoreV1().RESTClient()
 
 	req := restClient.Post().
-		Namespace(job.start.Namespace).
+		Namespace(task.start.Namespace).
 		Resource("pods").
 		Name(name).
 		SubResource("exec").
@@ -136,8 +134,8 @@ func (job *Task) filePod(ctx context.Context, name string, container string, ret
 	if retrieve {
 		out, errGo := os.OpenFile(localFile, os.O_RDWR|os.O_CREATE, 0600)
 		if errGo != nil {
-			job.failed = kv.Wrap(errGo).With("fn", localFile, "namespace", job.start.Namespace, "pod", name, "stack", stack.Trace().TrimRuntime())
-			return job.failed
+			task.failed = kv.Wrap(errGo).With("fn", localFile, "namespace", task.start.Namespace, "pod", name, "stack", stack.Trace().TrimRuntime())
+			return task.failed
 		}
 		localF = out
 		for _, item := range []string{"/bin/cp", remoteFile, "/dev/stdout"} {
@@ -147,8 +145,8 @@ func (job *Task) filePod(ctx context.Context, name string, container string, ret
 	} else {
 		in, errGo := os.Open(localFile)
 		if errGo != nil {
-			job.failed = kv.Wrap(errGo).With("fn", localFile, "namespace", job.start.Namespace, "pod", name, "stack", stack.Trace().TrimRuntime())
-			return job.failed
+			task.failed = kv.Wrap(errGo).With("fn", localFile, "namespace", task.start.Namespace, "pod", name, "stack", stack.Trace().TrimRuntime())
+			return task.failed
 		}
 		localF = in
 		for _, item := range []string{"/bin/cp", "/dev/stdin", remoteFile} {
@@ -159,10 +157,10 @@ func (job *Task) filePod(ctx context.Context, name string, container string, ret
 
 	defer localF.Close()
 
-	executor, errGo := remotecommand.NewSPDYExecutor(restConfig, http.MethodPost, req.URL())
+	executor, errGo := remotecommand.NewSPDYExecutor(RestConfig(), http.MethodPost, req.URL())
 	if errGo != nil {
-		job.failed = kv.Wrap(errGo).With("namespace", job.start.Namespace, "pod", name, "stack", stack.Trace().TrimRuntime())
-		return job.failed
+		task.failed = kv.Wrap(errGo).With("namespace", task.start.Namespace, "pod", name, "stack", stack.Trace().TrimRuntime())
+		return task.failed
 	}
 
 	localF.Sync()
@@ -183,14 +181,13 @@ func (job *Task) filePod(ctx context.Context, name string, container string, ret
 		streamOpts.Stdin = localF
 	}
 	if errGo = executor.Stream(streamOpts); errGo != nil {
-		job.failed = kv.Wrap(errGo).With("namespace", job.start.Namespace, "pod", name, "stack", stack.Trace().TrimRuntime())
-		return job.failed
+		task.failed = kv.Wrap(errGo).With("namespace", task.start.Namespace, "pod", name, "stack", stack.Trace().TrimRuntime())
+		return task.failed
 	}
 	return nil
 }
 
 func (job *Task) runInPod(ctx context.Context, name string, container string, cmdArgs []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, logger chan *Status) (err kv.Error) {
-	restConfig := &rest.Config{}
 	restClient := Client().CoreV1().RESTClient()
 
 	req := restClient.Post().
@@ -210,7 +207,7 @@ func (job *Task) runInPod(ctx context.Context, name string, container string, cm
 		req.Param("command", cmd)
 	}
 
-	executor, errGo := remotecommand.NewSPDYExecutor(restConfig, http.MethodPost, req.URL())
+	executor, errGo := remotecommand.NewSPDYExecutor(RestConfig(), http.MethodPost, req.URL())
 	if errGo != nil {
 		job.failed = kv.Wrap(errGo).With("namespace", job.start.Namespace, "pod", name, "stack", stack.Trace().TrimRuntime())
 		return job.failed

@@ -19,7 +19,7 @@ import (
 // pods and jobs involved in generation of images etc
 //
 type TaskSpec struct {
-	Namespace  string
+	Namespace  string // The Kubernetes namespace being used for running the CI bootstrapping
 	ID         string
 	Dir        string
 	Dockerfile string
@@ -45,8 +45,12 @@ func (task *Task) initialize(ctx context.Context, debugMode bool, logger chan *S
 		return initFailure
 	}
 
+	deleteCtx, deleteCancel := context.WithTimeout(ctx, 60*time.Second)
+	defer deleteCancel()
 	if debugMode {
-		task.deleteNamespace(task.start.Namespace, logger)
+		if err = task.deleteNamespace(deleteCtx, task.start.Namespace, logger); err != nil {
+			task.sendStatus(ctx, logger, logxi.LevelFatal, err)
+		}
 	}
 
 	if err = task.createNamespace(task.start.Namespace, true, logger); err != nil {
@@ -105,7 +109,7 @@ func (task *Task) initialize(ctx context.Context, debugMode bool, logger chan *S
 	}
 
 	if !debugMode {
-		if err = task.deleteNamespace(task.start.Namespace, logger); err != nil {
+		if err = task.deleteNamespace(deleteCtx, task.start.Namespace, logger); err != nil {
 			return err
 		}
 	}
