@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: imagebuilder
+  namespace: {{ .Namespace }}
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: makisu
+        image: gcr.io/makisu-project/makisu:v0.1.9
+        imagePullPolicy: IfNotPresent
+        restartpolicy: Never
+        args:
+        - build
+        - --push=kube-registry.kube-system.svc.cluster.local:5000
+        - --modifyfs=true
+        - -t=karlmutch/duat:{{.duat.version}}
+        - --registry-config=/registry-config/registry.yaml
+        - /makisu-context
+        volumeMounts:
+        - name: context
+          mountPath: /makisu-context
+        - name: registry-config
+          mountPath: /registry-config
+        - name: storage
+          mountPath: /makisu-storage
+      volumes:
+      - name: context
+        persistentVolumeClaim:
+          # Name of the PVC created earlier
+          claimName: {{.ID}}
+      - name: registry-config
+        secret:
+          secretName: docker-registry-config
+      - name: storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: docker-registry-config
+  namespace: {{ .Namespace }}
+type: Opaque
+data:
+    registry.yaml: '{{ expandenv "$Registry" | b64enc }}'

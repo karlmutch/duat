@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat) Beta
 
-Version : <repo-version>0.11.0</repo-version>
+Version : <repo-version>0.11.1-feature-102-microk8s-registry-aaaagjfuypo</repo-version>
 
 duat is a set of tools useful for automating the bootstrapping of containerized workflows.  duat includes tools for working with software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go, and Kubernetes to manage portions of container centric software lifecycles, helping to remove proprietary tooling, scripting, and other DSLs typically used for building, releasing, and deploying software.
 
@@ -279,27 +279,27 @@ Templates also support functions from masterminds.github.io/sprig.  Please refer
 
 ## git-watch
 
-The primary use case for git-watch is to be able to build CI/CD docker images from git repositories when commits occur.  git-watch meets an unaddressed need for ad-hoc git client integration to container centric CI/CD pipelines that can run within a Kubernetes cluster.
+The primary use case for git-watch is to be able to build CI/CD docker images from git repositories when commits occur.  git-watch meets an unaddressed need for an ad-hoc git client that can produce CI/CD docker images that can then feed into container centric CI/CD pipelines, all hosted within a single node Kubernetes deployment.
+
+This document describes by example the git-watch tool using a combination of github, docker registries, and finally keel.sh for downstream CI.
 
 ### audience
 
-The primary audience for performing CI/CD bootstrapping are individual, or small teams of developers with shared and/or limited resources who wish to implement CI/CD pipelines.
+The primary audience for this style of CI/CD bootstrapping includes individual, or small teams of developers with shared and/or limited resources who wish to implement CI/CD pipelines but for which the price of entry for large scale clusters and infrastructure is too high.
 
-This tool is useful for first capturing a release or git versioned artifact into an image and then triggering down stream CI/CD operations.  It uses polling in order that publically accessible hosts are not needed and the costs of handling CI/CD pipelines are minimal.  This tool is designed to place private CI/CD pipelines into the hands of smaller teams sensitive to the costs of using a SaaS solution such as Travis, and tools such as Jenkins that require a full time role.
+This tool is useful for first capturing a git cloned repository into a docker image, pushing this into an image registry and then triggering down stream CI/CD operations.  It uses polling in order that publically accessible hosts are not needed and the costs of handling CI/CD pipelines remains minimal.  This tool is designed to place private CI/CD pipelines into the hands of smaller teams sensitive to the costs of using a SaaS solution such as Travis, and tools such as Jenkins that require a full time engineer role.
 
 ### introduction
 
-The git-watch tool will poll a github repository and when commits are observed, clones the github repo into a Kubernetes volume, and then dispatch a Kubernetes job, for example an Uber Mikasu based docker image build.  This can be done within an accessible Kubernetes cluster against the cloned repository volume.
+The git-watch tool will poll a github repository and when commits are observed, clones the github repo into a Kubernetes volume, and then dispatch a Kubernetes job, for example an Uber Mikasu based docker image build.
 
-git-watch is intended to run as the primordial step in a downstream pipeline.  The git commit and push to the git origin repository acts as the trigger for git-watch to begin the process of packaging the source code at a specific commit into a Kubernetes volume.  git-watch will then take the packaged volume and run it against a Kubernetes batch Job for your choice.  Ubers Mikasu is used by the authors as the Job for processing the packaged code.  Mikasu is used to produce a docker image containing the source code and the results of the docker build using a nominated Dockerfile within the packaged volume suitable for CI/CD actions.  Mikasu will then push the docker image to a registry of the users choice as supported by Mikasu.
+git-watch is intended to run as the primordial step front-ending a downstream pipeline.  The git commit and push to the git origin repository acts as the trigger for git-watch to begin the process of packaging the source code at a specific commit into a Kubernetes volume.  git-watch will then take the packaged volume and run it against a Kubernetes batch Job for your choice.  Ubers Mikasu is used by the authors as the Job for processing the packaged code.  Mikasu is used to produce a docker image containing the source code and the results of the docker build using a nominated Dockerfile within the packaged volume suitable for CI/CD actions.  Mikasu will then push the docker image to a registry of the users choice as supported by Mikasu.
 
-The trigger to the downstream pipeline is a combination of git-watch and Uber Mikasu pushing a docker image to an image registry for example docker hub, or Amazon ECR.  The use of image registries is common for several CI/CD platforms as triggers.  For the minmalist case the author makes use of https://keel.sh/ to monitor for the artifacts produced by the tools under discussion to trigger actions related to the builds, test, release lifecycle of choice.
-
-This document describes by example the git-watch tool using a combination of github, dockerhub, and keel.sh for the downstream CI.
+The trigger to the downstream pipeline is a combination of git-watch and Uber Mikasu pushing a docker image to an image registry for example docker hub, or Amazon ECR.  The use of image registries is common for several CI/CD platforms as triggers.  For the minimalist case the author makes use of https://keel.sh/ to monitor for the artifacts produced by the tools under discussion to trigger actions related to the builds, test, release lifecycle of choice.
 
 ### github
 
-git-watch can be configured to watch git repositories using the git clone url, and optionally can be configured to watch specific branches.i  In order to have git-watch run continuously it can be used in combination with a Kubernetes Deployment and a containerized version of this application.
+git-watch can be configured to watch git repositories using the git clone url, and optionally can be configured to watch specific branches. In order to have git-watch run continuously it can be used in combination with a Kubernetes Deployment and a containerized version of this application.
 
 The --github-token option is used by the watcher to access any configured repositories.  Having an environment variable GITHUB\_TOKEN is also supported.
 
@@ -307,11 +307,11 @@ The --state-persistence-dir option is used to specify where the files that track
 
 The repositories are specified as arguments to the command.  Each argument represents a git repository URL and can be suffixed with a caret character, '^', and the branch name to further specify the repository to be watched.
 
-The --job-template option is used to specify a template following the golang/Kubernetes style that will be used to initiate jobs as commits are detected.  An exmaple of a template is provided in the duat code repository called 'ci_containerize.yaml'.  This Kubernetes Job specification uses the Makisu container build image from Uber to read a Dockerfile from the code base and deploy an image containing all of the source code associated with the commit.  Mikasu will then push that image to a 3rd party image repository using a Kubernetes secret populated by the user.
+The --job-template option is used to specify a template following the golang/Kubernetes style that will be used to initiate jobs as commits are detected.  An exmaple of a template is provided in the duat code repository called 'ci\_containerize.yaml'.  This Kubernetes Job specification uses the Makisu container build image from Uber to read a Dockerfile from the code base and deploy an image containing all of the source code associated with the commit.  Mikasu will then push that image to a 3rd party image repository using a Kubernetes secret populated by the user.
 
 ### registry
 
-In order to perform builds with stable code throughout the process the Mikasu job template will build a Docker image using the default Dockerfile inside the code repository being watched.  After the build image has obtained the needed compilation tooling and source code to be useful during CI/CD operations it will need to be stored for access by the downstream CI/CD pipeline.  The Mikasu builder uses Kubernetes secrets to retrieve the user name and password for the registry credentials.  The user is responsible for definition of the Registry environment variable to hold the credentials.  When the Job in which the Mikasu container is run the environment variable will be substituted into the Job template.
+In order to perform builds with stable code throughout the process the Mikasu job template builds a Docker image using the default Dockerfile inside the code repository being watched.  After the build image has obtained the needed compilation tooling and source code to be useful during CI/CD operations it is pushed to a registry for access by the downstream CI/CD pipeline.  The Mikasu builder uses Kubernetes secrets to retrieve the user name and password for the registry credentials.  The user is responsible for definition of the Registry environment variable to hold the credentials.  When the Job in which the Mikasu container is run the environment variable will be substituted into the Job template.
 
 Before using the registry setting you should copy registry-template.yaml to registry.yaml, and modify the contents so that they contain your docker user name and password.  You can then apply the secrets to your environment variables using commands such as the following:
 
@@ -319,24 +319,134 @@ Before using the registry setting you should copy registry-template.yaml to regi
 export Registry=`cat registry.yaml`
 ```
 
-When the git-watch command is run environment variables set by the user can be substituted into your job template.  The supplied example uses the Registry env variable to do exactly this.
+When the git-watch command is run environment variables set by the user can be substituted into your job template, the above example uses the Registry env variable to do this.
 
-### Kubernetes and microk8s
+### Kubernetes microk8s
 
-In order to make use of Kubernetes a KUBE\_CONFIG environment variable should be set that contains the configuration items needed to access your cluster.  When using microk8s the configuration can be extracted from the microk8s tool as follows:
+In order to make use of Kubernetes a KUBECONFIG environment variable should be set that contains the configuration items needed to access your cluster.  When using microk8s the configuration can be extracted from the microk8s tool as follows:
 
 ```
 microk8s.kubectl config view --raw > $HOME/.kube/microk8s.config
-export KUBE_CONFIG=$HOME/.kube/microk8s.config
+export KUBECONFIG=$HOME/.kube/microk8s.config
 ```
 
-The documentation on the README.md github page is very useful and a recommended read for users using a laptop or workstation style configuration.
+The documentation in the microk8s README.md, on the github page, is very useful and a recommended read for users using a laptop or workstation style configuration.
+
+microk8s uses a docker registry that it self deploys and which can be referenced inside the job template using the RegistryPort, and RegistryIP variables.  In order to use the insecure microk8s registry take the registry\_local.yaml file and define a Registry environment variable to hold it, then start the watcher using the example ci\_containerize\_local.yaml file as your job template.
+
+```
+export Registry=`cat registry_local.yaml`
+git-watch --job-template ../../ci_containerize_local.yaml https://github.com/karlmutch/duat.git^feature/102_microk8s_registry
+```
+
+Generated images will be accessible using the host via the localhost:32000 microk8s registry proxy and can be pulled from the cluster to the local docker registry or can be left in-situ for a CI pipeline to pull and process via a tool such as https://keel.sh.
+
+The following example shows the result of a commit triggering a build after the git-watch tool has been started on the command line:
+
+```
+$ export KUBECONFIG=~/.kube/microk8s.config
+$ export KUBE_CONFIG=~/.kube/microk8s.config
+$ microk8s.kubectl config view --raw > $KUBECONFIG
+$ cat ../../registry_local.yaml   
+localhost:
+  .*:
+    security:
+      tls:
+        client:
+          disabled: true
+$ export Registry=`cat ../../registry_local.yaml`
+$ git-watch -v --job-template ../../ci_containerize_local.yaml https://github.com/karlmutch/duat.git^feature/102_microk8s_registry
+16:05:42.953783 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: volume update namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo volume: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 phase: (v1.PersistentVolumeClaimPhase) (len=5) "Bound"
+16:05:47.257452 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: pod update phase: Pending id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo
+16:05:48.160613 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: pod update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo phase: Running
+16:09:52.460762 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: pod update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo phase: Succeeded
+16:09:52.462364 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: running id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo dir: /tmp/git-watcher/Eu8nD7tNm0qcxSRTojd8518tk5npRG6bn2qgQeUqplE
+16:09:52.465553 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: pod namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo node_name: awsdev pod_name: copy-pod
+16:09:52.465606 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: pod namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo node_name: awsdev pod_name: imagebuilder-k7xhn
+16:09:52.465644 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: volume namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo volume_name: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 capacity: 10Gi
+16:09:52.465830 INF git-watch task completed id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 dir: /tmp/git-watcher/Eu8nD7tNm0qcxSRTojd8518tk5npRG6bn2qgQeUqplE namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo
+```
+
+If we were to observe the running job from another terminal, and once complete were to pull the resulting source code image into our local docker registry we would see the following:
+
+```
+$ semver pre
+0.11.1-feature-102-microk8s-registry-aaaagjfuypo
+$ git commit -a -m "Bump semantic version to trigger a build via a commit"
+$ git push
+# Allow the build to trigger itself based on our pushed commit to the github repository
+$ sleep 30
+$ microk8s.kubectl get ns
+NAME                                                  STATUS   AGE
+container-registry                                    Active   23h
+default                                               Active   23h
+gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo   Active   23h
+kube-node-lease                                       Active   23h
+kube-public                                           Active   23h
+kube-system                                           Active   23h
+$ kubectl --namespace=gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo get pods                  
+NAME                 READY   STATUS      RESTARTS   AGE
+copy-pod             1/1     Running     0          23h
+imagebuilder-k7xhn   1/1     Running     0          23h
+$ kubectl --namespace=gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo logs -f imagebuilder-k7xhn
+...
+{"level":"info","ts":1555024191.5788004,"msg":"Stored cacheID mapping to KVStore: 960ee5ee => MAKISU_CACHE_EMPTY"}
+{"level":"info","ts":1555024191.5788994,"msg":"Stored cacheID mapping to KVStore: 8c70ac78 => MAKISU_CACHE_EMPTY"}
+{"level":"info","ts":1555024191.6197424,"msg":"Computed total image size 431108731","total_image_size":431108731}
+{"level":"info","ts":1555024191.6197767,"msg":"Successfully built image karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo"}
+{"level":"info","ts":1555024191.619851,"msg":"* Started pushing image 10.1.1.32:5000/karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo"}
+{"level":"info","ts":1555024191.6351519,"msg":"* Image 10.1.1.32:5000/karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo already exists, overwriting"}
+{"level":"info","ts":1555024191.6383321,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:119c7358fbfc2897ed63529451df83614c694a8abbd9e960045c1b0b2dc8a4a1"}
+{"level":"info","ts":1555024191.6391516,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:d18d76a881a47e51f4210b97ebeda458767aa6a493b244b4b40bfe0b1ddd2c42"}
+{"level":"info","ts":1555024191.6396852,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:34667c7e4631207d64c99e798aafe8ecaedcbda89fb9166203525235cc4d72b9"}
+{"level":"info","ts":1555024191.641192,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:2aaf13f3eff07aa25f73813096bd588e6408b514288651402aa3d0357509be7a"}
+{"level":"info","ts":1555024191.6417122,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:914e2320d76b65434df88951e6d9736cfec1ea22cfce48bfb0945ed5a5e99639"}
+{"level":"info","ts":1555024191.6418197,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:5c75f60bd4e0546a26ea7d6eec32835b93c41d994291f57815bc83673f099e5c"}
+{"level":"info","ts":1555024191.6461737,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:d273e0d8cc2120c145e615ddb78c627049cb15a03a5dcb10fdff9e1b07cee633"}
+{"level":"info","ts":1555024191.6467197,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:5aa155938eb06162dc1e8387c80b186b0032364fdd5733da78defbb81fb56b4f"}
+{"level":"info","ts":1555024191.7139697,"msg":"* Started pushing image config sha256:8370897394f1bbf6a0fbad488698364796b3f897625f16b23a92aa25a13227b7"}
+{"level":"info","ts":1555024191.733266,"msg":"* Finished pushing image config sha256:8370897394f1bbf6a0fbad488698364796b3f897625f16b23a92aa25a13227b7"}
+{"level":"info","ts":1555024191.7486677,"msg":"* Finished pushing image 10.1.1.32:5000/karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo in 128.789167ms"}
+{"level":"info","ts":1555024191.7486932,"msg":"Successfully pushed 10.1.1.32:5000/karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo to 10.1.1.32:5000"}
+{"level":"info","ts":1555024191.7487,"msg":"Finished building karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo"}
+```
+
+Now that the image has been pushed into the registry of the cluster it can be pulled into an external registry using port 32000 on the host that is running the microk8s cluster and used.
+
+```
+$ docker pull localhost:32000/karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo
+0.11.1-feature-102-microk8s-registry-aaaagjfuypo: Pulling from karlmutch/duat
+34667c7e4631: Already exists 
+d18d76a881a4: Already exists 
+119c7358fbfc: Already exists 
+2aaf13f3eff0: Already exists 
+5c75f60bd4e0: Pull complete 
+914e2320d76b: Pull complete 
+d273e0d8cc21: Pull complete 
+5aa155938eb0: Pull complete 
+Digest: sha256:c0f0070555204d528709f1c3a25f44e56950d9dc9b1be5a2bcb6ac73bab26ee1
+Status: Downloaded newer image for localhost:32000/karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo
+```
+
+If you have deployed a keel based pipeline then you will be able to have it triggered off the internal registry using localhost:5000 as the registry frompods inside the microk8s cluster.
+
+Remember that registries deployed on microk8s are insecure and only available to the localhost you are performing development on.  Public registries can be used after changing the Registry environment variable and modifing the deployment.yaml file to point at them.  Again an externally hosted pipeline can be used to trigger downstream testing and release activities.
+
+### Kubernetes minikube
+
+Work In Progress, your milage may vary.
+
+minikube when run using the --driver=none option is typically hosted within an AWS EC2 or similar environment will not deploy its own image registry and will instead leverage the local hosts registry deployed using docker.  This is because the driver none option relies on docker for its container runtime.
+
+The RegistryPort and RegistryIP variables are available for the job template.  After creation of a minikube cluster used the kubectl context command to configure your Kubernetes client side environmnet, ```kubectl config use-context minikube```.  This is then used by the watcher to set the registry variables.
+
+If you intend on using the Ubuntu and minikube stack then the following installation guide might be of help, https://gist.github.com/karlmutch/f6bfc81a08b3815888d632dc572764bc.
 
 ### bootstrapping
 
 Having setup the git-watch process the [--stat-persistence-dir] is used to store information about the last commit seen and acted on by the watcher.
 
-The watcher will check the git repositories on a regular basis to poll for new commits and will initiate Kubernetes jobs on the lastest observed commit ID.
+The watcher will check the git repositories on a regular basis to poll for new commits and will initiate Kubernetes jobs on the latest observed commit ID.
 
 As each job is run git-watch will generate a namespace based upon the current semantic version set in the README.md file at the root of your repository.  Information about the version tags used can be found in the semver section of this document.  Importantly the semver utility in this package only generates pre-release tags that obey DNS naming rules and this allows Kubernetes to use these identifiers as DNS compliant namespaces.
 

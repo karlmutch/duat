@@ -18,6 +18,7 @@ import (
 var (
 	clientNamespace = ""
 	clientSet       *kubernetes.Clientset // Thread safe Kubernetes API https://github.com/kubernetes/client-go/issues/36
+	clientCfg       *rest.Config
 
 	initFailure = kv.NewError("uninitialized")
 )
@@ -28,6 +29,7 @@ func initInCluster() (err kv.Error) {
 		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
+	clientCfg = cfg
 	clientSet, errGo = kubernetes.NewForConfig(cfg)
 	if errGo != nil {
 		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
@@ -51,7 +53,7 @@ func homeDir() string {
 }
 
 func kubeConfigGet() (kubeConfig string) {
-	kubeConfig = os.Getenv("KUBE_CONFIG")
+	kubeConfig = os.Getenv("KUBECONFIG")
 
 	if len(kubeConfig) == 0 {
 		if home := homeDir(); home != "" {
@@ -71,6 +73,7 @@ func initOutOfCluster() (err kv.Error) {
 		return kv.Wrap(errGo).With("config", configFile).With("stack", stack.Trace().TrimRuntime())
 	}
 
+	clientCfg = clientConfig
 	clientSet, errGo = kubernetes.NewForConfig(clientConfig)
 	if errGo != nil {
 		return kv.Wrap(errGo).With("config", configFile).With("stack", stack.Trace().TrimRuntime())
@@ -91,4 +94,10 @@ func init() {
 //
 func Client() (client *kubernetes.Clientset) {
 	return clientSet
+}
+
+// RestConfig returns the rest configuration used to access the Kubernetes cluster Pods that are being created
+//
+func RestConfig() (client *rest.Config) {
+	return clientCfg
 }

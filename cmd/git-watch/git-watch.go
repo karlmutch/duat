@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -63,6 +64,7 @@ var (
 
 	jobTemplate = flag.String("job-template", "", "The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository")
 	stateDir    = flag.String("persistent-state-dir", defStateDir[:], "Overrides the default directory used to store state information for the last known commit of the repositories being watched")
+	debugMode   = flag.Bool("debug", false, "Enables features useful for when doing step by step debugging such as delaying cleanup operations etc")
 )
 
 // Usage will print the options and help screen when the flag package sees the help option
@@ -125,6 +127,10 @@ func extractMap(list []interface{}) (withs map[string]string) {
 }
 
 func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.TaskSpec) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	doc, errGo := os.Open(*jobTemplate)
 	if errGo != nil {
 		fmt.Fprintf(os.Stderr, "%v\n",
@@ -155,6 +161,19 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 			"ID":        start.ID,
 			"Namespace": start.Namespace,
 		},
+	}
+
+	microK8s := &kubernetes.MicroK8s{}
+
+	// Allow the optional features for microk8s to fail and then later we can test for nil on the registry
+	if microk8sRegistry, _ := microK8s.GetRegistryPod(ctx); microk8sRegistry != nil {
+		opts.OverrideValues["RegistryPort"] = strconv.FormatInt(int64(microk8sRegistry.Spec.Containers[0].Ports[0].ContainerPort), 10)
+		opts.OverrideValues["RegistryIP"] = microk8sRegistry.Status.PodIP
+	}
+
+	if isMinikube, _ := kubernetes.IsMinikube(); isMinikube {
+		opts.OverrideValues["RegistryPort"] = "2375"
+		opts.OverrideValues["RegistryIP"] = "127.0.0.1"
 	}
 
 	if errGo = md.Template(opts); errGo != nil {
@@ -348,7 +367,7 @@ func main() {
 		}
 	}()
 
-	kubernetes.TasksStart(ctx, taskTriggerC, doneC)
+	kubernetes.TasksStart(ctx, *debugMode, taskTriggerC, doneC)
 
 	// Add any configured repositories to the list that need to be watched
 	for i, url := range repos {
