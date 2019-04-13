@@ -8,6 +8,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// IsMinikube  will test the operating environment of the present process to determine
+// if it is running within a minikube provisioned cluster
+//
 func IsMinikube() (isMinikube bool, err kv.Error) {
 	selector := "kubernetes.io/hostname=minikube"
 	nodes, errGo := Client().CoreV1().Nodes().List(metav1.ListOptions{LabelSelector: selector})

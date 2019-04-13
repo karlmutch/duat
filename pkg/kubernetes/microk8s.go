@@ -13,8 +13,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// MicroK8s is used to encapsulate receivers for working with microk8s clusters
+//
 type MicroK8s struct{}
 
+// GetRegistryPod is used to obtain pod information for the microk8s provisioned image registry.
+//
 func (*MicroK8s) GetRegistryPod(ctx context.Context) (pod *apiv1.Pod, err kv.Error) {
 
 	namespace := "container-registry"
