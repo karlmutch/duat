@@ -103,7 +103,7 @@ duat generates and software under management using the semantic versioning 2.0 a
 karlmutch/no-code/noserver:0.1.0-89-bzip2-aaaagjecpnf
 ```
 
-represents a docker image from the github.com/karlmutch/no-code repository, and the noserver component, that is a pre-release of 0.1.0 and was generated from the 89_bzip2, or 89-bzip2 branch with the pre-release timestamp of aaaagjecpnf.
+represents a docker image from the github.com/karlmutch/no-code repository, and the noserver component, that is a pre-release of 0.1.0 and was generated from the 89\_bzip2, or 89-bzip2 branch with the pre-release timestamp of aaaagjecpnf.
 
 The git repository name is obtained by the git package
 
