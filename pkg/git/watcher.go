@@ -199,6 +199,12 @@ func (gw *GitWatcher) watcher(ctx context.Context, interval time.Duration, logge
 				}
 				if errGo = tree.Checkout(options); errGo != nil {
 					reportError(errGo, loggerC)
+					// If we had an error then make sure to remove the directory that is already present but only
+					// if we see a .git subdirectory indicating it is a real git project directory
+					dotGit := filepath.Join(dirName, ".git")
+					if _, errGo := os.Stat(dotGit); errGo == nil {
+						os.RemoveAll(dirName)
+					}
 					continue
 				}
 

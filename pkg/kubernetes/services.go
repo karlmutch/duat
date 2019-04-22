@@ -5,10 +5,10 @@ import (
 	"github.com/karlmutch/stack"
 )
 
-func (task *Task) initSecrets(logger chan *Status) (err kv.Error) {
+func (task *Task) initServices(logger chan *Status) (err kv.Error) {
 	api := Client().CoreV1()
-	for _, secret := range task.start.SecretSpecs {
-		if _, errGo := api.Secrets(task.start.Namespace).Create(secret); errGo != nil {
+	for _, service := range task.start.ServiceSpecs {
+		if _, errGo := api.Services(task.start.Namespace).Create(service); errGo != nil {
 			task.failed = kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 			return task.failed
 		}

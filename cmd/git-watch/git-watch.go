@@ -142,13 +142,14 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 	id := uuid.New().String()
 
 	start = &kubernetes.TaskSpec{
-		ID:         id,
-		Namespace:  "gw-" + strings.ToLower(strings.Replace(md.SemVer.String(), ".", "-", -1)),
-		Dir:        msg.Dir,
-		Dockerfile: "",
-		Env:        map[string]string{},
-		JobSpec:    &batchv1.Job{},
-		SecretSpec: &corev1.Secret{},
+		ID:           id,
+		Namespace:    "gw-" + strings.ToLower(strings.Replace(md.SemVer.String(), ".", "-", -1)),
+		Dir:          msg.Dir,
+		Dockerfile:   "",
+		Env:          map[string]string{},
+		JobSpec:      &batchv1.Job{},
+		SecretSpecs:  []*corev1.Secret{},
+		ServiceSpecs: []*corev1.Service{},
 	}
 
 	// Run the job template through stencil
@@ -202,7 +203,9 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 		case "Job":
 			start.JobSpec = obj.(*batchv1.Job)
 		case "Secret":
-			start.SecretSpec = obj.(*corev1.Secret)
+			start.SecretSpecs = append(start.SecretSpecs, obj.(*corev1.Secret))
+		case "Service":
+			start.ServiceSpecs = append(start.ServiceSpecs, obj.(*corev1.Service))
 		default:
 			fmt.Fprintf(os.Stderr, "%v\n",
 				kv.NewError("kubernetes object kind not recognized").With("kind", kind.Kind, "template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
@@ -211,7 +214,12 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 	}
 
 	start.JobSpec.SetNamespace(start.Namespace)
-	start.SecretSpec.SetNamespace(start.Namespace)
+	for i := range start.SecretSpecs {
+		start.SecretSpecs[i].SetNamespace(start.Namespace)
+	}
+	for i := range start.ServiceSpecs {
+		start.ServiceSpecs[i].SetNamespace(start.Namespace)
+	}
 
 	return start
 }

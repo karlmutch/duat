@@ -19,13 +19,14 @@ import (
 // pods and jobs involved in generation of images etc
 //
 type TaskSpec struct {
-	Namespace  string // The Kubernetes namespace being used for running the CI bootstrapping
-	ID         string
-	Dir        string
-	Dockerfile string
-	Env        map[string]string
-	JobSpec    *batchv1.Job
-	SecretSpec *v1.Secret
+	Namespace    string // The Kubernetes namespace being used for running the CI bootstrapping
+	ID           string
+	Dir          string
+	Dockerfile   string
+	Env          map[string]string
+	JobSpec      *batchv1.Job
+	SecretSpecs  []*v1.Secret
+	ServiceSpecs []*v1.Service
 }
 
 // Task encapsulates the entire context of a Kubernetes batch job/pod, including the
@@ -45,13 +46,15 @@ func (task *Task) initialize(ctx context.Context, debugMode bool, logger chan *S
 		return initFailure
 	}
 
-	deleteCtx, deleteCancel := context.WithTimeout(ctx, 60*time.Second)
-	defer deleteCancel()
-	if debugMode {
-		if err = task.deleteNamespace(deleteCtx, task.start.Namespace, logger); err != nil {
-			task.sendStatus(ctx, logger, logxi.LevelFatal, err)
+	func() {
+		deleteCtx, deleteCancel := context.WithTimeout(ctx, 60*time.Second)
+		defer deleteCancel()
+		if debugMode {
+			if err = task.deleteNamespace(deleteCtx, task.start.Namespace, logger); err != nil {
+				task.sendStatus(ctx, logger, logxi.LevelInfo, err)
+			}
 		}
-	}
+	}()
 
 	if err = task.createNamespace(task.start.Namespace, true, logger); err != nil {
 		return err
@@ -62,6 +65,12 @@ func (task *Task) initialize(ctx context.Context, debugMode bool, logger chan *S
 		return err
 	}
 
+	// Populate services, these are often portals outside of our namespace and allow
+	// interaction with external caches etc
+	if err = task.initServices(logger); err != nil {
+		return err
+	}
+
 	// Create a persistent volume claim
 	if err = task.initVolume(logger); err != nil {
 		return err
@@ -69,9 +78,14 @@ func (task *Task) initialize(ctx context.Context, debugMode bool, logger chan *S
 
 	// Wait for Bound state ifor the volume we just created or ctx.Done()
 	//
-	if err = task.waitOnVolume(ctx, logger); err != nil {
-		return err
-	}
+	err = func() (err kv.Error) {
+		deleteCtx, deleteCancel := context.WithTimeout(ctx, 60*time.Second)
+		defer deleteCancel()
+		if err = task.waitOnVolume(deleteCtx, logger); err != nil {
+			return err
+		}
+		return nil
+	}()
 
 	// Create an archive containing the snapshot of the code to be ossified within a build
 	// image
@@ -108,11 +122,18 @@ func (task *Task) initialize(ctx context.Context, debugMode bool, logger chan *S
 		return err
 	}
 
-	if !debugMode {
-		if err = task.deleteNamespace(deleteCtx, task.start.Namespace, logger); err != nil {
-			return err
+	func() {
+		deleteCtx, deleteCancel := context.WithTimeout(ctx, 60*time.Second)
+		defer deleteCancel()
+		if !debugMode {
+			if err = task.deleteNamespace(deleteCtx, task.start.Namespace, logger); err != nil {
+				task.sendStatus(ctx, logger, logxi.LevelInfo, err)
+			}
 		}
-	}
+		if errGo := deleteCtx.Err(); errGo != nil {
+			task.sendStatus(ctx, logger, logxi.LevelInfo, kv.Wrap(errGo))
+		}
+	}()
 
 	return nil
 }
