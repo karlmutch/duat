@@ -62,6 +62,7 @@ var (
 	githubToken = flag.String("github-token", "", "A github token that can be used to access the repositories that will be watched")
 	verbose     = flag.Bool("v", false, "When enabled will print internal logging for this tool")
 
+	namespace   = flag.String("namespace", "", "The namespace that should be used for processing the bootstrap, potentially destructive cleanup might be used on this namespace")
 	jobTemplate = flag.String("job-template", "", "The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository")
 	stateDir    = flag.String("persistent-state-dir", defStateDir[:], "Overrides the default directory used to store state information for the last known commit of the repositories being watched")
 	debugMode   = flag.Bool("debug", false, "Enables features useful for when doing step by step debugging such as delaying cleanup operations etc")
@@ -152,6 +153,10 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 		ServiceSpecs: []*corev1.Service{},
 	}
 
+	if len(*namespace) != 0 {
+		start.Namespace = *namespace
+	}
+
 	// Run the job template through stencil
 	opts := duat.TemplateOptions{
 		IOFiles: []duat.TemplateIOFiles{{
@@ -161,6 +166,8 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 		OverrideValues: map[string]string{
 			"ID":        start.ID,
 			"Namespace": start.Namespace,
+			"Commit":    msg.Commit,
+			"URL":       msg.URL,
 		},
 	}
 

@@ -2,17 +2,13 @@ package kubernetes
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/jjeffery/kv"
 	"github.com/mgutz/logxi"
 
-	"github.com/davecgh/go-spew/spew"
-
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // TaskSpec encapsulates the information used when initating the bootstrapping
@@ -49,8 +45,8 @@ func (task *Task) initialize(ctx context.Context, debugMode bool, logger chan *S
 	func() {
 		deleteCtx, deleteCancel := context.WithTimeout(ctx, 60*time.Second)
 		defer deleteCancel()
-		if debugMode {
-			if err = task.deleteNamespace(deleteCtx, task.start.Namespace, logger); err != nil {
+		if err = task.deleteNamespace(deleteCtx, task.start.Namespace, logger); err != nil {
+			if err != nil {
 				task.sendStatus(ctx, logger, logxi.LevelInfo, err)
 			}
 		}
@@ -60,9 +56,9 @@ func (task *Task) initialize(ctx context.Context, debugMode bool, logger chan *S
 		return err
 	}
 
-	// Populate secrets
-	if err = task.initSecrets(logger); err != nil {
-		return err
+	// Populate secrets, report only the first failure if any occur
+	if errs := task.initSecrets(logger); len(errs) != 0 {
+		return errs[0]
 	}
 
 	// Populate services, these are often portals outside of our namespace and allow
@@ -71,106 +67,12 @@ func (task *Task) initialize(ctx context.Context, debugMode bool, logger chan *S
 		return err
 	}
 
-	// Create a persistent volume claim
-	if err = task.initVolume(logger); err != nil {
-		return err
-	}
-
-	// Wait for Bound state ifor the volume we just created or ctx.Done()
-	//
-	err = func() (err kv.Error) {
-		deleteCtx, deleteCancel := context.WithTimeout(ctx, 60*time.Second)
-		defer deleteCancel()
-		if err = task.waitOnVolume(deleteCtx, logger); err != nil {
-			return err
-		}
-		return nil
-	}()
-
-	// Create an archive containing the snapshot of the code to be ossified within a build
-	// image
-	archiveName := task.start.Dir + ".tar.gz"
-	if err = task.createArchive(task.start.Dir, archiveName); err != nil {
-		return err
-	}
-	defer os.Remove(archiveName)
-
-	// Start a pod and mount the freshly created volume
-	podName := "copy-pod"
-	if err = task.startMinimalPod(ctx, podName, task.volume, logger); err != nil {
-		return err
-	}
-
-	// Copy the cloned github repo into using a mount for the persistent volume
-	if err = task.filePod(ctx, podName, "alpine", false, archiveName, "/data/tmp.gz", logger); err != nil {
-		return err
-	}
-
-	if err = task.runInPod(ctx, podName, "alpine", []string{"tar", "-xf", "/data/tmp.gz", "-C", "/data"}, nil, os.Stdout, os.Stderr, logger); err != nil {
-		return err
-	}
-
-	if !debugMode {
-		// Get rid of the temporary pod used for copying data
-		if err = task.stopPod(ctx, podName, logger); err != nil {
-			return err
-		}
-	}
-
 	// Start the templated deployment and allow it to create its own container
 	if err = task.runJob(ctx, logger); err != nil {
 		return err
 	}
 
-	func() {
-		deleteCtx, deleteCancel := context.WithTimeout(ctx, 60*time.Second)
-		defer deleteCancel()
-		if !debugMode {
-			if err = task.deleteNamespace(deleteCtx, task.start.Namespace, logger); err != nil {
-				task.sendStatus(ctx, logger, logxi.LevelInfo, err)
-			}
-		}
-		if errGo := deleteCtx.Err(); errGo != nil {
-			task.sendStatus(ctx, logger, logxi.LevelInfo, kv.Wrap(errGo))
-		}
-	}()
-
 	return nil
-}
-
-func (task *Task) runWatchedJob(ctx context.Context, statusC chan *Status) {
-	statusCtx, statusCancel := context.WithTimeout(ctx, time.Duration(20*time.Millisecond))
-	defer statusCancel()
-
-	if initFailure != nil {
-		task.sendStatus(statusCtx, statusC, logxi.LevelFatal, initFailure)
-		return
-	}
-
-	task.sendStatus(statusCtx, statusC, logxi.LevelInfo, kv.NewError("running").With("id", task.start.ID, "namespace", task.start.Namespace, "dir", task.start.Dir))
-
-	// List pods for validation
-	api := Client().CoreV1()
-	podList, errGo := api.Pods(task.start.Namespace).List(metav1.ListOptions{})
-	if errGo != nil {
-		task.sendStatus(statusCtx, statusC, logxi.LevelFatal, kv.Wrap(errGo).With("msg", spew.Sdump(task), "namespace", task.start.Namespace, "dir", task.start.Dir))
-		return
-	}
-
-	volList, errGo := api.PersistentVolumeClaims(task.start.Namespace).List(metav1.ListOptions{})
-	if errGo != nil {
-		task.sendStatus(statusCtx, statusC, logxi.LevelFatal, kv.Wrap(errGo).With("msg", spew.Sdump(task), "namespace", task.start.Namespace, "dir", task.start.Dir))
-		return
-	}
-	for _, v := range podList.Items {
-		task.sendStatus(statusCtx, statusC, logxi.LevelInfo, kv.NewError("pod").With("namespace", task.start.Namespace, "node_name", v.Spec.NodeName, "pod_name", v.Name))
-	}
-	for _, v := range volList.Items {
-		qty := v.Spec.Resources.Requests[v1.ResourceStorage]
-		task.sendStatus(statusCtx, statusC, logxi.LevelInfo, kv.NewError("volume").With("namespace", task.start.Namespace, "volume_name", v.Name, "capacity", qty.String()))
-	}
-
-	task.sendStatus(statusCtx, statusC, logxi.LevelNotice, kv.NewError("success").With("msg", spew.Sdump(task), "namespace", task.start.Namespace, "dir", task.start.Dir))
 }
 
 // TasksRunner will listen for changes to a git repository and trigger downstream tasks that will process and consume
@@ -187,11 +89,12 @@ func TasksRunner(ctx context.Context, debugMode bool, triggerC chan *TaskSpec, s
 				start: *msg,
 			}
 
+			task.sendStatus(ctx, statusC, logxi.LevelInfo, kv.NewError("change detected").With("dir", msg.Dir))
+
 			if err := task.initialize(ctx, debugMode, statusC); err != nil {
 				task.sendStatus(ctx, statusC, logxi.LevelFatal, err)
 				continue
 			}
-			go task.runWatchedJob(ctx, statusC)
 		}
 	}
 }
