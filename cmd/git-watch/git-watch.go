@@ -62,6 +62,7 @@ var (
 	githubToken = flag.String("github-token", "", "A github token that can be used to access the repositories that will be watched")
 	verbose     = flag.Bool("v", false, "When enabled will print internal logging for this tool")
 
+	namespace   = flag.String("namespace", "", "The namespace that should be used for processing the bootstrap, potentially destructive cleanup might be used on this namespace")
 	jobTemplate = flag.String("job-template", "", "The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository")
 	stateDir    = flag.String("persistent-state-dir", defStateDir[:], "Overrides the default directory used to store state information for the last known commit of the repositories being watched")
 	debugMode   = flag.Bool("debug", false, "Enables features useful for when doing step by step debugging such as delaying cleanup operations etc")
@@ -142,13 +143,18 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 	id := uuid.New().String()
 
 	start = &kubernetes.TaskSpec{
-		ID:         id,
-		Namespace:  "gw-" + strings.ToLower(strings.Replace(md.SemVer.String(), ".", "-", -1)),
-		Dir:        msg.Dir,
-		Dockerfile: "",
-		Env:        map[string]string{},
-		JobSpec:    &batchv1.Job{},
-		SecretSpec: &corev1.Secret{},
+		ID:           id,
+		Namespace:    "gw-" + strings.ToLower(strings.Replace(md.SemVer.String(), ".", "-", -1)),
+		Dir:          msg.Dir,
+		Dockerfile:   "",
+		Env:          map[string]string{},
+		JobSpec:      &batchv1.Job{},
+		SecretSpecs:  []*corev1.Secret{},
+		ServiceSpecs: []*corev1.Service{},
+	}
+
+	if len(*namespace) != 0 {
+		start.Namespace = *namespace
 	}
 
 	// Run the job template through stencil
@@ -160,6 +166,8 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 		OverrideValues: map[string]string{
 			"ID":        start.ID,
 			"Namespace": start.Namespace,
+			"Commit":    msg.Commit,
+			"URL":       msg.URL,
 		},
 	}
 
@@ -202,7 +210,9 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 		case "Job":
 			start.JobSpec = obj.(*batchv1.Job)
 		case "Secret":
-			start.SecretSpec = obj.(*corev1.Secret)
+			start.SecretSpecs = append(start.SecretSpecs, obj.(*corev1.Secret))
+		case "Service":
+			start.ServiceSpecs = append(start.ServiceSpecs, obj.(*corev1.Service))
 		default:
 			fmt.Fprintf(os.Stderr, "%v\n",
 				kv.NewError("kubernetes object kind not recognized").With("kind", kind.Kind, "template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
@@ -211,7 +221,12 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 	}
 
 	start.JobSpec.SetNamespace(start.Namespace)
-	start.SecretSpec.SetNamespace(start.Namespace)
+	for i := range start.SecretSpecs {
+		start.SecretSpecs[i].SetNamespace(start.Namespace)
+	}
+	for i := range start.ServiceSpecs {
+		start.ServiceSpecs[i].SetNamespace(start.Namespace)
+	}
 
 	return start
 }

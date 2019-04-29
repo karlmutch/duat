@@ -21,10 +21,6 @@ import (
 	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
 )
 
-var (
-	goPath = os.Getenv("GOPATH")
-)
-
 // Look for directories inside the root 'dir' and return their paths, skip any vendor directories
 //
 func findDirs(dir string) (dirs []string, err kv.Error) {
@@ -265,15 +261,17 @@ func FindPossibleGoFuncs(names []string, dirs []string, tags []string) (possible
 	return possibles, nil
 }
 
-func (md *MetaData) GoBuild(tags []string, opts []string) (outputs []string, err kv.Error) {
+func (md *MetaData) GoBuild(tags []string, opts []string, versionBump bool) (outputs []string, err kv.Error) {
 
 	// Dont do any version manipulation if we are just preparing images
 	// As we begin the build determine if we are using a pre-released version
 	// and if so automatically bump the pre-release version to reflect a development
 	// step
-	if len(md.SemVer.Prerelease()) != 0 {
-		if _, err = md.BumpPrerelease(); err != nil {
-			return outputs, err
+	if versionBump {
+		if len(md.SemVer.Prerelease()) != 0 {
+			if _, err = md.BumpPrerelease(); err != nil {
+				return outputs, err
+			}
 		}
 	}
 
@@ -323,6 +321,7 @@ func (md *MetaData) GoGenerate(file string, env map[string]string, tags []string
 		tagOption = fmt.Sprintf(" -tags \"%s\" ", strings.Join(tags, " "))
 	}
 
+	goPath := os.Getenv("GOPATH")
 	cmds := []string{
 		fmt.Sprintf("%s/bin/dep ensure", goPath),
 		fmt.Sprintf("%s go generate %s %s %s",
@@ -341,6 +340,7 @@ func (md *MetaData) GoSimpleBuild(tags []string, opts []string) (outputs []strin
 	outputs = []string{}
 
 	// Copy the compiled file into the GOPATH bin directory
+	goPath := os.Getenv("GOPATH")
 	if len(goPath) == 0 {
 		return outputs, kv.NewError("unable to determine the compiler bin output dir, env var GOPATH might be missing or empty").With("stack", stack.Trace().TrimRuntime())
 	}
@@ -503,6 +503,7 @@ func (md *MetaData) GoTest(env map[string]string, tags []string, opts []string) 
 		tagOption = fmt.Sprintf(" -tags \"%s\" ", strings.Join(tags, " "))
 	}
 
+	goPath := os.Getenv("GOPATH")
 	cmds := []string{
 		fmt.Sprintf("%s/bin/dep ensure", goPath),
 		fmt.Sprintf(("%s go test %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" %s ."),
