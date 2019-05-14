@@ -11,7 +11,7 @@ import (
 	"github.com/karlmutch/stack"
 	"github.com/mgutz/logxi"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -62,27 +62,29 @@ func (task *Task) runJob(ctx context.Context, logger chan *Status) (err kv.Error
 		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
-	watch, errGo := Client().CoreV1().Pods(task.start.Namespace).Watch(metav1.ListOptions{LabelSelector: labelK + "=" + label})
+	pods, errGo := Client().CoreV1().Pods(task.start.Namespace).Watch(metav1.ListOptions{LabelSelector: labelK + "=" + label})
 	if errGo != nil {
 		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
-	lastPhase := ""
-	for event := range watch.ResultChan() {
-		p, ok := event.Object.(*v1.Pod)
-		if !ok {
-			continue
+	func() {
+		lastPhase := ""
+		for event := range pods.ResultChan() {
+			if p, ok := event.Object.(*v1.Pod); ok {
+				switch p.Status.Phase {
+				case v1.PodFailed:
+					task.sendStatus(ctx, logger, logxi.LevelInfo, kv.NewError("pod update").With("id", task.start.ID, "namespace", task.start.Namespace, "phase", lastPhase, "evt", spew.Sdump(p)))
+					return
+				case v1.PodSucceeded:
+					task.sendStatus(ctx, logger, logxi.LevelInfo, kv.NewError("pod update").With("id", task.start.ID, "namespace", task.start.Namespace, "phase", lastPhase, "message", p.Status.Message, "reason", p.Status.Reason))
+					return
+				}
+				if lastPhase != string(p.Status.Phase) {
+					lastPhase = string(p.Status.Phase)
+					task.sendStatus(ctx, logger, logxi.LevelInfo, kv.NewError("pod update").With("id", task.start.ID, "namespace", task.start.Namespace, "phase", lastPhase, "message", p.Status.Message, "reason", p.Status.Reason))
+				}
+			}
 		}
-		if lastPhase != string(p.Status.Phase) {
-			lastPhase = string(p.Status.Phase)
-			task.sendStatus(ctx, logger, logxi.LevelInfo, kv.NewError("pod update").With("id", task.start.ID, "namespace", task.start.Namespace, "phase", lastPhase))
-		}
-		if p.Status.Phase == v1.PodFailed {
-			break
-		}
-		if p.Status.Phase == v1.PodSucceeded {
-			break
-		}
-	}
+	}()
 	return nil
 }

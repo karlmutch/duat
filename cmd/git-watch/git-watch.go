@@ -42,6 +42,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes/scheme"
 
+	"k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi"
+	"k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi/validation"
+
 	"github.com/karlmutch/stack"
 	colorable "github.com/mattn/go-colorable"
 
@@ -138,6 +141,7 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
 		os.Exit(-1)
 	}
+
 	writer := new(bytes.Buffer)
 
 	id := uuid.New().String()
@@ -190,12 +194,31 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 		os.Exit(-1)
 	}
 
+	apiDoc, errGo := kubernetes.Client().DiscoveryClient.OpenAPISchema()
+	if errGo != nil {
+		fmt.Fprintf(os.Stderr, "%v\n",
+			kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+		os.Exit(-1)
+	}
+	rscs, errGo := openapi.NewOpenAPIData(apiDoc)
+	if errGo != nil {
+		fmt.Fprintf(os.Stderr, "%v\n",
+			kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+		os.Exit(-1)
+	}
+	if errGo := validation.NewSchemaValidation(rscs).ValidateBytes(writer.Bytes()[:]); errGo != nil {
+		fmt.Fprintf(os.Stderr, "%v\n",
+			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+		os.Exit(-1)
+	}
+
 	allRes := string(writer.Bytes()[:])
 	resources := strings.Split(allRes, "---")
 	for _, rsc := range resources {
 		if len(rsc) == 0 {
 			continue
 		}
+
 		// Create a YAML serializer.  JSON is a subset of YAML, so is supported too.
 		s := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme)
 
@@ -208,7 +231,7 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 		}
 		switch kind.Kind {
 		case "Job":
-			start.JobSpec = obj.(*batchv1.Job)
+			start.JobSpec, _ = obj.(*batchv1.Job)
 		case "Secret":
 			start.SecretSpecs = append(start.SecretSpecs, obj.(*corev1.Secret))
 		case "Service":
