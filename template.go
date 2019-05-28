@@ -27,7 +27,10 @@ import (
 	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
 )
 
-func FuncMap() (f template.FuncMap) {
+// FuncMap augments the template functions with some standard string maniuplation functions
+// for document format conversions
+//
+func FuncMap(funcs map[string]interface{}) (f template.FuncMap) {
 	// For more documentation about templating see http://masterminds.github.io/sprig/
 	f = sprig.TxtFuncMap()
 
@@ -36,6 +39,9 @@ func FuncMap() (f template.FuncMap) {
 	f["toYaml"] = toYaml
 	f["toToml"] = toToml
 
+	for name, fun := range funcs {
+		f[name] = fun
+	}
 	return f
 }
 
@@ -80,7 +86,7 @@ func toToml(v interface{}) string {
 }
 
 // create template context
-func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, overrideVals map[string]string) (vars map[string]interface{}, err kv.Error) {
+func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, overrideVals map[string]string) (vars map[string]interface{}, err kv.Error, warnings []kv.Error) {
 
 	vars = map[string]interface{}{}
 
@@ -107,6 +113,8 @@ func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, ov
 
 	if ecrURL, err := GetECRDefaultURL(); err == nil {
 		duatVars["awsecr"] = ecrURL.Hostname()
+	} else {
+		warnings = append(warnings, err)
 	}
 
 	vars["duat"] = duatVars
@@ -114,7 +122,7 @@ func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, ov
 	if jsonVals != "" {
 		obj := map[string]interface{}{}
 		if errGo := json.Unmarshal([]byte(jsonVals), &obj); errGo != nil {
-			return nil, kv.Wrap(errGo, "bad json format").With("stack", stack.Trace().TrimRuntime())
+			return nil, kv.Wrap(errGo, "bad json format").With("stack", stack.Trace().TrimRuntime()), warnings
 		}
 		for k, v := range obj {
 			vars[k] = v
@@ -123,25 +131,25 @@ func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, ov
 
 	for _, file := range loadFiles {
 		if bytes, errGo := ioutil.ReadFile(file); errGo != nil {
-			return nil, kv.Wrap(errGo).With("file", file).With("stack", stack.Trace().TrimRuntime())
+			return nil, kv.Wrap(errGo).With("file", file).With("stack", stack.Trace().TrimRuntime()), warnings
 		} else {
 			obj := map[string]interface{}{}
 
 			switch filepath.Ext(file) {
 			case ".json":
 				if errGo := json.Unmarshal(bytes, &obj); errGo != nil {
-					return nil, kv.Wrap(errGo, "unrecognized json").With("file", file).With("stack", stack.Trace().TrimRuntime())
+					return nil, kv.Wrap(errGo, "unrecognized json").With("file", file).With("stack", stack.Trace().TrimRuntime()), warnings
 				}
 			case ".yaml", ".yml":
 				if errGo := yaml.Unmarshal(bytes, &obj); errGo != nil {
-					return nil, kv.Wrap(errGo, "unrecognized yaml").With("file", file).With("stack", stack.Trace().TrimRuntime())
+					return nil, kv.Wrap(errGo, "unrecognized yaml").With("file", file).With("stack", stack.Trace().TrimRuntime()), warnings
 				}
 			case ".toml":
 				if errGo := toml.Unmarshal(bytes, &obj); errGo != nil {
-					return nil, kv.Wrap(errGo, "unrecognized toml").With("file", file).With("stack", stack.Trace().TrimRuntime())
+					return nil, kv.Wrap(errGo, "unrecognized toml").With("file", file).With("stack", stack.Trace().TrimRuntime()), warnings
 				}
 			default:
-				return nil, kv.NewError("unsupported file type (extension)").With("file", file).With("stack", stack.Trace().TrimRuntime())
+				return nil, kv.NewError("unsupported file type (extension)").With("file", file).With("stack", stack.Trace().TrimRuntime()), warnings
 			}
 
 			for k, v := range obj {
@@ -161,7 +169,7 @@ func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, ov
 		vars[k] = v
 	}
 
-	return vars, nil
+	return vars, nil, warnings
 }
 
 func templateExecute(t *template.Template, src io.Reader, dest io.Writer, ctx interface{}) (err kv.Error) {
@@ -182,11 +190,14 @@ func templateExecute(t *template.Template, src io.Reader, dest io.Writer, ctx in
 	return nil
 }
 
+// TemplateIOFiles is used to encapsulate some streaming interfaces for input and output documents
 type TemplateIOFiles struct {
 	In  io.Reader
 	Out io.Writer
 }
 
+// TemplateOptions is used to pass into the Template function both streams and key values
+// for the template engine
 type TemplateOptions struct {
 	IOFiles        []TemplateIOFiles
 	Delimiters     []string
@@ -194,7 +205,11 @@ type TemplateOptions struct {
 	OverrideValues map[string]string
 }
 
-func (md *MetaData) Template(opts TemplateOptions) (err kv.Error) {
+// Template takes the TemplateOptions and processes the template execution, it also
+// it used to catch and report errors the user raises within the template from
+// validation checking etc
+//
+func (md *MetaData) Template(opts TemplateOptions) (err kv.Error, warnings []kv.Error) {
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -202,25 +217,37 @@ func (md *MetaData) Template(opts TemplateOptions) (err kv.Error) {
 		}
 	}()
 
-	t := template.New("noname").Funcs(FuncMap())
+	tmplErrs := []kv.Error{}
+	funcs := template.FuncMap{
+		"RaiseError": func(msg string) string {
+			tmplErrs = append(tmplErrs, kv.NewError(msg).With("stack", stack.Trace().TrimRuntime()))
+			return ""
+		},
+	}
+
+	t := template.New("noname").Funcs(FuncMap(funcs))
+
 	if len(opts.Delimiters) != 0 {
 		if len(opts.Delimiters) != 2 {
-			return kv.NewError("unexpected number of delimiters, tw are expected [\"left\",\"right\"").With("stack", stack.Trace().TrimRuntime())
+			return kv.NewError("unexpected number of delimiters, tw are expected [\"left\",\"right\"").With("stack", stack.Trace().TrimRuntime()), warnings
 		}
 		t = t.Delims(opts.Delimiters[0], opts.Delimiters[1])
 	}
 
-	vars, err := md.NewTemplateVariables("", opts.ValueFiles, opts.OverrideValues)
+	vars, err, warnings := md.NewTemplateVariables("", opts.ValueFiles, opts.OverrideValues)
 	if err != nil {
-		return err
+		return err, warnings
 	}
 
 	for _, files := range opts.IOFiles {
 		err = templateExecute(t, files.In, files.Out, vars)
 		if err != nil {
-			return err
+			return err, warnings
 		}
 	}
+	if len(tmplErrs) != 0 {
+		return tmplErrs[0], tmplErrs
+	}
 
-	return nil
+	return nil, warnings
 }

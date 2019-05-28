@@ -188,10 +188,23 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 		opts.OverrideValues["RegistryIP"] = "127.0.0.1"
 	}
 
-	if errGo = md.Template(opts); errGo != nil {
+	if errGo, warnings := md.Template(opts); errGo != nil {
 		fmt.Fprintf(os.Stderr, "%v\n",
 			kv.Wrap(errGo).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
 		os.Exit(-1)
+	} else {
+		if len(warnings) != 0 {
+			if strings.Contains(string(writer.Bytes()[:]), "<no value>") {
+				for _, err := range warnings {
+					fmt.Fprintf(os.Stderr, "%v\n",
+						kv.Wrap(err).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+				}
+				os.Exit(-1)
+			}
+			for _, err := range warnings {
+				logger.Warn(err.Error())
+			}
+		}
 	}
 
 	apiDoc, errGo := kubernetes.Client().DiscoveryClient.OpenAPISchema()

@@ -73,18 +73,19 @@ func (task *Task) runJob(ctx context.Context, logger chan *Status) (err kv.Error
 			if p, ok := event.Object.(*v1.Pod); ok {
 				switch p.Status.Phase {
 				case v1.PodFailed:
-					task.sendStatus(ctx, logger, logxi.LevelInfo, kv.NewError("pod update").With("id", task.start.ID, "namespace", task.start.Namespace, "phase", lastPhase))
+					task.sendStatus(ctx, logger, logxi.LevelInfo, kv.NewError("pod update").With("id", task.start.ID, "namespace", task.start.Namespace, "phase", p.Status.Phase))
 					return
 				case v1.PodSucceeded:
-					task.sendStatus(ctx, logger, logxi.LevelInfo, kv.NewError("pod update").With("id", task.start.ID, "namespace", task.start.Namespace, "phase", lastPhase, "message", p.Status.Message, "reason", p.Status.Reason))
+					task.sendStatus(ctx, logger, logxi.LevelInfo, kv.NewError("pod update").With("id", task.start.ID, "namespace", task.start.Namespace, "phase", p.Status.Phase))
 					return
 				}
 				if lastPhase != string(p.Status.Phase) {
 					lastPhase = string(p.Status.Phase)
-					task.sendStatus(ctx, logger, logxi.LevelInfo, kv.NewError("pod update").With("id", task.start.ID, "namespace", task.start.Namespace, "phase", lastPhase, "message", p.Status.Message, "reason", p.Status.Reason))
+					task.sendStatus(ctx, logger, logxi.LevelInfo, kv.NewError("pod update").With("id", task.start.ID, "namespace", task.start.Namespace, "phase", p.Status.Phase, "message", p.Status.Message, "reason", p.Status.Reason))
 				}
 			}
 		}
 	}()
+
 	return nil
 }

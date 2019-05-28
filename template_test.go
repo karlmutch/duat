@@ -33,7 +33,7 @@ func TestUserTemplate(t *testing.T) {
 		OverrideValues: map[string]string{},
 	}
 
-	if err = md.Template(opts); err != nil {
+	if err, _ = md.Template(opts); err != nil {
 		t.Fatal(err)
 	}
 
