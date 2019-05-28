@@ -129,8 +129,12 @@ func main() {
 		}
 	}
 
-	if err = md.Template(opts); err != nil {
+	err, warnings := md.Template(opts)
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(-2)
+	}
+	for _, err = range warnings {
+		logger.Warn(err.Error())
 	}
 }
