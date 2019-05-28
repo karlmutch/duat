@@ -27,6 +27,9 @@ import (
 	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
 )
 
+// FuncMap augments the template functions with some standard string maniuplation functions
+// for document format conversions
+//
 func FuncMap(funcs map[string]interface{}) (f template.FuncMap) {
 	// For more documentation about templating see http://masterminds.github.io/sprig/
 	f = sprig.TxtFuncMap()
@@ -187,11 +190,14 @@ func templateExecute(t *template.Template, src io.Reader, dest io.Writer, ctx in
 	return nil
 }
 
+// TemplateIOFiles is used to encapsulate some streaming interfaces for input and output documents
 type TemplateIOFiles struct {
 	In  io.Reader
 	Out io.Writer
 }
 
+// TemplateOptions is used to pass into the Template function both streams and key values
+// for the template engine
 type TemplateOptions struct {
 	IOFiles        []TemplateIOFiles
 	Delimiters     []string
@@ -199,6 +205,10 @@ type TemplateOptions struct {
 	OverrideValues map[string]string
 }
 
+// Template takes the TemplateOptions and processes the template execution, it also
+// it used to catch and report errors the user raises within the template from
+// validation checking etc
+//
 func (md *MetaData) Template(opts TemplateOptions) (err kv.Error, warnings []kv.Error) {
 
 	defer func() {
