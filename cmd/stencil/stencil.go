@@ -26,7 +26,9 @@ var (
 	input  = flag.String("input", "", "The name of an input file, defaults to the standard input of the shell")
 	output = flag.String("output", "", "The name of an output file, default to the console")
 
-	values = flag.String("values", "", "A comma seperated list of k=v pairs, that can act as overriden values or new values within the template")
+	values       = flag.String("values", "", "A comma seperated list of k=v pairs, that can act as overriden values or new values within the template")
+	suppressWarn = flag.Bool("supress-warnings", false, "This flag will cause warnings to become supressed")
+	warnError    = flag.Bool("error-warnings", false, "This flag will cause warnings to be treated error exits")
 )
 
 func usage() {
@@ -89,6 +91,8 @@ func main() {
 		logger.Debug(fmt.Sprintf("%s:%s", repo, ver))
 	}
 
+	// Setup the I/O streams that will be processed using the standard input
+	// and output as the defaults
 	in := os.Stdin
 	out := os.Stdout
 
@@ -109,6 +113,8 @@ func main() {
 		out = file
 	}
 
+	// Take the open streams that will be used and place them into a parameter structure for the
+	// template function, along with key value pairs of template variables specified on the command line
 	opts := duat.TemplateOptions{
 		IOFiles: []duat.TemplateIOFiles{{
 			In:  in,
@@ -129,12 +135,21 @@ func main() {
 		}
 	}
 
+	// Perform the templating operation
 	err, warnings := md.Template(opts)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(-2)
 	}
-	for _, err = range warnings {
-		logger.Warn(err.Error())
+
+	// cmd line options to control the response of the stencil software to
+	// warnings
+	if !*suppressWarn {
+		for _, err = range warnings {
+			logger.Warn(err.Error())
+		}
+	}
+	if *warnError {
+		os.Exit(-1)
 	}
 }
