@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat) Beta
 
-Version : <repo-version>0.11.6</repo-version>
+Version : <repo-version>0.12.0-feature-117-better-git-watch-docs-aaaagmrfobq</repo-version>
 
 duat is a set of tools useful for automating the bootstrapping of containerized workflows.  duat includes tools for working with software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go, and Kubernetes to manage portions of container centric software lifecycles, helping to remove proprietary tooling, scripting, and other DSLs typically used for building, releasing, and deploying software.
 
@@ -281,7 +281,7 @@ Templates also support functions from masterminds.github.io/sprig.  Please refer
 
 The primary use case for git-watch is to be able to build CI/CD docker images from git repositories when commits occur.  git-watch meets an unaddressed need for an ad-hoc git client that can produce CI/CD docker images that can then feed into container centric CI/CD pipelines, all hosted within a single node Kubernetes deployment.
 
-This document describes by example the git-watch tool using a combination of github, docker registries, and finally keel.sh for downstream CI.
+This document describes by example the git-watch tool using a combination of git, docker registries, and finally keel.sh for downstream CI.
 
 ### audience
 
@@ -464,7 +464,7 @@ Please review https://github.com/mgutz/logxi for more information on logging lev
 ### usage
 
 <pre><code>
-Usage of git-watch: [options] [arguments]      Git Commit watcher and trigger (git-watch)
+usage:  git-watch [options] [arguments]      Git Commit watcher and trigger (git-watch)       1910aaf935e3a53cf22de4ede292492b77164bdb      2019-07-18_13:01:01-0700
 
 Arguments:
 
@@ -479,10 +479,15 @@ Example of valid arguments include:
 
 Options:
 
+  -debug
+        Enables features useful for when doing step by step debugging such as delaying cleanup operations etc
   -github-token string
         A github token that can be used to access the repositories that will be watched
   -job-template string
-        The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository
+        The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of
+the captured repository
+  -namespace string
+        The namespace that should be used for processing the bootstrap, potentially destructive cleanup might be used on this namespace
   -persistent-state-dir string
         Overrides the default directory used to store state information for the last known commit of the repositories being watched (default "/tmp/git-watcher")
   -v    When enabled will print internal logging for this tool
