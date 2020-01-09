@@ -449,6 +449,7 @@ func (md *MetaData) GoCompile(env map[string]string, tags []string, opts []strin
 	if ldPath, hasLdPath := os.LookupEnv("LD_LIBRARY_PATH"); hasLdPath {
 		buildEnv = append(buildEnv, fmt.Sprintf("LD_LIBRARY_PATH=%s", ldPath))
 	}
+	fmt.Println(os.Environ())
 	for k, v := range env {
 		buildEnv = append(buildEnv, fmt.Sprintf("%s='%s'", k, v))
 		switch k {
@@ -502,7 +503,7 @@ func (md *MetaData) GoTest(env map[string]string, tags []string, opts []string) 
 	if ldPath, hasLdPath := os.LookupEnv("LD_LIBRARY_PATH"); hasLdPath {
 		buildEnv = append(buildEnv, fmt.Sprintf("LD_LIBRARY_PATH=%s", ldPath))
 	}
-
+	fmt.Println(os.Environ())
 	for k, v := range env {
 		buildEnv = append(buildEnv, fmt.Sprintf("%s='%s'", k, v))
 	}
