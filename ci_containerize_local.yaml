@@ -9,7 +9,7 @@ spec:
       restartPolicy: Never
       containers:
       - name: makisu
-        image: gcr.io/makisu-project/makisu:v0.1.9
+        image: gcr.io/makisu-project/makisu:v0.1.10
         imagePullPolicy: IfNotPresent
         restartpolicy: Never
         args:

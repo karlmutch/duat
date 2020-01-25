@@ -1,13 +1,13 @@
 package main
 
-// This file contains the main function for a git cimmit watcher that upon a git
-// commit occuring will activate a kubernetes job based upon a template.  In this
+// This file contains the main function for a git commit watcher that upon a git
+// pushed commit occuring will activate a kubernetes job based upon a template.  In this
 // case this could be a Mikasu build job to allow a CI pipeline to be initiated.
 //
 // The rational behind triggering pipeline in this manner is that it provides a
 // minimal viable way of self hosting a quay.io service.  It cannot match this
 // service with things such as security scanning of resulting images triggered
-// by cimmits but will perform at least minimal self hosted docker builds within
+// by commits but will perform at least minimal self hosted docker builds within
 // a users self provisioned Kubernetes cluster.  Subsequent images from Mikasu
 // can then be pushed to a vanilla docker image registry where scans and the like
 // can be performed.
@@ -30,6 +30,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/google/uuid"
 	"github.com/jjeffery/kv"
 	"github.com/karlmutch/duat"
@@ -59,16 +60,18 @@ import (
 )
 
 var (
-	defStateDir = "/tmp/git-watcher"
+	defStateDir = os.ExpandEnv("/tmp/git-watcher-${USER}")
 	logger      = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "git-watch")
 
 	githubToken = flag.String("github-token", "", "A github token that can be used to access the repositories that will be watched")
 	verbose     = flag.Bool("v", false, "When enabled will print internal logging for this tool")
 
-	namespace   = flag.String("namespace", "", "The namespace that should be used for processing the bootstrap, potentially destructive cleanup might be used on this namespace")
-	jobTemplate = flag.String("job-template", "", "The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository")
-	stateDir    = flag.String("persistent-state-dir", defStateDir[:], "Overrides the default directory used to store state information for the last known commit of the repositories being watched")
-	debugMode   = flag.Bool("debug", false, "Enables features useful for when doing step by step debugging such as delaying cleanup operations etc")
+	namespace    = flag.String("namespace", "", "The namespace that should be used for processing the bootstrap, potentially destructive cleanup might be used on this namespace")
+	jobTemplate  = flag.String("job-template", "", "The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository")
+	stateDir     = flag.String("persistent-state-dir", os.ExpandEnv(defStateDir[:]), "Overrides the default directory used to store state information for the last known commit of the repositories being watched")
+	ignoreWarn   = flag.Bool("ignore-warn", false, "Treat template warnings as non-fatal")
+	debugMode    = flag.Bool("debug", false, "Enables features useful for when doing step by step debugging such as delaying cleanup operations etc")
+	awsErrIgnore = flag.Bool("ignore-aws-errors", false, "Used to manage whether AWS access and configuration not being present is treated as a fatal error")
 )
 
 // Usage will print the options and help screen when the flag package sees the help option
@@ -170,9 +173,11 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 		OverrideValues: map[string]string{
 			"ID":        start.ID,
 			"Namespace": start.Namespace,
+			"Dir":       start.Dir,
 			"Commit":    msg.Commit,
 			"URL":       msg.URL,
 		},
+		IgnoreAWSErrors: *awsErrIgnore,
 	}
 
 	microK8s := &kubernetes.MicroK8s{}
@@ -199,7 +204,9 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 					fmt.Fprintf(os.Stderr, "%v\n",
 						kv.Wrap(err).With("template", *jobTemplate, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
 				}
-				os.Exit(-1)
+				if !*ignoreWarn {
+					os.Exit(-1)
+				}
 			}
 			for _, err := range warnings {
 				logger.Warn(err.Error())
@@ -304,16 +311,17 @@ func main() {
 
 	// If the stateDir was defaulted then create it if it does not exist otherwise
 	// if the user specified a value then that directory must actually exist
-	if *stateDir == defStateDir {
-		os.MkdirAll(*stateDir, 0700)
+	workingDir := os.ExpandEnv(*stateDir)
+	if workingDir == defStateDir {
+		os.MkdirAll(workingDir, 0700)
 	}
-	if _, errGo := os.Stat(*stateDir); errGo != nil && !os.IsNotExist(errGo) {
+	if _, errGo := os.Stat(workingDir); errGo != nil && !os.IsNotExist(errGo) {
 		fmt.Fprintf(os.Stderr, "%v\n",
 			kv.NewError("the state presistence directory must already exist").With("dir", *stateDir, "stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
 		os.Exit(-1)
 	}
 
-	watcher, err := git.NewGitWatcher(ctx, *stateDir, reportC)
+	watcher, err := git.NewGitWatcher(ctx, workingDir, reportC)
 	if err != nil {
 		logger.Info(err.Error())
 	}
@@ -378,6 +386,8 @@ func main() {
 				taskTracking.Lock()
 				taskTracking.tasks[start.ID] = start
 				taskTracking.Unlock()
+
+				spew.Dump(start)
 
 				taskTriggerC <- start
 			}

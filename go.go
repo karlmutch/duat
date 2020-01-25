@@ -445,6 +445,11 @@ func (md *MetaData) GoCompile(env map[string]string, tags []string, opts []strin
 	}
 
 	buildEnv := []string{"GO_ENABLED=0"}
+	// If the LD_LIBRARY_PATH is present bring it into the build automatically
+	if ldPath, hasLdPath := os.LookupEnv("LD_LIBRARY_PATH"); hasLdPath {
+		buildEnv = append(buildEnv, fmt.Sprintf("LD_LIBRARY_PATH=%s", ldPath))
+	}
+
 	for k, v := range env {
 		buildEnv = append(buildEnv, fmt.Sprintf("%s='%s'", k, v))
 		switch k {
@@ -494,6 +499,11 @@ func (md *MetaData) GoTest(env map[string]string, tags []string, opts []string) 
 	ldFlags = append(ldFlags, fmt.Sprintf("-X github.com/karlmutch/duat/version.SemVer=\"%s\"", md.SemVer.String()))
 
 	buildEnv := []string{"GO_ENABLED=0"}
+	// If the LD_LIBRARY_PATH is present bring it into the build automatically
+	if ldPath, hasLdPath := os.LookupEnv("LD_LIBRARY_PATH"); hasLdPath {
+		buildEnv = append(buildEnv, fmt.Sprintf("LD_LIBRARY_PATH=%s", ldPath))
+	}
+
 	for k, v := range env {
 		buildEnv = append(buildEnv, fmt.Sprintf("%s='%s'", k, v))
 	}
