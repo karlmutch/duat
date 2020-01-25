@@ -66,11 +66,12 @@ var (
 	githubToken = flag.String("github-token", "", "A github token that can be used to access the repositories that will be watched")
 	verbose     = flag.Bool("v", false, "When enabled will print internal logging for this tool")
 
-	namespace   = flag.String("namespace", "", "The namespace that should be used for processing the bootstrap, potentially destructive cleanup might be used on this namespace")
-	jobTemplate = flag.String("job-template", "", "The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository")
-	stateDir    = flag.String("persistent-state-dir", os.ExpandEnv(defStateDir[:]), "Overrides the default directory used to store state information for the last known commit of the repositories being watched")
-	ignoreWarn  = flag.Bool("ignore-warn", false, "Treat template warnings as non-fatal")
-	debugMode   = flag.Bool("debug", false, "Enables features useful for when doing step by step debugging such as delaying cleanup operations etc")
+	namespace    = flag.String("namespace", "", "The namespace that should be used for processing the bootstrap, potentially destructive cleanup might be used on this namespace")
+	jobTemplate  = flag.String("job-template", "", "The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of the captured repository")
+	stateDir     = flag.String("persistent-state-dir", os.ExpandEnv(defStateDir[:]), "Overrides the default directory used to store state information for the last known commit of the repositories being watched")
+	ignoreWarn   = flag.Bool("ignore-warn", false, "Treat template warnings as non-fatal")
+	debugMode    = flag.Bool("debug", false, "Enables features useful for when doing step by step debugging such as delaying cleanup operations etc")
+	awsErrIgnore = flag.Bool("ignore-aws-errors", false, "Used to manage whether AWS access and configuration not being present is treated as a fatal error")
 )
 
 // Usage will print the options and help screen when the flag package sees the help option
@@ -176,6 +177,7 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 			"Commit":    msg.Commit,
 			"URL":       msg.URL,
 		},
+		IgnoreAWSErrors: *awsErrIgnore,
 	}
 
 	microK8s := &kubernetes.MicroK8s{}

@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat) Beta
 
-Version : <repo-version>0.12.0-feature-117-better-git-watch-docs-aaaagmrgktw</repo-version>
+Version : <repo-version>0.12.0-feature-117-better-git-watch-docs-aaaagmupwkb</repo-version>
 
 duat is a set of tools useful for automating the bootstrapping of containerized workflows.  duat includes tools for working with software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go, and Kubernetes to manage portions of container centric software lifecycles, helping to remove proprietary tooling, scripting, and other DSLs typically used for building, releasing, and deploying software.
 
@@ -355,7 +355,7 @@ localhost:
         client:
           disabled: true
 $ export Registry=`cat ../../registry_local.yaml`
-$ git-watch -v --job-template ../../ci_containerize_local.yaml https://github.com/karlmutch/duat.git^feature/102_microk8s_registry
+$ git-watch -v --ignore-aws-errors --job-template ../../ci_containerize_local.yaml https://github.com/karlmutch/duat.git^feature/102_microk8s_registry
 16:05:42.953783 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: volume update namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo volume: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 phase: (v1.PersistentVolumeClaimPhase) (len=5) "Bound"
 16:05:47.257452 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: pod update phase: Pending id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo
 16:05:48.160613 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: pod update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo phase: Running

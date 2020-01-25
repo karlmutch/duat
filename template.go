@@ -86,7 +86,7 @@ func toToml(v interface{}) string {
 }
 
 // create template context
-func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, overrideVals map[string]string) (vars map[string]interface{}, err kv.Error, warnings []kv.Error) {
+func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, overrideVals map[string]string, ignoreAWSErrors bool) (vars map[string]interface{}, err kv.Error, warnings []kv.Error) {
 
 	vars = map[string]interface{}{}
 
@@ -114,7 +114,9 @@ func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, ov
 	if ecrURL, err := GetECRDefaultURL(); err == nil {
 		duatVars["awsecr"] = ecrURL.Hostname()
 	} else {
-		warnings = append(warnings, err)
+		if !ignoreAWSErrors {
+			warnings = append(warnings, err)
+		}
 	}
 
 	vars["duat"] = duatVars
@@ -199,10 +201,11 @@ type TemplateIOFiles struct {
 // TemplateOptions is used to pass into the Template function both streams and key values
 // for the template engine
 type TemplateOptions struct {
-	IOFiles        []TemplateIOFiles
-	Delimiters     []string
-	ValueFiles     []string
-	OverrideValues map[string]string
+	IOFiles         []TemplateIOFiles
+	Delimiters      []string
+	ValueFiles      []string
+	OverrideValues  map[string]string
+	IgnoreAWSErrors bool
 }
 
 // Template takes the TemplateOptions and processes the template execution, it also
@@ -234,7 +237,7 @@ func (md *MetaData) Template(opts TemplateOptions) (err kv.Error, warnings []kv.
 		t = t.Delims(opts.Delimiters[0], opts.Delimiters[1])
 	}
 
-	vars, err, warnings := md.NewTemplateVariables("", opts.ValueFiles, opts.OverrideValues)
+	vars, err, warnings := md.NewTemplateVariables("", opts.ValueFiles, opts.OverrideValues, opts.IgnoreAWSErrors)
 	if err != nil {
 		return err, warnings
 	}
