@@ -198,12 +198,14 @@ Using build.go
 
 ```
 go run ./build.go -r cmd > /tmp/compiled.lst
+go test -v ./...
 ```
 
 ### Perfoming a release
 
 ```
 semver [patch|minor|major]
+go test -v ./...
 go run ./build.go -r cmd > /tmp/compiled.lst
 cat /tmp/compiled.lst | go run ./cmd/github-release/github-release.go -
 ```

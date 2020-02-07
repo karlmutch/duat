@@ -51,4 +51,4 @@ USER ${USER}
 VOLUME /project
 WORKDIR /project/src/github.com/karlmutch/duat
 
-CMD go run ./build.go -dirs cmd,example -r
+CMD go test -v ./... ; go run ./build.go -dirs cmd,example -r
