@@ -149,9 +149,12 @@ func generateStartMsg(md *duat.MetaData, msg *git.Change) (start *kubernetes.Tas
 
 	id := uuid.New().String()
 
+	safeSemver := strings.ToLower(strings.Replace(md.SemVer.String(), ".", "-", -1))
+	safeSemver = kubernetes.TrimNamespace("gw-" + safeSemver)
+
 	start = &kubernetes.TaskSpec{
 		ID:           id,
-		Namespace:    "gw-" + strings.ToLower(strings.Replace(md.SemVer.String(), ".", "-", -1)),
+		Namespace:    safeSemver,
 		Dir:          msg.Dir,
 		Dockerfile:   "",
 		Env:          map[string]string{},
