@@ -224,7 +224,7 @@ func (md *MetaData) Replace(fn string, dest string, substitute bool) (err kv.Err
 
 	newVer := fmt.Sprintf("<repo-version>%s</repo-version>", md.SemVer.String())
 	if substitute {
-		newVer = fmt.Sprintf("%s", md.SemVer.String())
+		newVer = md.SemVer.String()
 	}
 
 	scan := bufio.NewScanner(file)

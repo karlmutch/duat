@@ -393,6 +393,14 @@
   revision = "ca99b135e50f526fde9cd88705f0ff2f3f95b77c"
 
 [[projects]]
+  digest = "1:09970bb8daf100bdf11b48b72c71ef980cd2b50efbd903989b3d182956be0b83"
+  name = "github.com/karlmutch/durafmt"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "7b7ae1e72eade09dbc9c2cfba3e6c4bae7b8bcac"
+  version = "1.0.0"
+
+[[projects]]
   branch = "master"
   digest = "1:bc16e81c4c66522e1af53f0c4372622a3a9bae4cea75e70716c41bb1810e5ec9"
   name = "github.com/karlmutch/envflag"
@@ -995,6 +1003,7 @@
     "github.com/karlmutch/base62",
     "github.com/karlmutch/basex",
     "github.com/karlmutch/deepcopier",
+    "github.com/karlmutch/durafmt",
     "github.com/karlmutch/envflag",
     "github.com/karlmutch/semver",
     "github.com/karlmutch/stack",
