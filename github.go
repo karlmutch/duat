@@ -99,8 +99,6 @@ func (md *MetaData) publish(release *gitRelease, filepaths []string) (err kv.Err
 	name := strings.TrimSuffix(parts[len(parts)-1], ".git")
 	endpointPrefix := "https://api.github.com/repos/" + user + "/" + name + "/"
 
-	// Try to create tag from which to base the release, ignore any errors if it already exists
-
 	endpoint := endpointPrefix + "releases"
 	releaseData, errGo := json.Marshal(release)
 	if errGo != nil {
@@ -114,7 +112,10 @@ func (md *MetaData) publish(release *gitRelease, filepaths []string) (err kv.Err
 	if err != nil && data != nil {
 		// The release may already exist to rerun the upload assuming it does
 		endpoint = endpointPrefix + "releases/tags/" + release.TagName
-		data, err = doGitRequest("GET", endpoint, "application/json", nil, int64(0), md.Git.Token)
+		if newData, newErr := doGitRequest("GET", endpoint, "application/json", nil, int64(0), md.Git.Token); newErr != nil {
+			err = newErr
+			data = newData
+		}
 	}
 
 	if err != nil {
