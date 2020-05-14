@@ -97,8 +97,9 @@ func (md *MetaData) publish(release *gitRelease, filepaths []string) (err kv.Err
 	}
 	user := parts[1]
 	name := strings.TrimSuffix(parts[len(parts)-1], ".git")
+	endpointPrefix := "https://api.github.com/repos/" + user + "/" + name + "/"
 
-	endpoint := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases", user, name)
+	endpoint := endpointPrefix + "releases"
 	releaseData, errGo := json.Marshal(release)
 	if errGo != nil {
 		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
@@ -110,12 +111,15 @@ func (md *MetaData) publish(release *gitRelease, filepaths []string) (err kv.Err
 
 	if err != nil && data != nil {
 		// The release may already exist to rerun the upload assuming it does
-		endpoint = fmt.Sprintf("%s/tags/%s", endpoint, release.TagName)
-		data, err = doGitRequest("GET", endpoint, "application/json", nil, int64(0), md.Git.Token)
+		endpoint = endpointPrefix + "releases/tags/" + release.TagName
+		if newData, newErr := doGitRequest("GET", endpoint, "application/json", nil, int64(0), md.Git.Token); newErr != nil {
+			err = newErr
+			data = newData
+		}
 	}
 
 	if err != nil {
-		return kv.Wrap(err).With("response", string(data)).With("endpoint", endpoint).With("stack", stack.Trace().TrimRuntime())
+		return err.With("response", string(data)).With("endpoint", endpoint).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	// Gets the release Upload URL from the returned JSON data

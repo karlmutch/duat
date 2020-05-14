@@ -261,7 +261,7 @@ func FindPossibleGoFuncs(names []string, dirs []string, tags []string) (possible
 	return possibles, nil
 }
 
-func (md *MetaData) GoBuild(tags []string, opts []string, versionBump bool) (outputs []string, err kv.Error) {
+func (md *MetaData) GoBuild(tags []string, opts []string, outputDir string, outputSuffix string, versionBump bool) (outputs []string, err kv.Error) {
 
 	// Dont do any version manipulation if we are just preparing images
 	// As we begin the build determine if we are using a pre-released version
@@ -275,7 +275,7 @@ func (md *MetaData) GoBuild(tags []string, opts []string, versionBump bool) (out
 		}
 	}
 
-	if outputs, err = md.GoSimpleBuild(tags, opts); err != nil {
+	if outputs, err = md.GoSimpleBuild(tags, opts, outputDir, outputSuffix); err != nil {
 		return []string{}, err
 	}
 
@@ -336,7 +336,7 @@ func (md *MetaData) GoGenerate(file string, env map[string]string, tags []string
 	return outputs, nil
 }
 
-func (md *MetaData) GoSimpleBuild(tags []string, opts []string) (outputs []string, err kv.Error) {
+func (md *MetaData) GoSimpleBuild(tags []string, opts []string, outputDir string, outputSuffix string) (outputs []string, err kv.Error) {
 	outputs = []string{}
 
 	// Copy the compiled file into the GOPATH bin directory
@@ -345,10 +345,15 @@ func (md *MetaData) GoSimpleBuild(tags []string, opts []string) (outputs []strin
 		return outputs, kv.NewError("unable to determine the compiler bin output dir, env var GOPATH might be missing or empty").With("stack", stack.Trace().TrimRuntime())
 	}
 
-	if outputs, err = md.GoCompile(map[string]string{}, tags, opts); err != nil {
+	if len(outputDir) == 0 {
+		outputDir = "./bin"
+	}
+
+	if outputs, err = md.GoCompile(map[string]string{}, tags, opts, outputDir, outputSuffix); err != nil {
 		return outputs, err
 	}
 
+	// Any executable binaries are copied into your $GOPATH/bin automatically
 	if errGo := os.MkdirAll(filepath.Join(goPath, "bin"), os.ModePerm); errGo != nil {
 		if !os.IsExist(errGo) {
 			return outputs, kv.Wrap(errGo, "unable to create the $GOPATH/bin directory").With("stack", stack.Trace().TrimRuntime())
@@ -416,7 +421,7 @@ func (md *MetaData) GoFetchBuilt() (outputs []string, err kv.Error) {
 	return outputs, errGo.(kv.Error)
 }
 
-func (md *MetaData) GoCompile(env map[string]string, tags []string, opts []string) (outputs []string, err kv.Error) {
+func (md *MetaData) GoCompile(env map[string]string, tags []string, opts []string, outputDir string, outputSuffix string) (outputs []string, err kv.Error) {
 	if errGo := os.Mkdir("bin", os.ModePerm); errGo != nil {
 		if !os.IsExist(errGo) {
 			return outputs, kv.Wrap(errGo, "unable to create the bin directory").With("stack", stack.Trace().TrimRuntime())
@@ -469,7 +474,11 @@ func (md *MetaData) GoCompile(env map[string]string, tags []string, opts []strin
 		trimpath = "-gcflags \"all=-trimpath=" + goPath + "\""
 	}
 
-	output := fmt.Sprintf("%s-%s-%s", md.Module, buildOS, arch)
+	output := md.Module + "-" + buildOS + "-" + arch
+	if len(outputSuffix) != 0 {
+		output += "-" + outputSuffix
+	}
+	output = filepath.Join(outputDir, output)
 
 	tagOption := ""
 	if len(tags) > 0 {
@@ -478,7 +487,7 @@ func (md *MetaData) GoCompile(env map[string]string, tags []string, opts []strin
 
 	cmds := []string{
 		fmt.Sprintf("%s/bin/dep ensure", goPath),
-		fmt.Sprintf(("%s go build %s %s %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" -o bin/" + output + " ."),
+		fmt.Sprintf(("%s go build %s %s %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" -o " + output + " ."),
 			strings.Join(buildEnv, " "), strings.Join(opts, " "), trimpath, tagOption),
 	}
 

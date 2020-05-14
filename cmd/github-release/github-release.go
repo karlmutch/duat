@@ -29,7 +29,7 @@ var (
 
 	verFn   = flag.String("f", "README.md", "The file to be used as the source of truth for the existing, and future, version")
 	verbose = flag.Bool("v", false, "When enabled will print internal logging for this tool")
-	token   = flag.String("github-token", "", "The github token string obtained from https://github.com/settings/tokens, defaults to the env var GUTHUB_TOKEN")
+	token   = flag.String("github-token", "", "The github token string obtained from https://github.com/settings/tokens, defaults to the env var GITHUB_TOKEN")
 	module  = flag.String("module", ".", "The name of the component that is being used to identify the container image, this will default to the current working directory")
 )
 

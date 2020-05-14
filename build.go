@@ -139,5 +139,5 @@ func build(dir string, verFn string) (outputs []string, err kv.Error) {
 		return outputs, err
 	}
 
-	return md.GoBuild([]string{}, []string{}, true)
+	return md.GoBuild([]string{}, []string{}, "", "", true)
 }

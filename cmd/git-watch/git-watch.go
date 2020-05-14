@@ -49,6 +49,8 @@ import (
 	"github.com/karlmutch/stack"
 	colorable "github.com/mattn/go-colorable"
 
+	"github.com/karlmutch/durafmt"
+
 	// The following packages are forked to retain copies in the event github accounts are shutdown
 	//
 	// I am torn between this and just letting dep ensure with a checkedin vendor directory
@@ -457,7 +459,7 @@ func main() {
 	defer shutdownCancel()
 
 	if !watcher.Stop(shutdownCtx) {
-		logger.Warn("git watch had to force shutdown", "timeout", shutdownTimeout)
+		logger.Warn("git watch had to force shutdown", "timeout", durafmt.Parse(shutdownTimeout).String())
 		os.Exit(-1)
 	}
 }
