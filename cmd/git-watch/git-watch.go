@@ -57,8 +57,7 @@ import (
 	// to do this.  In any event I ended up doing both with my own forks
 
 	"github.com/karlmutch/envflag" // Forked copy of https://github.com/GoBike/envflag
-
-	"github.com/mgutz/logxi" // Using a forked copy of this package results in build issues
+	"github.com/mgutz/logxi"       // Using a forked copy of this package results in build issues
 )
 
 var (

@@ -17,8 +17,8 @@ import (
 	"go/parser"
 	"go/token"
 
-	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
 	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"    // Forked copy of https://github.com/jjeffery/kv
 )
 
 // Look for directories inside the root 'dir' and return their paths, skip any vendor directories
@@ -323,7 +323,7 @@ func (md *MetaData) GoGenerate(file string, env map[string]string, tags []string
 
 	goPath := os.Getenv("GOPATH")
 	cmds := []string{
-		fmt.Sprintf("%s/bin/dep ensure", goPath),
+		fmt.Sprintf("%s/bin/dep ensure || true", goPath),
 		fmt.Sprintf("%s go generate %s %s %s",
 			strings.Join(buildEnv, " "), file, strings.Join(opts, " "), tagOption),
 	}
@@ -486,7 +486,7 @@ func (md *MetaData) GoCompile(env map[string]string, tags []string, opts []strin
 	}
 
 	cmds := []string{
-		fmt.Sprintf("%s/bin/dep ensure", goPath),
+		fmt.Sprintf("%s/bin/dep ensure || true", goPath),
 		fmt.Sprintf(("%s go build %s %s %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" -o " + output + " ."),
 			strings.Join(buildEnv, " "), strings.Join(opts, " "), trimpath, tagOption),
 	}
@@ -524,7 +524,7 @@ func (md *MetaData) GoTest(env map[string]string, tags []string, opts []string) 
 
 	goPath := os.Getenv("GOPATH")
 	cmds := []string{
-		fmt.Sprintf("%s/bin/dep ensure", goPath),
+		fmt.Sprintf("%s/bin/dep ensure || true", goPath),
 		fmt.Sprintf(("%s go test %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" %s ."),
 			strings.Join(buildEnv, " "), tagOption, strings.Join(opts, " ")),
 	}
