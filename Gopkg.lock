@@ -175,6 +175,14 @@
   revision = "6480d4af844c189cf5dd913db24ddd339d3a4f85"
 
 [[projects]]
+  digest = "1:9dd07599524c6a9e4316f76512271c7a9fb5c214d67788245dafaf4624fbe981"
+  name = "github.com/eknkc/basex"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "8c16d1cfd7c84e830da85091ad46cb1e36cd44a3"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:de4a74b504df31145ffa8ca0c4edbffa2f3eb7f466753962184611b618fa5981"
   name = "github.com/emirpasic/gods"
   packages = [
@@ -375,14 +383,6 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "b80cdc656a7a61702f293555d54777d6ff617eb7"
-
-[[projects]]
-  digest = "1:9dd07599524c6a9e4316f76512271c7a9fb5c214d67788245dafaf4624fbe981"
-  name = "github.com/karlmutch/basex"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "8c16d1cfd7c84e830da85091ad46cb1e36cd44a3"
-  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -996,12 +996,12 @@
     "github.com/aws/aws-sdk-go/service/ecr",
     "github.com/davecgh/go-spew/spew",
     "github.com/docker/docker/client",
+    "github.com/eknkc/basex",
     "github.com/go-test/deep",
     "github.com/go-yaml/yaml",
     "github.com/google/uuid",
     "github.com/jjeffery/kv",
     "github.com/karlmutch/base62",
-    "github.com/karlmutch/basex",
     "github.com/karlmutch/deepcopier",
     "github.com/karlmutch/durafmt",
     "github.com/karlmutch/envflag",

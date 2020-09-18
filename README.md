@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat) Beta
 
-Version : <repo-version>0.13.0</repo-version>
+Version : <repo-version>0.13.1</repo-version>
 
 duat is a set of tools useful for automating the bootstrapping of containerized workflows.  duat includes tools for working with software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go, and Kubernetes to manage portions of container centric software lifecycles, helping to remove proprietary tooling, scripting, and other DSLs typically used for building, releasing, and deploying software.
 

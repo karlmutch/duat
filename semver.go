@@ -12,7 +12,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/karlmutch/basex" // Fork of "github.com/eknkc/basex", MIT License
+	"github.com/eknkc/basex" // MIT License
 	"github.com/karlmutch/duat/version"
 
 	// The following packages are forked to retain copies in the event github accounts are shutdown
