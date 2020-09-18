@@ -18,7 +18,7 @@ import (
 	"go/token"
 
 	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
-	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
+	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
 )
 
 // Look for directories inside the root 'dir' and return their paths, skip any vendor directories

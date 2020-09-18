@@ -21,7 +21,7 @@ import (
 	"github.com/jjeffery/kv"
 	"github.com/karlmutch/base62"
 	"github.com/karlmutch/deepcopier"
-	"github.com/karlmutch/stack"
+	"github.com/go-stack/stack"
 
 	gogit "gopkg.in/src-d/go-git.v4" // Not forked due to depency tree being too complex, src-d however are a serious org so I dont expect the repo to disappear
 	"gopkg.in/src-d/go-git.v4/plumbing"

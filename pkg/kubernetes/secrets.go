@@ -2,7 +2,7 @@ package kubernetes
 
 import (
 	"github.com/jjeffery/kv"
-	"github.com/karlmutch/stack"
+	"github.com/go-stack/stack"
 )
 
 // initSecrets will try and create all of the secrets that are available in the task structure.

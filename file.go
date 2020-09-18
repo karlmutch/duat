@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
-	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
+	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
 )
 
 // CopyFile is used to create a mirror of the source.  If a hard

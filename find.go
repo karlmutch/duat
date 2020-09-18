@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
-	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
+	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
 )
 
 func (*MetaData) FileFind(pattern string) (matches []string, err kv.Error) {

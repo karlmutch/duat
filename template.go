@@ -24,7 +24,7 @@ import (
 	"github.com/go-yaml/yaml"
 
 	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
-	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
+	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
 )
 
 // FuncMap augments the template functions with some standard string maniuplation functions

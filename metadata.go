@@ -13,7 +13,7 @@ import (
 	"github.com/karlmutch/semver" // Forked copy of https://github.com/Masterminds/semver
 
 	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
-	"github.com/karlmutch/stack" // Forked copy of https://github.com/go-stack/stack
+	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
 
 	docker "github.com/docker/docker/client"
 

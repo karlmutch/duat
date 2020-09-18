@@ -3,7 +3,7 @@ package kubernetes
 // This file contains functions of use when using minikube
 import (
 	"github.com/jjeffery/kv"
-	"github.com/karlmutch/stack"
+	"github.com/go-stack/stack"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

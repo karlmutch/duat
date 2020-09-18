@@ -12,7 +12,7 @@ import (
 
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/karlmutch/stack"
+	"github.com/go-stack/stack"
 )
 
 var (

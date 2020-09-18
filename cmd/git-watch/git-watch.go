@@ -46,7 +46,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi"
 	"k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi/validation"
 
-	"github.com/karlmutch/stack"
+	"github.com/go-stack/stack"
 	colorable "github.com/mattn/go-colorable"
 
 	"github.com/karlmutch/durafmt"

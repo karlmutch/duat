@@ -2,7 +2,7 @@ package kubernetes
 
 import (
 	"github.com/jjeffery/kv"
-	"github.com/karlmutch/stack"
+	"github.com/go-stack/stack"
 )
 
 func (task *Task) initServices(logger chan *Status) (err kv.Error) {

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/jjeffery/kv"
-	"github.com/karlmutch/stack"
+	"github.com/go-stack/stack"
 )
 
 // This file contains a number of test functions for the templating features of duat

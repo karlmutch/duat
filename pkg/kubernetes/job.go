@@ -8,7 +8,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/google/uuid"
 	"github.com/jjeffery/kv"
-	"github.com/karlmutch/stack"
+	"github.com/go-stack/stack"
 	"github.com/mgutz/logxi"
 
 	v1 "k8s.io/api/core/v1"
