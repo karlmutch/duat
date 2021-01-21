@@ -13,9 +13,9 @@ import (
 	"github.com/karlmutch/duat/version"
 	colorable "github.com/mattn/go-colorable"
 
-	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
-	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
-	"github.com/mgutz/logxi"     // Using a forked copy of this package results in build issues
+	"github.com/go-stack/stack"           // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"              // Forked copy of https://github.com/jjeffery/kv
+	logxi "github.com/karlmutch/logxi/v1" // Using a forked copy of this package results in build issues
 
 	"github.com/karlmutch/envflag" // Forked copy of https://github.com/GoBike/envflag
 )

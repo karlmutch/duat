@@ -20,7 +20,7 @@ RUN apt-get -y install git software-properties-common wget openssl ssh curl jq a
     groupadd -f -g ${USER_GROUP_ID} ${USER} && \
     useradd -g ${USER_GROUP_ID} -u ${USER_ID} -ms /bin/bash ${USER}
 
-ENV GO_VERSION 1.11.13
+ENV GO_VERSION 1.15.6
 
 RUN cd /home/${USER} && \
     mkdir -p /home/${USER}/go && \
@@ -51,4 +51,4 @@ USER ${USER}
 VOLUME /project
 WORKDIR /project/src/github.com/karlmutch/duat
 
-CMD go test -v ./... ; go run ./build.go -dirs cmd,example -r
+CMD go mod vendor ; go test -v ./... ; go run ./build.go -dirs cmd,example -r

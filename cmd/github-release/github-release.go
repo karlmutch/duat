@@ -12,16 +12,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	logxi "github.com/karlmutch/logxi/v1" // Using a forked copy of this package results in build issues
 	colorable "github.com/mattn/go-colorable"
-	"github.com/mgutz/logxi" // Using a forked copy of this package results in build issues
 
 	"github.com/karlmutch/duat"
 	"github.com/karlmutch/duat/version"
 
 	"github.com/karlmutch/envflag" // Forked copy of https://github.com/GoBike/envfla
 
-	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
 	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"    // Forked copy of https://github.com/jjeffery/kv
 )
 
 var (

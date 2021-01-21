@@ -25,15 +25,15 @@ import (
 
 	"github.com/karlmutch/envflag" // Forked copy of https://github.com/GoBike/envflag
 
-	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
-	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
-	"github.com/mgutz/logxi"     // Using a forked copy of this package results in build issues
+	"github.com/go-stack/stack"           // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"              // Forked copy of https://github.com/jjeffery/kv
+	logxi "github.com/karlmutch/logxi/v1" // Using a forked copy of this package results in build issues
 )
 
 var (
 	logger = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "semver")
 
-	verFn   = flag.String("f", "README.md", "The file to be used as the source of truth for the existing, and future, version")
+	verFn   = flag.String("f", "README.md,README.adoc", "A list of files from which the first match will be used as the source of truth for the existing, and any new, version")
 	applyFn = flag.String("t", "", "The files to which the version data will be propagated")
 	verbose = flag.Bool("v", false, "When enabled will print internal logging for this tool")
 

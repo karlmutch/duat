@@ -56,8 +56,8 @@ import (
 	// I am torn between this and just letting dep ensure with a checkedin vendor directory
 	// to do this.  In any event I ended up doing both with my own forks
 
-	"github.com/karlmutch/envflag" // Forked copy of https://github.com/GoBike/envflag
-	"github.com/mgutz/logxi"       // Using a forked copy of this package results in build issues
+	"github.com/karlmutch/envflag"        // Forked copy of https://github.com/GoBike/envflag
+	logxi "github.com/karlmutch/logxi/v1" // Using a forked copy of this package results in build issues
 )
 
 var (

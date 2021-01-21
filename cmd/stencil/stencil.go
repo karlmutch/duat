@@ -7,8 +7,8 @@ import (
 	"path"
 	"strings"
 
+	logxi "github.com/karlmutch/logxi/v1" // Using a forked copy of this package results in build issues
 	colorable "github.com/mattn/go-colorable"
-	"github.com/mgutz/logxi" // Using a forked copy of this package results in build issues
 
 	"github.com/karlmutch/duat"
 	"github.com/karlmutch/duat/version"
