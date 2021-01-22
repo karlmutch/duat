@@ -22,45 +22,97 @@ import (
 
 	"github.com/karlmutch/semver" // Forked copy of https://github.com/Masterminds/semver
 
-	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
 	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"    // Forked copy of https://github.com/jjeffery/kv
 )
+
+// docHandler allows us to have different document types with regular expressions for each
+// that can be used by the code for scraping and saving versions into human readable documents
+type docHandler struct {
+	ext       string
+	fnMatcher *regexp.Regexp
+	find      *regexp.Regexp
+	replace   *regexp.Regexp
+	html      *regexp.Regexp
+	subst     string
+}
 
 var (
-	rVerReplace *regexp.Regexp
-	rFind       *regexp.Regexp
-	rHTML       *regexp.Regexp
+	handlers = []*docHandler{}
 )
 
-func init() {
-	r, errGo := regexp.Compile("\\<repo-version\\>.*?\\</repo-version\\>")
-	if errGo != nil {
-		fmt.Fprintf(os.Stderr, "%v\n",
-			kv.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
-		return
+func (docHandler) GetExts() (exts []string) {
+	for _, handler := range handlers {
+		exts = append(exts, handler.ext)
 	}
-	rFind = r
-	r, errGo = regexp.Compile("<[^>]*>")
-	if errGo != nil {
-		fmt.Fprintf(os.Stderr, "%v\n",
-			kv.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
-		return
-	}
-	rHTML = r
+	return exts
+}
 
-	r, errGo = regexp.Compile("\\<repo-version\\>(.*?)\\</repo-version\\>")
+func addHandler(fnMatcher string, find string, replace string, html string, subst string) (err kv.Error) {
+	handler := &docHandler{
+		ext:   filepath.Ext(fnMatcher),
+		subst: subst,
+	}
+
+	r, errGo := regexp.Compile(fnMatcher)
 	if errGo != nil {
-		fmt.Fprintf(os.Stderr, "%v\n",
-			kv.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
+		return kv.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash)
 		return
 	}
-	rVerReplace = r
+	handler.fnMatcher = r
+
+	if r, errGo = regexp.Compile(find); errGo != nil {
+		return kv.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash)
+	}
+	handler.find = r
+
+	if r, errGo = regexp.Compile(replace); errGo != nil {
+		return kv.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash)
+	}
+	handler.replace = r
+
+	if len(html) == 0 {
+		return nil
+	}
+
+	if r, errGo = regexp.Compile(html); errGo != nil {
+		return kv.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash)
+	}
+	handler.html = r
+
+	handlers = append(handlers, handler)
+
+	return nil
+}
+
+func getHandler(fn string) (handler *docHandler, err kv.Error) {
+	for _, h := range handlers {
+		if h.fnMatcher.Match([]byte(fn)) {
+			return h, nil
+		}
+	}
+	return nil, kv.NewError("no version handler for file type").With("file", filepath.Base(fn)).With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash)
+}
+
+func init() {
+	if err := addHandler(".*\\.adoc", ":Revision:.*", ":Revision:\\s*(.*)", ":Revision:\\s*", ":Revision: %s"); err != nil {
+		fmt.Fprintf(os.Stderr, "asciidoc %v\n", err)
+	}
+
+	if err := addHandler(".*\\.md", "\\<repo-version\\>.*?\\</repo-version\\>", "\\<repo-version\\>(.*?)\\</repo-version\\>", "<[^>]*>", "<repo-version>%s</repo-version>"); err != nil {
+		fmt.Fprintf(os.Stderr, "markdown %v\n", err)
+	}
 }
 
 func (md *MetaData) LoadVer(fn string) (ver *semver.Version, err kv.Error) {
 
 	if md.SemVer != nil {
 		return nil, kv.NewError("version already loaded").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+	}
+
+	handler, err := getHandler(fn)
+	if err != nil {
+		return nil, err
 	}
 
 	file, errGo := os.Open(fn)
@@ -71,13 +123,13 @@ func (md *MetaData) LoadVer(fn string) (ver *semver.Version, err kv.Error) {
 	scan := bufio.NewScanner(file)
 
 	for scan.Scan() {
-		versions := rFind.FindAllString(scan.Text(), -1)
+		versions := handler.find.FindAllString(scan.Text(), -1)
 		if len(versions) == 0 {
 			continue
 		}
 		for _, version := range versions {
 			if ver == nil {
-				extracted := html.UnescapeString(rHTML.ReplaceAllString(version, ""))
+				extracted := html.UnescapeString(handler.html.ReplaceAllString(version, ""))
 				if len(extracted) == 0 {
 					continue
 				}
@@ -87,9 +139,9 @@ func (md *MetaData) LoadVer(fn string) (ver *semver.Version, err kv.Error) {
 				}
 				continue
 			}
-			newVer := html.UnescapeString(rHTML.ReplaceAllString(version, ""))
+			newVer := html.UnescapeString(handler.html.ReplaceAllString(version, ""))
 			if newVer != ver.String() {
-				return nil, kv.NewError("all repo-version HTML tags must have the same version string").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
+				return nil, kv.NewError("all repo-version trimming tags must have the same version string").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 			}
 		}
 	}
@@ -217,19 +269,24 @@ func (md *MetaData) Replace(fn string, dest string, substitute bool) (err kv.Err
 		tmp.Close()
 	}()
 
+	handler, err := getHandler(fn)
+	if err != nil {
+		return err
+	}
+
 	file, errGo := os.OpenFile(origFn, os.O_RDWR, 0600)
 	if errGo != nil {
 		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}
 
-	newVer := fmt.Sprintf("<repo-version>%s</repo-version>", md.SemVer.String())
+	newVer := fmt.Sprintf(handler.subst, md.SemVer.String())
 	if substitute {
 		newVer = md.SemVer.String()
 	}
 
 	scan := bufio.NewScanner(file)
 	for scan.Scan() {
-		tmp.WriteString(rVerReplace.ReplaceAllString(scan.Text(), newVer) + "\n")
+		tmp.WriteString(handler.replace.ReplaceAllString(scan.Text(), newVer) + "\n")
 	}
 
 	tmp.Sync()

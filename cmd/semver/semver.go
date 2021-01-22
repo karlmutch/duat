@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"regexp"
 	"strings"
 
 	"github.com/karlmutch/duat"
@@ -25,8 +24,6 @@ import (
 
 	"github.com/karlmutch/envflag" // Forked copy of https://github.com/GoBike/envflag
 
-	"github.com/go-stack/stack"           // Forked copy of https://github.com/go-stack/stack
-	"github.com/jjeffery/kv"              // Forked copy of https://github.com/jjeffery/kv
 	logxi "github.com/karlmutch/logxi/v1" // Using a forked copy of this package results in build issues
 )
 
@@ -67,31 +64,9 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "log levels are handled by the LOGXI env variables, these are documented at https://github.com/mgutz/logxi")
 }
 
-var (
-	rFind *regexp.Regexp
-	rHTML *regexp.Regexp
-)
-
-func init() {
-	flag.Usage = usage
-
-	r, errGo := regexp.Compile("\\<repo-version\\>.*?\\</repo-version\\>")
-	if errGo != nil {
-		fmt.Fprintf(os.Stderr, "%v\n",
-			kv.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
-		return
-	}
-	rFind = r
-	r, errGo = regexp.Compile("<[^>]*>")
-	if errGo != nil {
-		fmt.Fprintf(os.Stderr, "%v\n",
-			kv.Wrap(errGo, "internal error please notify karlmutch@gmail.com").With("stack", stack.Trace().TrimRuntime()).With("version", version.GitHash))
-		return
-	}
-	rHTML = r
-}
-
 func main() {
+
+	flag.Usage = usage
 
 	if !flag.Parsed() {
 		envflag.Parse()
@@ -113,15 +88,24 @@ func main() {
 		os.Exit(-1)
 	}
 
-	if _, err := os.Stat(*verFn); err != nil {
-		fmt.Fprintln(os.Stderr, "the input file was not found")
+	verFile := ""
+	candidates := strings.Split(*verFn, ",")
+	for _, verFile = range candidates {
+
+		if _, err := os.Stat(verFile); err == nil {
+			break
+		}
+	}
+
+	if len(verFile) == 0 {
+		fmt.Fprintln(os.Stderr, "no input file was found")
 		os.Exit(-2)
 	}
 
 	md := &duat.MetaData{}
-	_, err := md.LoadVer(*verFn)
+	_, err := md.LoadVer(verFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "the input file version string that is currently in the file is not valid due to '%v'\n", err)
+		fmt.Fprintf(os.Stderr, "the input file version string that is currently in %s is not valid due to '%v'\n", verFile, err)
 		os.Exit(-2)
 	}
 	ver := md.SemVer.String()
@@ -162,11 +146,12 @@ func main() {
 	// Having generated or extracted a version string if it is different as a result of processing we need
 	// to update the original file
 	if ver != md.SemVer.String() {
-		if err := md.Replace(*verFn, *verFn, false); err != nil {
+		if err := md.Replace(verFile, verFile, false); err != nil {
 			fmt.Fprintf(os.Stderr, "the attempt to write the incremented version back failed due to %v\n", err)
 			os.Exit(-4)
 		}
 	}
 
 	fmt.Fprintf(os.Stdout, "%s\n", md.SemVer.String())
+
 }
