@@ -19,7 +19,7 @@ import (
 var (
 	logger = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "stencil")
 
-	verFn   = flag.String("f", "README.md", "The file to be used as the source of truth for the existing, and future, version")
+	verFn   = flag.String("f", "README.md,README.adoc", "A list of files from which the first match will be used as the source of truth for the existing, and any new, version")
 	verbose = flag.Bool("v", false, "When enabled will print internal logging for this tool")
 	module  = flag.String("module", ".", "The name of the component that is being used to identify the container image, this will default to the current working directory")
 
@@ -76,7 +76,21 @@ func main() {
 
 	logger.Debug(fmt.Sprintf("%s built at %s, against commit id %s\n", os.Args[0], version.BuildTime, version.GitHash))
 
-	md, err := duat.NewMetaData(*module, *verFn)
+	verFile := ""
+	candidates := strings.Split(*verFn, ",")
+	for _, verFile = range candidates {
+
+		if _, err := os.Stat(verFile); err == nil {
+			break
+		}
+	}
+
+	if len(verFile) == 0 {
+		fmt.Fprintln(os.Stderr, "no input file was found")
+		os.Exit(-2)
+	}
+
+	md, err := duat.NewMetaData(*module, verFile)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(-1)
@@ -146,7 +160,7 @@ func main() {
 	// warnings
 	if !*suppressWarn {
 		for _, err = range warnings {
-			logger.Warn(err.Error())
+			_ = logger.Warn(err.Error())
 		}
 	}
 	if *warnError {
