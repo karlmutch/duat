@@ -49,14 +49,12 @@ require (
 	github.com/karlmutch/deepcopier v0.0.0-20171107155558-ca99b135e50f
 	github.com/karlmutch/durafmt v0.0.0-20180520121703-7b7ae1e72ead
 	github.com/karlmutch/envflag v0.0.0-20160830095501-ae3268980a29
-	github.com/karlmutch/logxi v0.0.0-20180719221844-75b3c5d19c5e
+	github.com/karlmutch/logxi v0.0.0-20210126195415-2f02ee1dbe8d
 	github.com/karlmutch/semver v1.4.0
 	github.com/kevinburke/ssh_config v0.0.0-20180317175531-9fc7bb800b55 // indirect
 	github.com/lib/pq v1.9.0 // indirect
 	github.com/mailru/easyjson v0.0.0-20190403194419-1ea4449da983 // indirect
-	github.com/mattn/go-colorable v0.0.9
-	github.com/mattn/go-isatty v0.0.3 // indirect
-	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
+	github.com/mattn/go-colorable v0.1.8
 	github.com/mgutz/logxi v0.0.0-20170321173016-3753102df44e
 	github.com/mitchellh/go-homedir v0.0.0-20180523094522-3864e76763d9 // indirect
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect

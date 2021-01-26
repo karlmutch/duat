@@ -83,14 +83,6 @@ func TestVersionApply(t *testing.T) {
 	}
 }
 
-func dumpCase(fn string) {
-	payload, errGo := ioutil.ReadFile(fn)
-	if errGo != nil {
-		fmt.Println(errGo, "unable to read test file for apply test", "stack", stack.Trace().TrimRuntime())
-	}
-	fmt.Println("payload", string(payload), "fn", fn, "stack", stack.Trace().TrimRuntime())
-}
-
 func ApplyCase(fileVer *semver.Version, applyVer semver.Version, fileExt string) (err kv.Error) {
 
 	failed := true
@@ -113,8 +105,6 @@ func ApplyCase(fileVer *semver.Version, applyVer semver.Version, fileExt string)
 	if err != nil {
 		return kv.Wrap(err, "unable to create test file for apply test").With("file", fn).With("stack", stack.Trace().TrimRuntime()).With("ver", applyVer)
 	}
-
-	dumpCase(fn)
 
 	newMD := &MetaData{}
 	result, err := newMD.LoadVer(fn)

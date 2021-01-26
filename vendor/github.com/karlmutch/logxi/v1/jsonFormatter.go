@@ -72,6 +72,29 @@ func (jf *JSONFormatter) appendValue(buf bufferWriter, val interface{}) {
 		value = value.Elem()
 		kind = value.Kind()
 	}
+
+	if stringer, ok := val.(fmt.Stringer); ok {
+		b, err := json.Marshal(stringer.String())
+		if err != nil {
+			// Try other value types first, error handling happens in the
+			// default case below.
+		} else {
+			buf.Write(b)
+			return
+		}
+	}
+
+	if _, ok := val.(json.Marshaler); ok {
+		b, err := json.Marshal(val)
+		if err != nil {
+			// Try other value types first, error handling happens in the
+			// default case below.
+		} else {
+			buf.Write(b)
+			return
+		}
+	}
+
 	switch kind {
 	case reflect.Bool:
 		if value.Bool() {
@@ -92,14 +115,7 @@ func (jf *JSONFormatter) appendValue(buf bufferWriter, val interface{}) {
 		buf.WriteString(strconv.FormatFloat(value.Float(), 'g', -1, 64))
 
 	default:
-		var err error
-		var b []byte
-		if stringer, ok := val.(fmt.Stringer); ok {
-			b, err = json.Marshal(stringer.String())
-		} else {
-			b, err = json.Marshal(val)
-		}
-
+		b, err := json.Marshal(val)
 		if err != nil {
 			InternalLog.Error("Could not json.Marshal value: ", "formatter", "JSONFormatter", "err", err.Error())
 			if s, ok := val.(string); ok {

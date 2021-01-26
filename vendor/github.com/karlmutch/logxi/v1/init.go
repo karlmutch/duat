@@ -213,6 +213,7 @@ func init() {
 	RegisterFormatFactory(FormatHappy, formatFactory)
 	RegisterFormatFactory(FormatText, formatFactory)
 	RegisterFormatFactory(FormatJSON, formatFactory)
+	RegisterFormatFactory(FormatLTSV, formatFactory)
 	ProcessEnv(readFromEnviron())
 
 	// package logger for users
