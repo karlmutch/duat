@@ -114,6 +114,8 @@ func (md *MetaData) publish(release *gitRelease, filepaths []string) (err kv.Err
 		endpoint = endpointPrefix + "releases/tags/" + release.TagName
 		if newData, newErr := doGitRequest("GET", endpoint, "application/json", nil, int64(0), md.Git.Token); newErr != nil {
 			err = newErr
+		} else {
+			err = nil
 			data = newData
 		}
 	}
