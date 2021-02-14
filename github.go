@@ -109,8 +109,8 @@ func (md *MetaData) publish(release *gitRelease, filepaths []string) (err kv.Err
 
 	data, err := doGitRequest("POST", endpoint, "application/json", releaseBuffer, int64(releaseBuffer.Len()), md.Git.Token)
 
-	if err != nil && data != nil {
-		// The release may already exist to rerun the upload assuming it does
+	if err != nil {
+		// The release may already exist to add to existing artifacts do a get then continue
 		endpoint = endpointPrefix + "releases/tags/" + release.TagName
 		if newData, newErr := doGitRequest("GET", endpoint, "application/json", nil, int64(0), md.Git.Token); newErr != nil {
 			err = newErr
