@@ -1,3 +1,4 @@
+// Copyright (c) 2021 The duat Authors. All rights reserved.  Issued under the MIT license.
 package duat
 
 // This file contains functions that are useful for interaction with github to perform operations
@@ -21,8 +22,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
 	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"    // Forked copy of https://github.com/jjeffery/kv
 )
 
 // Release represents a Github Release.
@@ -59,12 +60,67 @@ func (git *gitRelease) githubUpload(url string, path string) (resp string, err k
 	}
 
 	rqst := url + "?name=" + filepath.Base(file.Name())
-	body, err := doGitRequest("POST", rqst, "application/octet-stream", file, size, git.token)
+	body, _, err := doGitRequest("POST", rqst, "application/octet-stream", file, size, git.token)
 	if err != nil {
 		return "", err
 	}
 
 	return string(body[:]), nil
+}
+
+// HasReleased is used to look for any of the output files that have already been released
+// using the projects current tag, or if specified the value in release
+func (md *MetaData) HasReleased(token string, release string, filepaths []string) (released []string, err kv.Error) {
+	if len(token) != 0 {
+		md.Git.Token = token
+	}
+	if len(md.Git.Token) == 0 {
+		return released, kv.NewError("a GITHUB_TOKEN must be present to release to a github repository").With("stack", stack.Trace().TrimRuntime())
+	}
+
+	endpointPrefix, err := md.getEndpoint()
+	if err != nil {
+		return released, err
+	}
+
+	// Check release exists first then check out output files
+	endpoint := endpointPrefix + "releases/tags/"
+	if len(release) == 0 {
+		endpoint += md.SemVer.String()
+	} else {
+		endpoint += release
+	}
+
+	data, code, err := doGitRequest("GET", endpoint, "application/json", nil, int64(0), md.Git.Token)
+	if err != nil {
+		if code == http.StatusNotFound {
+			return released, nil
+		}
+		return released, err.With("response", string(data)).With("endpoint", endpoint).With("stack", stack.Trace().TrimRuntime())
+	}
+
+	// prepare result
+	result := make(map[string]interface{})
+	json.Unmarshal(data, &result)
+
+	results := []interface{}{}
+	for _, asset := range result["assets"].([]interface{}) {
+		results = append(results, asset.(map[string]interface{})["browser_download_url"])
+	}
+
+	assets := make(map[string]struct{}, len(filepaths))
+	for _, fn := range filepaths {
+		assets[filepath.Base(fn)] = struct{}{}
+	}
+
+	for _, result := range results {
+		fn := filepath.Base(result.(string))
+		if _, isPresent := assets[fn]; isPresent {
+			released = append(released, fn)
+		}
+	}
+
+	return released, nil
 }
 
 func (md *MetaData) CreateRelease(token string, desc string, filepaths []string) (err kv.Error) {
@@ -88,32 +144,52 @@ func (md *MetaData) CreateRelease(token string, desc string, filepaths []string)
 	return md.publish(release, filepaths)
 }
 
-func (md *MetaData) publish(release *gitRelease, filepaths []string) (err kv.Error) {
-
+func (md *MetaData) getEndpoint() (endpoint string, err kv.Error) {
 	// The github url will have a path where the first item is the user and then the repository name
 	parts := strings.Split(md.Git.URL.EscapedPath(), "/")
 	if len(parts) != 3 {
-		return kv.NewError("the repository URL has an unexpected number of parts").With("url", md.Git.URL.EscapedPath()).With("stack", stack.Trace().TrimRuntime())
+		return "", kv.NewError("the repository URL has an unexpected number of parts").With("url", md.Git.URL.EscapedPath()).With("stack", stack.Trace().TrimRuntime())
 	}
 	user := parts[1]
 	name := strings.TrimSuffix(parts[len(parts)-1], ".git")
-	endpointPrefix := "https://api.github.com/repos/" + user + "/" + name + "/"
 
+	endpoint = "https://api.github.com/repos/" + user + "/" + name + "/"
+	return endpoint, nil
+}
+
+func (md *MetaData) getReleases(release *gitRelease) (data []byte, err kv.Error) {
+	endpointPrefix, err := md.getEndpoint()
+	if err != nil {
+		return data, err
+	}
 	endpoint := endpointPrefix + "releases"
 	releaseData, errGo := json.Marshal(release)
 	if errGo != nil {
-		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+		return data, kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	releaseBuffer := bytes.NewBuffer(releaseData)
 
-	data, err := doGitRequest("POST", endpoint, "application/json", releaseBuffer, int64(releaseBuffer.Len()), md.Git.Token)
+	data, _, err = doGitRequest("POST", endpoint, "application/json", releaseBuffer, int64(releaseBuffer.Len()), md.Git.Token)
+	return data, err
+}
 
-	if err != nil && data != nil {
-		// The release may already exist to rerun the upload assuming it does
-		endpoint = endpointPrefix + "releases/tags/" + release.TagName
-		if newData, newErr := doGitRequest("GET", endpoint, "application/json", nil, int64(0), md.Git.Token); newErr != nil {
+func (md *MetaData) publish(release *gitRelease, filepaths []string) (err kv.Error) {
+
+	endpointPrefix, err := md.getEndpoint()
+	if err != nil {
+		return err
+	}
+
+	endpoint := endpointPrefix + "releases/tags/" + release.TagName
+
+	data, err := md.getReleases(release)
+	if err != nil {
+		// The release may already exist to add to existing artifacts do a get then continue
+		if newData, _, newErr := doGitRequest("GET", endpoint, "application/json", nil, int64(0), md.Git.Token); newErr != nil {
 			err = newErr
+		} else {
+			err = nil
 			data = newData
 		}
 	}
@@ -123,7 +199,7 @@ func (md *MetaData) publish(release *gitRelease, filepaths []string) (err kv.Err
 	}
 
 	// Gets the release Upload URL from the returned JSON data
-	if errGo = json.Unmarshal(data, &release); errGo != nil {
+	if errGo := json.Unmarshal(data, &release); errGo != nil {
 		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
@@ -151,13 +227,13 @@ func (md *MetaData) publish(release *gitRelease, filepaths []string) (err kv.Err
 }
 
 // Sends HTTP request to Github API
-func doGitRequest(method, url, contentType string, reqBody io.Reader, bodySize int64, token string) (resp []byte, err kv.Error) {
+func doGitRequest(method, url, contentType string, reqBody io.Reader, bodySize int64, token string) (resp []byte, httpStatus int, err kv.Error) {
 
 	resp = []byte{}
 
 	req, errGo := http.NewRequest(method, url, reqBody)
 	if errGo != nil {
-		return resp, kv.Wrap(errGo).With("url", url).With("stack", stack.Trace().TrimRuntime())
+		return resp, 0, kv.Wrap(errGo).With("url", url).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	req.Header.Set("Authorization", fmt.Sprintf("token %s", token))
@@ -167,19 +243,19 @@ func doGitRequest(method, url, contentType string, reqBody io.Reader, bodySize i
 
 	httpResp, errGo := http.DefaultClient.Do(req)
 	if errGo != nil {
-		return resp, kv.Wrap(errGo).With("url", url).With("stack", stack.Trace().TrimRuntime())
+		return resp, 0, kv.Wrap(errGo).With("url", url).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	defer httpResp.Body.Close()
 
 	respBody, errGo := ioutil.ReadAll(httpResp.Body)
 	if errGo != nil {
-		return nil, kv.Wrap(errGo).With("url", url).With("stack", stack.Trace().TrimRuntime())
+		return nil, 0, kv.Wrap(errGo).With("url", url).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	if httpResp.StatusCode != http.StatusOK && httpResp.StatusCode != http.StatusCreated {
-		return []byte{}, kv.NewError("Github error").With("status", httpResp.Status).With("response", respBody).With("url", url).With("stack", stack.Trace().TrimRuntime())
+		return []byte{}, httpResp.StatusCode, kv.NewError("Github error").With("status", httpResp.Status).With("response", respBody).With("url", url).With("stack", stack.Trace().TrimRuntime())
 	}
 
-	return respBody, nil
+	return respBody, httpResp.StatusCode, nil
 }

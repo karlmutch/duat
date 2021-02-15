@@ -1,3 +1,4 @@
+// Copyright (c) 2018-2021 The duat Authors. All rights reserved.  Issued under the MIT license.
 package duat
 
 import (
@@ -6,10 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
 	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"    // Forked copy of https://github.com/jjeffery/kv
 
-	"gopkg.in/src-d/go-git.v4" // Not forked due to depency tree being too complex, src-d however are a serious org so I dont expect the repo to disappear
+	"gopkg.in/src-d/go-git.v4" // Not forked due to dependency tree being too complex, src-d however are a serious org so I dont expect the repo to disappear
 	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
