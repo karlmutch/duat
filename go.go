@@ -96,7 +96,7 @@ func GoFileTags(fn string, tags []string) (tagsSatisfied bool) {
 	scan.Scan()
 	tokens := strings.Split(scan.Text(), " ")
 	if tokens[0] != "//" {
-		break
+		return true
 	}
 	fileTags := map[string]struct{}{}
 	for _, token := range tokens[1:] {
@@ -105,7 +105,7 @@ func GoFileTags(fn string, tags []string) (tagsSatisfied bool) {
 		}
 	}
 	if _, isPresent := fileTags["+build"]; !isPresent {
-		break
+		return true
 	}
 	delete(fileTags, "+build")
 	for _, aTag := range tags {
