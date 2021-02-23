@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/jjeffery/kv"
 	"github.com/go-stack/stack"
+	"github.com/jjeffery/kv"
 
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -130,6 +130,7 @@ func (task *Task) filePod(ctx context.Context, name string, container string, re
 		Param("stdout", "true").
 		Param("stderr", "true")
 
+	//lint:ignore SA4009 Unused value
 	localF := &os.File{}
 	if retrieve {
 		out, errGo := os.OpenFile(localFile, os.O_RDWR|os.O_CREATE, 0600)

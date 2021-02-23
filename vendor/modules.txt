@@ -138,7 +138,7 @@ github.com/go-test/deep
 # github.com/go-yaml/yaml v2.1.0+incompatible
 ## explicit
 github.com/go-yaml/yaml
-# github.com/gogo/protobuf v1.1.1
+# github.com/gogo/protobuf v1.3.2
 ## explicit
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
@@ -263,7 +263,6 @@ github.com/pkg/errors
 ## explicit
 github.com/sergi/go-diff/diffmatchpatch
 # github.com/sirupsen/logrus v1.7.0
-## explicit
 github.com/sirupsen/logrus
 # github.com/smartystreets/goconvey v1.6.4
 ## explicit
@@ -300,7 +299,7 @@ golang.org/x/crypto/ssh/agent
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/knownhosts
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3
+# golang.org/x/net v0.0.0-20201021035429-f5854403a974
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
@@ -313,7 +312,7 @@ golang.org/x/net/proxy
 ## explicit
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.0.0-20200831180312-196b9ba8737a
+# golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
@@ -321,7 +320,7 @@ golang.org/x/sys/unix
 golang.org/x/sys/windows
 # golang.org/x/term v0.0.0-20201117132131-f5c789dd3221
 golang.org/x/term
-# golang.org/x/text v0.3.0
+# golang.org/x/text v0.3.3
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi

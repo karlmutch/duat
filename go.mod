@@ -31,7 +31,7 @@ require (
 	github.com/go-stack/stack v1.8.0
 	github.com/go-test/deep v1.0.1
 	github.com/go-yaml/yaml v2.1.0+incompatible
-	github.com/gogo/protobuf v1.1.1 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/btree v1.0.0 // indirect
 	github.com/google/go-cmp v0.5.4 // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
@@ -66,7 +66,6 @@ require (
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/sergi/go-diff v1.0.0 // indirect
-	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/src-d/gcfg v1.3.0 // indirect
 	github.com/xanzy/ssh-agent v0.2.0 // indirect

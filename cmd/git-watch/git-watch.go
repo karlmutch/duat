@@ -427,7 +427,7 @@ func main() {
 				}
 				logger.Info("task update", logged...)
 			case <-ctx.Done():
-				break
+				return
 			}
 		}
 	}()

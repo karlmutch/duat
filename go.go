@@ -93,27 +93,25 @@ func GoFileTags(fn string, tags []string) (tagsSatisfied bool) {
 	defer file.Close()
 
 	scan := bufio.NewScanner(file)
-	for scan.Scan() {
-		tokens := strings.Split(scan.Text(), " ")
-		if tokens[0] != "//" {
-			break
-		}
-		fileTags := map[string]struct{}{}
-		for _, token := range tokens[1:] {
-			if len(token) != 0 {
-				fileTags[token] = struct{}{}
-			}
-		}
-		if _, isPresent := fileTags["+build"]; !isPresent {
-			break
-		}
-		delete(fileTags, "+build")
-		for _, aTag := range tags {
-			delete(fileTags, aTag)
-		}
-		return len(fileTags) == 0
+	scan.Scan()
+	tokens := strings.Split(scan.Text(), " ")
+	if tokens[0] != "//" {
+		break
 	}
-	return true
+	fileTags := map[string]struct{}{}
+	for _, token := range tokens[1:] {
+		if len(token) != 0 {
+			fileTags[token] = struct{}{}
+		}
+	}
+	if _, isPresent := fileTags["+build"]; !isPresent {
+		break
+	}
+	delete(fileTags, "+build")
+	for _, aTag := range tags {
+		delete(fileTags, aTag)
+	}
+	return len(fileTags) == 0
 }
 
 // FindGoFunc will locate a function or method within a directory of source files.
@@ -375,7 +373,7 @@ func (md *MetaData) GoSimpleBuild(tags []string, opts []string, outputDir string
 			src := filepath.Join("bin", f.Name())
 			dst := filepath.Join(goPath, "bin", filepath.Base(f.Name()))
 
-			if err = CopyFile(src, dst); err != nil {
+			if err := CopyFile(src, dst); err != nil {
 				return err
 			}
 			outputs = append(outputs, dst)
