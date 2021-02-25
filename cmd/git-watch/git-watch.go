@@ -440,7 +440,7 @@ func main() {
 		if i < len(branches) && len(branches[i]) > 0 {
 			branch = branches[i]
 		}
-		err = watcher.Add(url, branch, *githubToken, trackingC)
+		_ = watcher.Add(url, branch, *githubToken, trackingC)
 	}
 
 	stopC := make(chan os.Signal, 1)

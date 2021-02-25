@@ -130,7 +130,7 @@ func (task *Task) filePod(ctx context.Context, name string, container string, re
 		Param("stdout", "true").
 		Param("stderr", "true")
 
-	//lint:ignore SA4009 Unused value
+	//lint:ignore SA4006 Unused value
 	localF := &os.File{}
 	if retrieve {
 		out, errGo := os.OpenFile(localFile, os.O_RDWR|os.O_CREATE, 0600)

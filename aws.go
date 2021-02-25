@@ -10,12 +10,17 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
 
-	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
 	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"    // Forked copy of https://github.com/jjeffery/kv
 )
 
 func GetECRToken() (token string, err kv.Error) {
-	svc := ecr.New(session.New())
+	sess, errGo := session.NewSession()
+	if errGo != nil {
+		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+	}
+
+	svc := ecr.New(sess)
 	input := &ecr.GetAuthorizationTokenInput{}
 
 	result, errGo := svc.GetAuthorizationToken(input)
@@ -41,7 +46,12 @@ func GetECRToken() (token string, err kv.Error) {
 }
 
 func CreateECRRepo(repo string) (err kv.Error) {
-	svc := ecr.New(session.New())
+	sess, errGo := session.NewSession()
+	if errGo != nil {
+		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+	}
+
+	svc := ecr.New(sess)
 	input := &ecr.CreateRepositoryInput{
 		RepositoryName: aws.String(repo),
 	}
@@ -68,8 +78,12 @@ func CreateECRRepo(repo string) (err kv.Error) {
 }
 
 func GetECRDefaultURL() (urlOut *url.URL, err kv.Error) {
+	sess, errGo := session.NewSession()
+	if errGo != nil {
+		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+	}
 
-	svc := ecr.New(session.New())
+	svc := ecr.New(sess)
 	input := &ecr.DescribeRepositoriesInput{MaxResults: aws.Int64(1)}
 
 	result, errGo := svc.DescribeRepositories(input)
