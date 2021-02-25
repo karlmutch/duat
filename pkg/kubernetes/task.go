@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/jjeffery/kv"
-	"github.com/mgutz/logxi"
+	logxi "github.com/karlmutch/logxi/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"

@@ -183,7 +183,7 @@ func setDefaults(isTerminal bool) {
 func isReservedKey(k interface{}) (bool, error) {
 	key, ok := k.(string)
 	if !ok {
-		return false, fmt.Errorf("Key is not a string")
+		return false, fmt.Errorf("key is not a string")
 	}
 
 	// check if reserved

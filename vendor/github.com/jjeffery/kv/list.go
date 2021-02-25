@@ -110,6 +110,12 @@ func (l List) Wrap(err error, text ...string) Error {
 	return causer(e)
 }
 
+// Log is used to log a message. By default the message is logged
+// using the standard logger in the Go "log" package.
+func (l List) Log(args ...interface{}) {
+	logHelper(2, l, args...)
+}
+
 func (l List) clone(capacity int) List {
 	length := len(l)
 	if capacity < length {
@@ -138,6 +144,9 @@ func dedup(lists ...List) List {
 	)
 	for _, list := range lists {
 		totalLen += len(list)
+	}
+	if totalLen == 0 {
+		return nil
 	}
 	result := make(List, 0, totalLen)
 	m := make(map[string]map[string]struct{})

@@ -17,7 +17,7 @@ import (
 func GetECRToken() (token string, err kv.Error) {
 	sess, errGo := session.NewSession()
 	if errGo != nil {
-		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+		return "", kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	svc := ecr.New(sess)
@@ -80,7 +80,7 @@ func CreateECRRepo(repo string) (err kv.Error) {
 func GetECRDefaultURL() (urlOut *url.URL, err kv.Error) {
 	sess, errGo := session.NewSession()
 	if errGo != nil {
-		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
+		return nil, kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
 	svc := ecr.New(sess)

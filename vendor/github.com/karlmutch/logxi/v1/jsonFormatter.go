@@ -46,7 +46,6 @@ func (jf *JSONFormatter) writeString(buf bufferWriter, s string) {
 func (jf *JSONFormatter) writeError(buf bufferWriter, err error) {
 	jf.writeString(buf, err.Error())
 	jf.set(buf, KeyMap.CallStack, string(debug.Stack()))
-	return
 }
 
 func (jf *JSONFormatter) appendValue(buf bufferWriter, val interface{}) {
@@ -215,7 +214,7 @@ func (jf *JSONFormatter) LogEntry(level int, msg string, args []interface{}) map
 	var entry map[string]interface{}
 	err := json.Unmarshal(buf.Bytes(), &entry)
 	if err != nil {
-		panic("Unable to unmarhsal entry from JSONFormatter: " + err.Error() + " \"" + string(buf.Bytes()) + "\"")
+		panic("unable to unmarhsal entry from JSONFormatter: " + err.Error() + " \"" + buf.String() + "\"")
 	}
 	return entry
 }

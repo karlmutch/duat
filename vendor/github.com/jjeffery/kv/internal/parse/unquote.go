@@ -7,16 +7,16 @@ import (
 	"unsafe"
 )
 
+var (
+	errorIndicator = []byte("???")
+)
+
 // unquote the input. If possible the unquoted value points to the same
 // backing array as input. Otherwise it points to buf. The remainder is
 // the unused portion of buf.
 func unquote(input []byte, buf []byte) (unquoted []byte, remainder []byte) {
-	var (
-		errorIndicator = []byte("???")
-	)
 	if len(input) < 2 {
 		return errorIndicator, buf
-
 	}
 	quote := input[0]
 	input = input[1:]
@@ -33,6 +33,9 @@ func unquote(input []byte, buf []byte) (unquoted []byte, remainder []byte) {
 	if len(buf) > 0 {
 		unquoted = buf[:0]
 	}
+	// BUG(jpj): Uses the unsafe package to cast a byte slice to a string.
+	// This could break in future versions of Go. The reason for this conversion
+	// is that there is no equivalent to strconv.UnquoteChar that works on a byte slice.
 	strinput := toString(input)
 	for len(strinput) > 0 {
 		r, mb, tail, err := strconv.UnquoteChar(strinput, quote)

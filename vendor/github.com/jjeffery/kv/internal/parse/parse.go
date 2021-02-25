@@ -6,22 +6,38 @@ import (
 	"sync"
 )
 
+const (
+	// bufLength is the length of the buffer used for unquoting messages that
+	// have one or more escape characters (\) in them. If a message reuires more
+	// space than this, additional memory will need to be allocated.
+	bufLength = 256
+
+	// typicalKeywordCount is the number of keywords that can be in a
+	// message before it becomes necessary to allocate additional memory.
+	// The value is set to a number higher than expected in a typical
+	// log message.
+	typicalKeywordCount = 8
+)
+
 var (
 	messagePool = sync.Pool{
 		New: func() interface{} {
 			return &Message{
-				List: make([][]byte, 0, 16),
+				List: make([][]byte, 0, 2*typicalKeywordCount),
 			}
 		},
 	}
+
+	blankBuf [bufLength]byte
 )
 
 // Message represents a message with text and any assocated
 // key/value pairs.
 type Message struct {
-	Text []byte   // message text
-	List [][]byte // key/value pairs
-	buf  [80]byte // for unquoting values
+	Text []byte          // message text
+	List [][]byte        // key/value pairs
+	buf  [bufLength]byte // for unquoting values
+	used int             // number of bytes used in buf
 }
 
 func newMessage() *Message {
@@ -32,14 +48,22 @@ func newMessage() *Message {
 func (m *Message) Release() {
 	if m != nil {
 		m.Text = nil
+		for i := len(m.List) - 1; i >= 0; i-- {
+			m.List[i] = nil
+		}
 		m.List = m.List[:0]
+		if m.used > 0 {
+			copy(m.buf[:m.used], blankBuf[:m.used])
+			m.used = 0
+		}
 		messagePool.Put(m)
 	}
 }
 
 // Bytes parses the input bytes and returns a message.
 //
-// Memory allocations are kept to a minimum. Call Release()
+// Memory allocations are kept to a minimum. The message
+// is allocated from a memory pool. Call Release()
 // to return the message to the pool for re-use.
 func Bytes(input []byte) *Message {
 	lex := lexer{
@@ -122,5 +146,6 @@ func Bytes(input []byte) *Message {
 	}
 
 	message.Text = bytes.TrimSpace(message.Text)
+	message.used = bufLength - len(unquoteBuf)
 	return message
 }

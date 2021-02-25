@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/go-stack/stack"
 	"github.com/google/uuid"
 	"github.com/jjeffery/kv"
-	"github.com/go-stack/stack"
-	"github.com/mgutz/logxi"
+	logxi "github.com/karlmutch/logxi/v1"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
