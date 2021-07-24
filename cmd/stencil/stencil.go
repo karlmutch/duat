@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"runtime/debug"
 	"strings"
 
 	logxi "github.com/karlmutch/logxi/v1" // Using a forked copy of this package results in build issues
@@ -60,6 +61,13 @@ func init() {
 }
 
 func main() {
+
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("recovered from ", r)
+			debug.PrintStack()
+		}
+	}()
 
 	// Parse the CLI flags
 	if !flag.Parsed() {
@@ -160,7 +168,9 @@ func main() {
 	// warnings
 	if !*suppressWarn {
 		for _, err = range warnings {
-			_ = logger.Warn(err.Error())
+			if err != nil {
+				_ = logger.Warn(err.Error())
+			}
 		}
 	}
 	if *warnError {

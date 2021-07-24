@@ -11,7 +11,6 @@ package duat
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -23,8 +22,8 @@ import (
 	"github.com/Masterminds/sprig"
 	"github.com/go-yaml/yaml"
 
-	"github.com/jjeffery/kv"     // Forked copy of https://github.com/jjeffery/kv
 	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
+	"github.com/jjeffery/kv"    // Forked copy of https://github.com/jjeffery/kv
 )
 
 // FuncMap augments the template functions with some standard string maniuplation functions
@@ -111,7 +110,8 @@ func (md *MetaData) NewTemplateVariables(jsonVals string, loadFiles []string, ov
 		"userGroupID": md.user.Gid,
 	}
 
-	if ecrURL, err := GetECRDefaultURL(); err == nil {
+	ecrURL, err := GetECRDefaultURL()
+	if err == nil && ecrURL != nil {
 		duatVars["awsecr"] = ecrURL.Hostname()
 	} else {
 		if !ignoreAWSErrors {
@@ -213,12 +213,6 @@ type TemplateOptions struct {
 // validation checking etc
 //
 func (md *MetaData) Template(opts TemplateOptions) (err kv.Error, warnings []kv.Error) {
-
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
-	}()
 
 	tmplErrs := []kv.Error{}
 	funcs := template.FuncMap{
