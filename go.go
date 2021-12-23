@@ -207,11 +207,13 @@ func FindGoGenerateFiles(dir string, tags []string) (genFiles []string, err kv.E
 		func() {
 			for _, pkg := range pkgs {
 				for fn, f := range pkg.Files {
-					for _, comment := range f.Comments {
-						pos := fs.PositionFor(comment.Pos(), true)
-						if pos.Line == 1 && pos.Column == 1 {
-							if strings.HasPrefix(comment.Text(), "go:generate") {
-								genFiles = append(genFiles, fn)
+					for _, group := range f.Comments {
+						for _, comment := range group.List {
+							pos := fs.PositionFor(comment.Pos(), true)
+							if pos.Line == 1 && pos.Column == 1 {
+								if strings.HasPrefix(comment.Text, "go:generate") || strings.HasPrefix(comment.Text, "//go:generate") {
+									genFiles = append(genFiles, fn)
+								}
 							}
 						}
 					}

@@ -52,18 +52,18 @@ func (task *Task) initialize(ctx context.Context, debugMode bool, logger chan *S
 		}
 	}()
 
-	if err = task.createNamespace(task.start.Namespace, true, logger); err != nil {
+	if err = task.createNamespace(ctx, task.start.Namespace, true, logger); err != nil {
 		return err
 	}
 
 	// Populate secrets, report only the first failure if any occur
-	if errs := task.initSecrets(logger); len(errs) != 0 {
+	if errs := task.initSecrets(ctx, logger); len(errs) != 0 {
 		return errs[0]
 	}
 
 	// Populate services, these are often portals outside of our namespace and allow
 	// interaction with external caches etc
-	if err = task.initServices(logger); err != nil {
+	if err = task.initServices(ctx, logger); err != nil {
 		return err
 	}
 

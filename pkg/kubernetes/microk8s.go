@@ -6,8 +6,8 @@ package kubernetes
 import (
 	"context"
 
-	"github.com/jjeffery/kv"
 	"github.com/go-stack/stack"
+	"github.com/jjeffery/kv"
 
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +25,7 @@ func (*MicroK8s) GetRegistryPod(ctx context.Context) (pod *apiv1.Pod, err kv.Err
 	api := Client().CoreV1().Pods(namespace)
 
 	label := "app=registry"
-	pods, errGo := api.List(metav1.ListOptions{LabelSelector: label})
+	pods, errGo := api.List(ctx, metav1.ListOptions{LabelSelector: label})
 	if errGo != nil {
 		return nil, kv.Wrap(errGo).With("namespace", namespace, "stack", stack.Trace().TrimRuntime())
 	}

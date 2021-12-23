@@ -57,12 +57,11 @@ func (task *Task) runJob(ctx context.Context, logger chan *Status) (err kv.Error
 
 	api := Client().BatchV1().Jobs(task.start.Namespace)
 
-	_, errGo := api.Create(task.start.JobSpec)
-	if errGo != nil {
+	if _, errGo := api.Create(ctx, task.start.JobSpec, metav1.CreateOptions{}); errGo != nil {
 		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}
 
-	pods, errGo := Client().CoreV1().Pods(task.start.Namespace).Watch(metav1.ListOptions{LabelSelector: labelK + "=" + label})
+	pods, errGo := Client().CoreV1().Pods(task.start.Namespace).Watch(ctx, metav1.ListOptions{LabelSelector: labelK + "=" + label})
 	if errGo != nil {
 		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 	}

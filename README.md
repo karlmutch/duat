@@ -36,6 +36,7 @@ For example the following workflow might be used to compile duat itself:
 
 ```shell
 go run ./build.go -r cmd > /tmp/compiled.lst
+go test ./...
 # test is run and passes
 go run ./cmd/github-release/github-release.go `cat /tmp/compiled.lst`
 ```

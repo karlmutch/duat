@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jjeffery/kv"
 	"github.com/go-stack/stack"
+	"github.com/jjeffery/kv"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -54,13 +54,13 @@ func wordTrim(input string, delimiter string, max int) (result string) {
 	return strings.Join(output, delimiter)
 }
 
-func (task *Task) createNamespace(ns string, overwrite bool, logger chan *Status) (err kv.Error) {
+func (task *Task) createNamespace(ctx context.Context, ns string, overwrite bool, logger chan *Status) (err kv.Error) {
 	nsSpec := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: ns,
 		}}
 
-	if _, errGo := Client().CoreV1().Namespaces().Create(nsSpec); errGo != nil {
+	if _, errGo := Client().CoreV1().Namespaces().Create(ctx, nsSpec, metav1.CreateOptions{}); errGo != nil {
 		if !errors.IsAlreadyExists(errGo) || !overwrite {
 			task.failed = kv.Wrap(errGo).With("namespace", ns, "stack", stack.Trace().TrimRuntime())
 			return task.failed
@@ -72,12 +72,12 @@ func (task *Task) createNamespace(ns string, overwrite bool, logger chan *Status
 func (task *Task) deleteNamespace(ctx context.Context, ns string, logger chan *Status) (err kv.Error) {
 
 	deletePolicy := metav1.DeletePropagationForeground
-	opts := &metav1.DeleteOptions{
+	opts := metav1.DeleteOptions{
 		PropagationPolicy: &deletePolicy,
 	}
 
 	api := Client().CoreV1().Namespaces()
-	errGo := api.Delete(ns, opts)
+	errGo := api.Delete(ctx, ns, opts)
 	if errGo != nil {
 		task.failed = kv.Wrap(errGo).With("namespace", ns, "stack", stack.Trace().TrimRuntime())
 		return task.failed
@@ -89,7 +89,7 @@ func (task *Task) deleteNamespace(ctx context.Context, ns string, logger chan *S
 	}
 
 	for {
-		if _, errGo = api.Get(ns, metav1.GetOptions{}); errGo != nil {
+		if _, errGo = api.Get(ctx, ns, metav1.GetOptions{}); errGo != nil {
 			if errors.IsNotFound(errGo) {
 				return nil
 			}

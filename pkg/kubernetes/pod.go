@@ -64,7 +64,7 @@ func (job *Task) startMinimalPod(ctx context.Context, name string, volume string
 		},
 	}
 
-	_, errGo := api.Pods(job.start.Namespace).Create(podSpec)
+	_, errGo := api.Pods(job.start.Namespace).Create(ctx, podSpec, metav1.CreateOptions{})
 	if errGo != nil {
 		job.failed = kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 		return job.failed
@@ -75,7 +75,7 @@ func (job *Task) startMinimalPod(ctx context.Context, name string, volume string
 		FieldSelector: fmt.Sprintf("metadata.name=%s", name),
 	}
 
-	w, errGo := api.Pods(job.start.Namespace).Watch(watchOpts)
+	w, errGo := api.Pods(job.start.Namespace).Watch(ctx, watchOpts)
 	if errGo != nil {
 		job.failed = kv.Wrap(errGo).With("namespace", job.start.Namespace, "name", name, "stack", stack.Trace().TrimRuntime())
 		return job.failed
@@ -233,7 +233,7 @@ func (job *Task) stopPod(ctx context.Context, name string, logger chan *Status) 
 
 	api := Client().CoreV1()
 
-	deleteOpts := &metav1.DeleteOptions{
+	deleteOpts := metav1.DeleteOptions{
 		GracePeriodSeconds: &[]int64{0}[0],
 	}
 
@@ -242,7 +242,7 @@ func (job *Task) stopPod(ctx context.Context, name string, logger chan *Status) 
 		*deleteOpts.GracePeriodSeconds = int64(deadline.Sub(time.Now().Add(time.Second)).Truncate(time.Second).Seconds())
 	}
 
-	if errGo := api.Pods(job.start.Namespace).Delete(name, deleteOpts); errGo != nil {
+	if errGo := api.Pods(job.start.Namespace).Delete(ctx, name, deleteOpts); errGo != nil {
 		job.failed = kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime())
 		return job.failed
 	}
