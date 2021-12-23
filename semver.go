@@ -315,6 +315,7 @@ func (md *MetaData) Replace(fn string, dest string, substitute bool) (err kv.Err
 	if errGo != nil {
 		return kv.Wrap(errGo, "failed to update the output file").With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}
+
 	// Because we overwrote the file we need to trim off the end of the file if it shrank in size
 	file.Truncate(written)
 

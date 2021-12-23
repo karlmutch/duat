@@ -1,14 +1,12 @@
 # Developer utilities and tools (duat) Beta
 
-Version : <repo-version>0.15.6</repo-version>
+Version : <repo-version>0.16.0</repo-version>
 
 duat is a set of tools useful for automating the bootstrapping of containerized workflows.  duat includes tools for working with software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go, and Kubernetes to manage portions of container centric software lifecycles, helping to remove proprietary tooling, scripting, and other DSLs typically used for building, releasing, and deploying software.
 
 This repository also includes go import packages for handling meta data and artifacts associated with software development activities.
 
 duat is opinionated about naming of docker images, and semantic versioning.  duat provides tools and assistance specifically for go based development, but intentionally does not impose an end-to-end CI/CD automation solution.  Downstream workflow choices are determined by the user not duat.
-
-The duat git-watch bootstrapping tool elevates the platform layer from an OS host using docker, to using Kubernetes as the platform.  This includes the ability to build docker images.
 
 # About
 
@@ -173,7 +171,6 @@ go get github.com/karlmutch/duat
 go install github.com/karlmutch/duat/cmd/semver
 go install github.com/karlmutch/duat/cmd/github-release
 go install github.com/karlmutch/duat/cmd/stencil
-go install github.com/karlmutch/duat/cmd/git-watch
 ```
 
 # Building duat from source
@@ -281,226 +278,82 @@ Templates also support functions from masterminds.github.io/sprig.  Please refer
 
 ## git-watch
 
-The primary use case for git-watch is to be able to build CI/CD docker images from git repositories when commits occur.  git-watch meets an unaddressed need for an ad-hoc git client that can produce CI/CD docker images that can then feed into container centric CI/CD pipelines, all hosted within a single node Kubernetes deployment.
+git-watch has been retired.  The preferred method to deal with git driven builds and file watch based builds is to make use of tilt.dev.
 
-This document describes by example the git-watch tool using a combination of git, docker registries, and finally keel.sh for downstream CI.
+## license-detector
 
-### audience
+license-detector is useful for performing data mining of code bases and performing license detection where standard license information is not made available via standard license selection using the github license feature for example.
 
-The primary audience for this style of CI/CD bootstrapping includes individual, or small teams of developers with shared and/or limited resources who wish to implement CI/CD pipelines but for which the price of entry for large scale clusters and infrastructure is too high.
+This tool is useful as an investigative tool for situations where incomplete formal licensing information is available.
 
-This tool is useful for first capturing a git cloned repository into a docker image, pushing this into an image registry and then triggering down stream CI/CD operations.  It uses polling in order that publically accessible hosts are not needed and the costs of handling CI/CD pipelines remains minimal.  This tool is designed to place private CI/CD pipelines into the hands of smaller teams sensitive to the costs of using a SaaS solution such as Travis, and tools such as Jenkins that require a full time engineer role.
+The role of this tool within an SPDX based workflow is intended to be a catch-all tool for when formal license infomation is not stored a metadata, for example when the API documented at https://docs.github.com/en/rest/reference/licenses is not able to return useful information.
 
-### introduction
+At a minimum this tool should be run against code bases using the the `short` option and the summary results quickly scanned to discover if any non-permitted licenses were found.  If so then a full report should be run to discover violations.
 
-The git-watch tool will poll a github repository and when commits are observed, clones the github repo into a Kubernetes volume, and then dispatch a Kubernetes job, for example an Uber Mikasu based docker image build.
+It is recommended that this tool be used in conjunction with a tool such as, https://github.com/google/go-licenses, which will restrict itself to using the Go vendor directory and looking for explicit license files.  
 
-git-watch is intended to run as the primordial step front-ending a downstream pipeline.  The git commit and push to the git origin repository acts as the trigger for git-watch to begin the process of packaging the source code at a specific commit into a Kubernetes volume.  git-watch will then take the packaged volume and run it against a Kubernetes batch Job for your choice.  Ubers Mikasu is used by the authors as the Job for processing the packaged code.  Mikasu is used to produce a docker image containing the source code and the results of the docker build using a nominated Dockerfile within the packaged volume suitable for CI/CD actions.  Mikasu will then push the docker image to a registry of the users choice as supported by Mikasu.
-
-The trigger to the downstream pipeline is a combination of git-watch and Uber Mikasu pushing a docker image to an image registry for example docker hub, or Amazon ECR.  The use of image registries is common for several CI/CD platforms as triggers.  For the minimalist case the author makes use of https://keel.sh/ to monitor for the artifacts produced by the tools under discussion to trigger actions related to the builds, test, release lifecycle of choice.
-
-### github
-
-git-watch can be configured to watch git repositories using the git clone url, and optionally can be configured to watch specific branches. In order to have git-watch run continuously it can be used in combination with a Kubernetes Deployment and a containerized version of this application.
-
-The --github-token option is used by the watcher to access any configured repositories.  Having an environment variable GITHUB\_TOKEN is also supported.
-
-The --state-persistence-dir option is used to specify where the files that track the last seen commit ID for the github repositories is kept.
-
-The repositories are specified as arguments to the command.  Each argument represents a git repository URL and can be suffixed with a caret character, '^', and the branch name to further specify the repository to be watched.
-
-The --job-template option is used to specify a template following the golang/Kubernetes style that will be used to initiate jobs as commits are detected.  An exmaple of a template is provided in the duat code repository called 'ci\_containerize.yaml'.  This Kubernetes Job specification uses the Makisu container build image from Uber to read a Dockerfile from the code base and deploy an image containing all of the source code associated with the commit.  Mikasu will then push that image to a 3rd party image repository using a Kubernetes secret populated by the user.
-
-### registry
-
-In order to perform builds with stable code throughout the process the Mikasu job template builds a Docker image using the default Dockerfile inside the code repository being watched.  After the build image has obtained the needed compilation tooling and source code to be useful during CI/CD operations it is pushed to a registry for access by the downstream CI/CD pipeline.  The Mikasu builder uses Kubernetes secrets to retrieve the user name and password for the registry credentials.  The user is responsible for definition of the Registry environment variable to hold the credentials.  When the Job in which the Mikasu container is run the environment variable will be substituted into the Job template.
-
-Before using the registry setting you should copy registry-template.yaml to registry.yaml, and modify the contents so that they contain your docker user name and password.  You can then apply the secrets to your environment variables using commands such as the following:
+If you wish to extract the SPDX ids for repositories based upon the github metadata fields then the offical github CLI tool can be used as follows:
 
 ```
-export Registry=`cat registry.yaml`
+gh api repos/karlmutch/duat/license | jq ".license.spdx_id"
 ```
 
-When the git-watch command is run environment variables set by the user can be substituted into your job template, the above example uses the Registry env variable to do this.
+While the github API can display this information Go modules come from a large number of sources and this is where the license-detector comes in handy.
 
-### Kubernetes microk8s
+To assist in creating manifests and lists useful to the license scanning tools the reader might find the `go list` tool useful for creating lists of packages, for example:
 
-In order to make use of Kubernetes a KUBECONFIG environment variable should be set that contains the configuration items needed to access your cluster.  When using microk8s the configuration can be extracted from the microk8s tool as follows:
-
-```
-microk8s.kubectl config view --raw > $HOME/.kube/microk8s.config
-export KUBECONFIG=$HOME/.kube/microk8s.config
+```shell
+go list -mod=mod -m all
 ```
 
-The documentation in the microk8s README.md, on the github page, is very useful and a recommended read for users using a laptop or workstation style configuration.
+### Installation
 
-microk8s uses a docker registry that it self deploys and which can be referenced inside the job template using the RegistryPort, and RegistryIP variables.  In order to use the insecure microk8s registry take the registry\_local.yaml file and define a Registry environment variable to hold it, then start the watcher using the example ci\_containerize\_local.yaml file as your job template.
+license-detector can installed using the following command:
 
-```
-export Registry=`cat registry_local.yaml`
-git-watch --job-template ../../ci_containerize_local.yaml https://github.com/karlmutch/duat.git^feature/102_microk8s_registry
-```
-
-Generated images will be accessible using the host via the localhost:32000 microk8s registry proxy and can be pulled from the cluster to the local docker registry or can be left in-situ for a CI pipeline to pull and process via a tool such as https://keel.sh.
-
-The following example shows the result of a commit triggering a build after the git-watch tool has been started on the command line:
-
-```
-$ export KUBECONFIG=~/.kube/microk8s.config
-$ export KUBE_CONFIG=~/.kube/microk8s.config
-$ microk8s.kubectl config view --raw > $KUBECONFIG
-$ cat ../../registry_local.yaml   
-localhost:
-  .*:
-    security:
-      tls:
-        client:
-          disabled: true
-$ export Registry=`cat ../../registry_local.yaml`
-$ git-watch -v --ignore-aws-errors --job-template ../../ci_containerize_local.yaml https://github.com/karlmutch/duat.git^feature/102_microk8s_registry
-16:05:42.953783 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: volume update namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo volume: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 phase: (v1.PersistentVolumeClaimPhase) (len=5) "Bound"
-16:05:47.257452 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: pod update phase: Pending id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo
-16:05:48.160613 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: pod update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo phase: Running
-16:09:52.460762 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: pod update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo phase: Succeeded
-16:09:52.462364 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: running id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo dir: /tmp/git-watcher/Eu8nD7tNm0qcxSRTojd8518tk5npRG6bn2qgQeUqplE
-16:09:52.465553 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: pod namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo node_name: awsdev pod_name: copy-pod
-16:09:52.465606 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: pod namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo node_name: awsdev pod_name: imagebuilder-k7xhn
-16:09:52.465644 INF git-watch task update id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 text: volume namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo volume_name: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 capacity: 10Gi
-16:09:52.465830 INF git-watch task completed id: 3b8e99c8-aed8-40d0-8ccd-82c8db391ff5 dir: /tmp/git-watcher/Eu8nD7tNm0qcxSRTojd8518tk5npRG6bn2qgQeUqplE namespace: gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo
+```shell
+$ go get -u karlmutch/duat/cmd/license-detector
 ```
 
-If we were to observe the running job from another terminal, and once complete were to pull the resulting source code image into our local docker registry we would see the following:
+### Basic usage
 
-```
-$ semver pre
-0.11.1-feature-102-microk8s-registry-aaaagjfuypo
-$ git commit -a -m "Bump semantic version to trigger a build via a commit"
-$ git push
-# Allow the build to trigger itself based on our pushed commit to the github repository
-$ sleep 30
-$ microk8s.kubectl get ns
-NAME                                                  STATUS   AGE
-container-registry                                    Active   23h
-default                                               Active   23h
-gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo   Active   23h
-kube-node-lease                                       Active   23h
-kube-public                                           Active   23h
-kube-system                                           Active   23h
-$ kubectl --namespace=gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo get pods                  
-NAME                 READY   STATUS      RESTARTS   AGE
-copy-pod             1/1     Running     0          23h
-imagebuilder-k7xhn   1/1     Running     0          23h
-$ kubectl --namespace=gw-0-11-1-feature-102-microk8s-registry-aaaagjfuypo logs -f imagebuilder-k7xhn
-...
-{"level":"info","ts":1555024191.5788004,"msg":"Stored cacheID mapping to KVStore: 960ee5ee => MAKISU_CACHE_EMPTY"}
-{"level":"info","ts":1555024191.5788994,"msg":"Stored cacheID mapping to KVStore: 8c70ac78 => MAKISU_CACHE_EMPTY"}
-{"level":"info","ts":1555024191.6197424,"msg":"Computed total image size 431108731","total_image_size":431108731}
-{"level":"info","ts":1555024191.6197767,"msg":"Successfully built image karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo"}
-{"level":"info","ts":1555024191.619851,"msg":"* Started pushing image 10.1.1.32:5000/karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo"}
-{"level":"info","ts":1555024191.6351519,"msg":"* Image 10.1.1.32:5000/karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo already exists, overwriting"}
-{"level":"info","ts":1555024191.6383321,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:119c7358fbfc2897ed63529451df83614c694a8abbd9e960045c1b0b2dc8a4a1"}
-{"level":"info","ts":1555024191.6391516,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:d18d76a881a47e51f4210b97ebeda458767aa6a493b244b4b40bfe0b1ddd2c42"}
-{"level":"info","ts":1555024191.6396852,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:34667c7e4631207d64c99e798aafe8ecaedcbda89fb9166203525235cc4d72b9"}
-{"level":"info","ts":1555024191.641192,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:2aaf13f3eff07aa25f73813096bd588e6408b514288651402aa3d0357509be7a"}
-{"level":"info","ts":1555024191.6417122,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:914e2320d76b65434df88951e6d9736cfec1ea22cfce48bfb0945ed5a5e99639"}
-{"level":"info","ts":1555024191.6418197,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:5c75f60bd4e0546a26ea7d6eec32835b93c41d994291f57815bc83673f099e5c"}
-{"level":"info","ts":1555024191.6461737,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:d273e0d8cc2120c145e615ddb78c627049cb15a03a5dcb10fdff9e1b07cee633"}
-{"level":"info","ts":1555024191.6467197,"msg":"* Skipped pushing existing layer karlmutch/duat:sha256:5aa155938eb06162dc1e8387c80b186b0032364fdd5733da78defbb81fb56b4f"}
-{"level":"info","ts":1555024191.7139697,"msg":"* Started pushing image config sha256:8370897394f1bbf6a0fbad488698364796b3f897625f16b23a92aa25a13227b7"}
-{"level":"info","ts":1555024191.733266,"msg":"* Finished pushing image config sha256:8370897394f1bbf6a0fbad488698364796b3f897625f16b23a92aa25a13227b7"}
-{"level":"info","ts":1555024191.7486677,"msg":"* Finished pushing image 10.1.1.32:5000/karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo in 128.789167ms"}
-{"level":"info","ts":1555024191.7486932,"msg":"Successfully pushed 10.1.1.32:5000/karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo to 10.1.1.32:5000"}
-{"level":"info","ts":1555024191.7487,"msg":"Finished building karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo"}
-```
+This tool scans directories, and individual files for license files and materials useful in identifing licenses using hashing, and fuzzing techniques to produce a list of SPDX identified licenses along with confidence measure for the licenses potentially detected.
 
-Now that the image has been pushed into the registry of the cluster it can be pulled into an external registry using port 32000 on the host that is running the microk8s cluster and used.
+This utility wraps the licensing tooling documented at https://github.com/go-enry/go-license-detector, and the license database found at https://github.com/spdx/license-list-data.
 
-```
-$ docker pull localhost:32000/karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo
-0.11.1-feature-102-microk8s-registry-aaaagjfuypo: Pulling from karlmutch/duat
-34667c7e4631: Already exists 
-d18d76a881a4: Already exists 
-119c7358fbfc: Already exists 
-2aaf13f3eff0: Already exists 
-5c75f60bd4e0: Pull complete 
-914e2320d76b: Pull complete 
-d273e0d8cc21: Pull complete 
-5aa155938eb0: Pull complete 
-Digest: sha256:c0f0070555204d528709f1c3a25f44e56950d9dc9b1be5a2bcb6ac73bab26ee1
-Status: Downloaded newer image for localhost:32000/karlmutch/duat:0.11.1-feature-102-microk8s-registry-aaaagjfuypo
-```
+This tool will output a list of all directories and their matched licenses when using the non-short form option.  Using the short form option a list of licenses that were detected will be produced and the maximum confidence seen for that license in the scanned directories will be output.  All license identification uses the SPDX codes.
 
-If you have deployed a keel based pipeline then you will be able to have it triggered off the internal registry using localhost:5000 as the registry frompods inside the microk8s cluster.
+The command has the following usage:
 
-Remember that registries deployed on microk8s are insecure and only available to the localhost you are performing development on.  Public registries can be used after changing the Registry environment variable and modifing the deployment.yaml file to point at them.  Again an externally hosted pipeline can be used to trigger downstream testing and release activities.
+<doc-opt><code>
+usage:  /tmp/go-build149289568/b001/exe/license-detector [options]       license scanning and detection tool (license-detector.go)       unknown      unknown
 
-### Kubernetes minikube
+Arguments
 
-Work In Progress, your milage may vary.
-
-minikube when run using the --driver=none option is typically hosted within an AWS EC2 or similar environment will not deploy its own image registry and will instead leverage the local hosts registry deployed using docker.  This is because the driver none option relies on docker for its container runtime.
-
-The RegistryPort and RegistryIP variables are available for the job template.  After creation of a minikube cluster used the kubectl context command to configure your Kubernetes client side environmnet, ```kubectl config use-context minikube```.  This is then used by the watcher to set the registry variables.
-
-If you intend on using the Ubuntu and minikube stack then the following installation guide might be of help, https://gist.github.com/karlmutch/f6bfc81a08b3815888d632dc572764bc.
-
-### bootstrapping
-
-Having setup the git-watch process the [--stat-persistence-dir] is used to store information about the last commit seen and acted on by the watcher.
-
-The watcher will check the git repositories on a regular basis to poll for new commits and will initiate Kubernetes jobs on the latest observed commit ID.
-
-As each job is run git-watch will generate a namespace based upon the current semantic version set in the README.md file at the root of your repository.  Information about the version tags used can be found in the semver section of this document.  Importantly the semver utility in this package only generates pre-release tags that obey DNS naming rules and this allows Kubernetes to use these identifiers as DNS compliant namespaces.
-
-The example ci\_containerize.yaml example file illustrates a job that will build a docker image containing the source code at the detected commit ID and will push this code to the docker hub repository.  The docker-registry-config secret in this file is used to store the user name and password as described above for completing the docker push operation once the Makisu build is done.
-
-In order to enable console output the following commands are useful:
-
-```
-LOGXI='*=INF'
-LOGXI_FORMAT='happy,maxcol=1024'
-```
-
-Please review https://github.com/mgutz/logxi for more information on logging levels and environment variables.
-
-### usage
-
-<pre><code>
-usage:  git-watch [options] [arguments]      Git Commit watcher and trigger (git-watch)       1910aaf935e3a53cf22de4ede292492b77164bdb      2019-07-18_13:01:01-0700
-
-Arguments:
-
-git-watch arguments take the form of a web URL containing the URL for the repository followed
-by an optional caret '^' and branch name.  If the caret and branch name are not specified then the
-branch name is assumed to be master.
-
-Example of valid arguments include:
-
-  https://github.com/karlmutch/duat.git
-  https://github.com/karlmutch/duat.git^master
-
-Options:
-
-  -debug
-        Enables features useful for when doing step by step debugging such as delaying cleanup operations etc
-  -github-token string
-        A github token that can be used to access the repositories that will be watched
-  -job-template string
-        The Kubernetes job specification stencil template file name that is run on a change being detected, env var GIT_HOME will be set to indicate the repo directory of
-the captured repository
-  -namespace string
-        The namespace that should be used for processing the bootstrap, potentially destructive cleanup might be used on this namespace
-  -persistent-state-dir string
-        Overrides the default directory used to store state information for the last known commit of the repositories being watched (default "/tmp/git-watcher")
-  -v    When enabled will print internal logging for this tool
+  -i string
+        The location of files to be scanned for licenses, or a single file (default ".")
+  -input string
+        The location of files to be scanned for licenses, or a single file (default ".")
+  -o string
+        The location of the license detection SPDX inventory output file, the referenced directory will be skipped from license checks (default "license-detector.rpt")
+  -output string
+        The location of the license detection SPDX inventory output file, the referenced directory will be skipped from license checks (default "license-detector.rpt")
+  -r    Descend all directories looking for licensed source code (default true)
+  -recurse
+        Descend all directories looking for licensed source code (default true)
+  -s    Output just a summary of the license types detected
+  -short
+        Output just a summary of the license types detected
+  -v    Print internal logging for this tool
+  -verbose
+        Print internal logging for this tool
 
 Environment Variables:
 
 options can also be extracted from environment variables by changing dashes '-' to underscores and using upper case.
 
-log levels are handled by the LOGXI env variables, these are documented at https://github.com/mgutz/logxi
-</code></pre>
+log levels are handled by the LOGXI env variables, these are documented at https://github.com/karlmutch/logxi
+</code></doc-opt>
 
-### downstream CI/CD (keel.sh)
+
 
 Copyright © 2018-2021 The duat authors. All rights reserved. Issued under the MIT license.

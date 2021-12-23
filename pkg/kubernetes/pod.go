@@ -133,7 +133,7 @@ func (task *Task) filePod(ctx context.Context, name string, container string, re
 	//lint:ignore SA4006 Unused value
 	localF := &os.File{}
 	if retrieve {
-		out, errGo := os.OpenFile(localFile, os.O_RDWR|os.O_CREATE, 0600)
+		out, errGo := os.OpenFile(localFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 		if errGo != nil {
 			task.failed = kv.Wrap(errGo).With("fn", localFile, "namespace", task.start.Namespace, "pod", name, "stack", stack.Trace().TrimRuntime())
 			return task.failed

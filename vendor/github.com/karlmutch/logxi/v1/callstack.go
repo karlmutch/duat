@@ -64,6 +64,11 @@ func (ci *frameInfo) String(color string, sourceColor string) string {
 	buf := pool.Get()
 	defer pool.Put(buf)
 
+	// skip anything in the logxi package
+	if isLogxiCode(ci.filename) {
+		return ""
+	}
+
 	if disableCallstack {
 		buf.WriteString(color)
 		buf.WriteString(Separator)
@@ -72,11 +77,6 @@ func (ci *frameInfo) String(color string, sourceColor string) string {
 		buf.WriteRune(':')
 		buf.WriteString(strconv.Itoa(ci.lineno))
 		return buf.String()
-	}
-
-	// skip anything in the logxi package
-	if isLogxiCode(ci.filename) {
-		return ""
 	}
 
 	// make path relative to current working directory or home

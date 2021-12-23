@@ -19,6 +19,8 @@ import (
 
 	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
 	"github.com/jjeffery/kv"    // Forked copy of https://github.com/jjeffery/kv
+
+	fileio "github.com/karlmutch/duat/pkg/fileio"
 )
 
 // Look for directories inside the root 'dir' and return their paths, skip any vendor directories
@@ -373,7 +375,7 @@ func (md *MetaData) GoSimpleBuild(tags []string, opts []string, outputDir string
 			src := filepath.Join("bin", f.Name())
 			dst := filepath.Join(goPath, "bin", filepath.Base(f.Name()))
 
-			if err := CopyFile(src, dst); err != nil {
+			if err := fileio.CopyFile(src, dst); err != nil {
 				return err
 			}
 			outputs = append(outputs, dst)

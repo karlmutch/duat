@@ -19,7 +19,7 @@ import (
 	"text/template"
 
 	"github.com/BurntSushi/toml"
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	"github.com/go-yaml/yaml"
 
 	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
