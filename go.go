@@ -23,6 +23,17 @@ import (
 	fileio "github.com/karlmutch/duat/pkg/fileio"
 )
 
+var (
+	goModTidy = "go mod tidy"
+)
+
+func init() {
+	goRoot := os.Getenv("GOROOT")
+	if len(goRoot) != 0 {
+		goModTidy = filepath.Join(goRoot, "bin", "go mod tidy")
+	}
+}
+
 // Look for directories inside the root 'dir' and return their paths, skip any vendor directories
 //
 func findDirs(dir string) (dirs []string, err kv.Error) {
@@ -321,9 +332,8 @@ func (md *MetaData) GoGenerate(file string, env map[string]string, tags []string
 		tagOption = fmt.Sprintf(" -tags \"%s\" ", strings.Join(tags, " "))
 	}
 
-	goPath := os.Getenv("GOPATH")
 	cmds := []string{
-		fmt.Sprintf("%s/bin/dep ensure || true", goPath),
+		goModTidy,
 		fmt.Sprintf("%s go generate %s %s %s",
 			strings.Join(buildEnv, " "), file, strings.Join(opts, " "), tagOption),
 	}
@@ -486,7 +496,7 @@ func (md *MetaData) GoCompile(env map[string]string, tags []string, opts []strin
 	}
 
 	cmds := []string{
-		fmt.Sprintf("%s/bin/dep ensure || true", goPath),
+		goModTidy,
 		fmt.Sprintf(("%s go build %s %s %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" -o " + output + " ."),
 			strings.Join(buildEnv, " "), strings.Join(opts, " "), trimpath, tagOption),
 	}
@@ -522,9 +532,8 @@ func (md *MetaData) GoTest(env map[string]string, tags []string, opts []string) 
 		tagOption = fmt.Sprintf(" -tags \"%s\" ", strings.Join(tags, " "))
 	}
 
-	goPath := os.Getenv("GOPATH")
 	cmds := []string{
-		fmt.Sprintf("%s/bin/dep ensure || true", goPath),
+		goModTidy,
 		fmt.Sprintf(("%s go test %s -ldflags \"" + strings.Join(ldFlags, " ") + "\" %s ."),
 			strings.Join(buildEnv, " "), tagOption, strings.Join(opts, " ")),
 	}
