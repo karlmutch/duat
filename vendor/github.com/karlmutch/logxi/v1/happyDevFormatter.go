@@ -274,7 +274,18 @@ func (hd *HappyDevFormatter) Format(writer io.Writer, level int, msg string, arg
 			// Ensure keys are simple strings. The JSONFormatter doesn't escape
 			// keys as a performance tradeoff. This panics if the JSON key
 			// value has a different value than a simple quoted string.
-			key := args[i].(string)
+			key, isOK := args[i].(string)
+			if !isOK {
+				panic("Key is invalid or was omitted")
+			}
+			for _, aRune := range key {
+				if aRune == '"' || aRune == '\\' {
+					panic("Key is invalid. Use simpler key for: " + fmt.Sprintf("%q", key))
+				}
+				if int(aRune) < 32 {
+					panic("Key contains control character. Use simpler key for: " + fmt.Sprintf("%q", key))
+				}
+			}
 			b, err := json.Marshal(key)
 			if err != nil {
 				panic("Key is invalid. " + err.Error())

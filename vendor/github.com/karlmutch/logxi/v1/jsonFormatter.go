@@ -185,7 +185,18 @@ func (jf *JSONFormatter) Format(writer io.Writer, level int, msg string, args []
 		} else if lenArgs%2 == 0 {
 			for i := 0; i < lenArgs; i += 2 {
 				if key, ok := args[i].(string); ok {
-					if key == "" {
+					failed := false
+					for _, aRune := range key {
+						if aRune == '"' || aRune == '\\' {
+							failed = true
+							break
+						}
+						if int(aRune) < 32 {
+							failed = true
+							break
+						}
+					}
+					if failed || key == "" {
 						// show key is invalid
 						jf.set(buf, badKeyAtIndex(i), args[i+1])
 					} else {
