@@ -279,9 +279,13 @@ func (md *MetaData) Replace(fn string, dest string, substitute bool) (err kv.Err
 		return kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()).With("file", fn)
 	}
 
-	newVer := fmt.Sprintf(handler.subst, md.SemVer.String())
+	ver := md.SemVer.String()
+	if len(md.SemVer.Original()) != 0 {
+		ver = md.SemVer.Original()
+	}
+	newVer := fmt.Sprintf(handler.subst, ver)
 	if substitute {
-		newVer = md.SemVer.String()
+		newVer = ver
 	}
 
 	scan := bufio.NewScanner(file)
