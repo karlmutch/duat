@@ -128,7 +128,12 @@ func main() {
 		md.SemVer, err = md.Prerelease()
 	case "apply":
 		if len(*prefix) != 0 {
-			md.SemVer, errGo = semver.NewVersion(*prefix + md.SemVer.String())
+			newVer, errGo := semver.NewVersion(*prefix + md.SemVer.String())
+			if errGo != nil {
+				fmt.Fprintf(os.Stderr, "the attempt to write the incremented version back failed due to %v\n", err)
+				os.Exit(-5)
+			}
+			md.SemVer = newVer
 		}
 		err = md.Apply(strings.Split(*applyFn, ","))
 	case "", "extract":
