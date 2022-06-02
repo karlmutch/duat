@@ -236,18 +236,38 @@ semver will output to stdout the new version number, except for the apply comman
 The command has the following usage:
 
 <doc-opt><code>
-Semantic Version tool
-
-Usage:
-
-  semver [major | major | minor | pre | extract | apply] [-f=<input-file>] [-t=[&lt;target-file&gt;,...]]
+semver
+usage:  semver [options] [arguments]      Semantic Version tool (semver)       948a83fadba78336e7a64333af549ef0ea5e10ef      2022-06-02_14:57:57-0700
 
 Options:
-  -h --help              Show this message.<p>
-  -version               Show the version of this software.<p>
-  -git string            The top level of the git repo to be used for the dev version (default ".")
-  -f=&lt;input-file&gt;        A file containing an HTML repo-version tag to be morped or queried [default: README.md]<p>
-  -t=&lt;target-file&gt;,...   A comma seperated list of files that will be examined for version tags and modified based upon the input-file version<p>
+
+  -f string
+        A list of files from which the first match will be used as the source of truth for the existing, and any new, version (default "README.md,README.adoc")
+  -git string
+        The top level of the git repo to be used for the dev version (default ".")
+  -p string
+        Decorate semver output with a user specified prefix
+  -t string
+        The files to which the version data will be propagated
+  -v    When enabled will print internal logging for this tool
+
+Arguments:
+
+    major                Increments the major version inside the input file
+    minor                Increments the minor version inside the input file
+    patch                Increments the patch version inside the input file
+    pre, prerelease      Updates the pre-release version inside the input file
+    apply                Propogate the version from the input file to the target files
+    extract              Retrives the version tag string from the file
+
+When using pre the branch name will be injected into the pre-release data along with the commit sequence number for that branch and then the commit-id.
+It is possible that when using 'pre' the precedence between different developers might not be in commit strict order, but in the order that the files were processed.
+
+Environment Variables:
+
+options can also be extracted from environment variables by changing dashes '-' to underscores and using upper case.
+
+log levels are handled by the LOGXI env variables, these are documented at https://github.com/mgutz/logxi
 </code></doc-opt>
 
 ## github-release
