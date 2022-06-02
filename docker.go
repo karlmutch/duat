@@ -32,9 +32,7 @@ func (md *MetaData) generateImageName(semVer *semver.Version) (repo string, vers
 	gitParts := strings.Split(md.Git.URL.EscapedPath(), "/")
 
 	label := gitParts[len(gitParts)-1]
-	if strings.HasSuffix(label, ".git") {
-		label = strings.TrimSuffix(label, ".git")
-	}
+	label = strings.TrimSuffix(label, ".git")
 
 	// Look for pre-release components within the version string
 	preParts := strings.Split(semVer.Prerelease(), "-")
