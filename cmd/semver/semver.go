@@ -127,11 +127,14 @@ func main() {
 		}
 		md.SemVer, err = md.Prerelease()
 	case "apply":
+		if len(*prefix) != 0 {
+			md.SemVer, errGo = semver.NewVersion(*prefix + md.SemVer.String())
+		}
 		err = md.Apply(strings.Split(*applyFn, ","))
 	case "", "extract":
 		break
 	default:
-		fmt.Fprintf(os.Stderr, "invalid command, you must specify one of the commands [major|minor|patch|pre|extract], '%s' is not a valid command\n", os.Args[1])
+		fmt.Fprintf(os.Stderr, "invalid command, you must specify one of the commands [major|minor|patch|pre|extract|apply], '%s' is not a valid command\n", os.Args[1])
 		os.Exit(-2)
 	}
 	if err != nil {
