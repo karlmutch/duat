@@ -3,7 +3,7 @@ module github.com/karlmutch/duat
 go 1.17
 
 require (
-	github.com/BurntSushi/toml v1.0.0
+	github.com/BurntSushi/toml v1.1.0
 	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/aws/aws-sdk-go v1.43.13
 	github.com/davecgh/go-spew v1.1.1
