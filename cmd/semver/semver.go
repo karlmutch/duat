@@ -11,6 +11,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/jjeffery/kv"
 	"github.com/karlmutch/duat"
 	"github.com/karlmutch/duat/version"
 	colorable "github.com/mattn/go-colorable"
@@ -20,7 +21,7 @@ import (
 	// I am torn between this and just letting dep ensure with a checkedin vendor directory
 	// to do this.  In any event I ended up doing both with my own forks
 
-	"github.com/karlmutch/semver" // Forked copy of https://github.com/Masterminds/semver
+	"github.com/Masterminds/semver"
 
 	"github.com/karlmutch/envflag" // Forked copy of https://github.com/GoBike/envflag
 
@@ -52,6 +53,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    minor                Increments the minor version inside the input file")
 	fmt.Fprintln(os.Stderr, "    patch                Increments the patch version inside the input file")
 	fmt.Fprintln(os.Stderr, "    pre, prerelease      Updates the pre-release version inside the input file")
+	fmt.Fprintln(os.Stderr, "    rc, releasecandidate Updates the version inside the input file to reflect the latest release candidate for the plain semver, uses the origin tags to determine the new value")
 	fmt.Fprintln(os.Stderr, "    apply                Propogate the version from the input file to the target files")
 	fmt.Fprintln(os.Stderr, "    extract              Retrives the version tag string from the file")
 	fmt.Fprintln(os.Stderr, "")
@@ -126,6 +128,16 @@ func main() {
 			os.Exit(-5)
 		}
 		md.SemVer, err = md.Prerelease()
+	case "rc", "releasecandidate":
+		warnings := []kv.Error{}
+		md.SemVer, err, warnings = md.IncRC()
+		if err != nil {
+			for _, warn := range warnings {
+				fmt.Fprintf(os.Stderr, warn.Error())
+			}
+			fmt.Fprintf(os.Stderr, err.Error())
+			os.Exit(-6)
+		}
 	case "apply":
 		if len(*prefix) != 0 {
 			newVer, errGo := semver.NewVersion(*prefix + md.SemVer.String())

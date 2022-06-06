@@ -287,8 +287,6 @@ github.com/karlmutch/envflag v0.0.0-20211229205350-9dc3b5cc21e3 h1:Iq8sfbTccD5mI
 github.com/karlmutch/envflag v0.0.0-20211229205350-9dc3b5cc21e3/go.mod h1:HCSJtRcU+YI1lWzCbrzb+9uAbwuAjGQ+g73Xznrnm/4=
 github.com/karlmutch/logxi v0.0.0-20211230183642-c324f015c3e6 h1:4diqI2apsG7Bb0nkwHyMJb4CR2R+YNSRiwjv6BaNVvU=
 github.com/karlmutch/logxi v0.0.0-20211230183642-c324f015c3e6/go.mod h1:yozMr5Xgvq7CItSgWRdqerl3tUYunVr0WsvXJrOhSdc=
-github.com/karlmutch/semver v1.4.0 h1:v43bB1hi6OKGnQqWvYUbJEczzcRFy3jACArCmbJp3zk=
-github.com/karlmutch/semver v1.4.0/go.mod h1:8oXKArMTj8cC1gpagjlMgCfmKMSp58lI4L3M2GdadQs=
 github.com/kevinburke/ssh_config v0.0.0-20190725054713-01f96b0aa0cd/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=
 github.com/kevinburke/ssh_config v0.0.0-20201106050909-4977a11b4351 h1:DowS9hvgyYSX4TO5NpyC606/Z4SxnNYbT+WX27or6Ck=
 github.com/kevinburke/ssh_config v0.0.0-20201106050909-4977a11b4351/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=

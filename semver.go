@@ -10,17 +10,20 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/eknkc/basex" // MIT License
 	"github.com/karlmutch/duat/version"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 
 	// The following packages are forked to retain copies in the event github accounts are shutdown
 	//
 	// I am torn between this and just letting dep ensure with a checkedin vendor directory
 	// to do this.  In any event I ended up doing both with my own forks
 
-	"github.com/karlmutch/semver" // Forked copy of https://github.com/Masterminds/semver
+	"github.com/Masterminds/semver"
 
 	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
 	"github.com/jjeffery/kv"    // Forked copy of https://github.com/jjeffery/kv
@@ -209,6 +212,69 @@ var (
 
 func init() {
 	alphaEncoder, _ = basex.NewEncoding("abcdefghijkmnopqrstuvwxyz")
+}
+
+func (md *MetaData) IncRC() (result *semver.Version, err kv.Error, warnings []kv.Error) {
+
+	warnings = []kv.Error{}
+
+	// Open the Github repo and get all tags for the release
+	// and go through looking for other release candidate tags.
+	repo := md.Git.Repo
+
+	iter, errGo := repo.Tags()
+	if errGo != nil {
+		return nil, kv.Wrap(err).With("stack", stack.Trace().TrimRuntime()), warnings
+	}
+
+	// Set some defaults for the release candidate
+	nextRCParts := []string{"rc", "1"}
+	nextRC := 1
+
+	result = md.SemVer
+
+	if errGo := iter.ForEach(func(ref *plumbing.Reference) error {
+
+		tag := ref.Name().String()
+		tagParts := strings.SplitN(tag, "/", 3)
+		tag = tagParts[2]
+
+		ver, errGo := semver.NewVersion(tag)
+		if errGo != nil {
+			warnings = append(warnings, kv.Wrap(errGo).With("semver", tag, "stack", stack.Trace().TrimRuntime()))
+			return nil
+		}
+		tag = ver.Prerelease()
+		if strings.HasPrefix(tag, "rc.") {
+			parts := strings.Split(tag, ".")
+			if len(parts) < 2 {
+				warnings = append(warnings, kv.NewError("unrecognized release candidate format expected rc.nnn.").With("prerelease", tag, "stack", stack.Trace().TrimRuntime()))
+				return nil
+			}
+			rc, errGo := strconv.Atoi(parts[1])
+			if errGo != nil {
+				warnings = append(warnings, kv.NewError("unrecognized release candidate format expected rc.nnn.").With("prerelease", tag, "stack", stack.Trace().TrimRuntime()))
+				return nil
+			}
+			if rc >= nextRC {
+				nextRC = rc + 1
+				nextRCParts = parts
+				nextRCParts[1] = strconv.Itoa(nextRC)
+			}
+		}
+		return nil
+	}); errGo != nil {
+		return nil, kv.Wrap(errGo).With("stack", stack.Trace().TrimRuntime()), warnings
+	}
+
+	result.SetMetadata("")
+	pre := strings.Join(nextRCParts, ".")
+	ver, errGo := md.SemVer.SetPrerelease(pre)
+	if errGo != nil {
+		return nil, kv.Wrap(errGo).With("preRelease", pre, "stack", stack.Trace().TrimRuntime()), warnings
+	}
+
+	return &ver, nil, warnings
 }
 
 func (md *MetaData) Prerelease() (result *semver.Version, err kv.Error) {

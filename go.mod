@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/BurntSushi/toml v1.1.0
+	github.com/Masterminds/semver v1.4.2
 	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/aws/aws-sdk-go v1.44.26
 	github.com/davecgh/go-spew v1.1.1
@@ -18,7 +19,6 @@ require (
 	github.com/karlmutch/base62 v0.0.0-20150408093626-b80cdc656a7a
 	github.com/karlmutch/envflag v0.0.0-20211229205350-9dc3b5cc21e3
 	github.com/karlmutch/logxi v0.0.0-20211230183642-c324f015c3e6
-	github.com/karlmutch/semver v1.4.0
 	github.com/mattn/go-colorable v0.1.12
 	github.com/pkg/errors v0.9.1
 	github.com/ulule/deepcopier v0.0.0-20200430083143-45decc6639b6
@@ -30,7 +30,6 @@ require (
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver v1.4.2 // indirect
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
