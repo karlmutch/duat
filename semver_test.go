@@ -11,7 +11,7 @@ import (
 	// I am torn between this and just letting dep ensure with a checkedin vendor directory
 	// to do this.  In any event I ended up doing both with my own forks
 
-	"github.com/karlmutch/semver" // Forked copy of https://github.com/Masterminds/semver
+	"github.com/Masterminds/semver"
 
 	"github.com/go-stack/stack" // Forked copy of https://github.com/go-stack/stack
 	"github.com/jjeffery/kv"    // Forked copy of https://github.com/jjeffery/kv

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/Masterminds/semver"
 	"github.com/jjeffery/kv"
-	"github.com/karlmutch/semver"
 )
 
 // ScrubeForDocker is used to transform module names into docker image name compliant strings.

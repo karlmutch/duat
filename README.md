@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat) Beta
 
-Version : <repo-version>0.16.1</repo-version>
+Version : <repo-version>v0.17.0-rc.3</repo-version>
 
 duat is a set of tools useful for automating the bootstrapping of containerized workflows.  duat includes tools for working with software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go, and Kubernetes to manage portions of container centric software lifecycles, helping to remove proprietary tooling, scripting, and other DSLs typically used for building, releasing, and deploying software.
 
@@ -202,7 +202,7 @@ go test -v ./...
 ### Perfoming a release
 
 ```
-semver [patch|minor|major]
+semver [patch|minor|major|pre|rc]
 go test -v ./...
 go run ./build.go -r cmd > /tmp/compiled.lst
 cat /tmp/compiled.lst | go run ./cmd/github-release/github-release.go -
@@ -237,7 +237,7 @@ The command has the following usage:
 
 <doc-opt><code>
 semver
-usage:  semver [options] [arguments]      Semantic Version tool (semver)       948a83fadba78336e7a64333af549ef0ea5e10ef      2022-06-02_14:57:57-0700
+usage:  semver [options] [arguments]      Semantic Version tool (semver)       unknown      unknown
 
 Options:
 
@@ -257,6 +257,7 @@ Arguments:
     minor                Increments the minor version inside the input file
     patch                Increments the patch version inside the input file
     pre, prerelease      Updates the pre-release version inside the input file
+    rc, releasecandidate Updates the version inside the input file to reflect the latest release candidate for the plain semver, uses the origin tags to determine the new value
     apply                Propogate the version from the input file to the target files
     extract              Retrives the version tag string from the file
 
