@@ -16,3 +16,5 @@ bin
 example/artifact/bin
 compiled.lst
 registry.yaml
+dist
+reports

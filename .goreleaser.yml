@@ -1,0 +1,130 @@
+# Please read the documentation found at https://goreleaser.com
+#
+project_name: duat
+
+release:
+  draft: true
+  prerelease: auto
+
+builds:
+  - id: github-release
+    dir: cmd/github-release
+    binary: github-release
+    tags:
+    - osusergo
+    - netgo
+    mod_timestamp: &build-timestamp '{{ .CommitTimestamp }}'
+    ldflags:
+      - -extldflags=static
+      - -w
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+  - id: license-detector
+    dir: cmd/license-detector
+    binary: license-detector
+    tags:
+    - osusergo
+    - netgo
+    mod_timestamp: &build-timestamp '{{ .CommitTimestamp }}'
+    ldflags:
+      - -extldflags=static
+      - -w
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+  - id: semver
+    dir: cmd/semver
+    binary: semver
+    tags:
+    - osusergo
+    - netgo
+    mod_timestamp: &build-timestamp '{{ .CommitTimestamp }}'
+    ldflags:
+      - -extldflags=static
+      - -w
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+  - id: stencil
+    dir: cmd/stencil
+    binary: stencil
+    tags:
+    - osusergo
+    - netgo
+    mod_timestamp: &build-timestamp '{{ .CommitTimestamp }}'
+    ldflags:
+      - -extldflags=static
+      - -w
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+  - id: artifact
+    dir: example/artifact
+    binary: artifact
+    tags:
+    - osusergo
+    - netgo
+    mod_timestamp: &build-timestamp '{{ .CommitTimestamp }}'
+    ldflags:
+      - -extldflags=static
+      - -w
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+# macOS can combine multiple architectures into single Fat Binaries for a single exe file
+universal_binaries:
+  - id: github-release
+    name_template: 'github-release'
+    replace: true
+  - id: license-detector
+    name_template: 'license-detector'
+    replace: true
+  - id: semver
+    name_template: 'semver'
+    replace: true
+  - id: stencil
+    name_template: 'stencil'
+    replace: true
+  - id: artifact
+    name_template: 'artifact'
+    replace: true
+
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+
+gomod:
+  proxy: true
+  mod: mod
