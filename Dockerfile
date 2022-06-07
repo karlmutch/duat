@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 MAINTAINER karlmutch@gmail.com
 
@@ -15,7 +15,7 @@ RUN \
 RUN \
     apt-get update
 
-ENV GO_VERSION 1.15.6
+ENV GO_VERSION 1.18.3
 
 RUN cd /home/${USER} && \
     mkdir -p /home/${USER}/go && \
