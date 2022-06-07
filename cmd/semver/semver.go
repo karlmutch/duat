@@ -133,9 +133,9 @@ func main() {
 		md.SemVer, err, warnings = md.IncRC()
 		if err != nil {
 			for _, warn := range warnings {
-				fmt.Fprintf(os.Stderr, warn.Error())
+				fmt.Fprintln(os.Stderr, warn.Error())
 			}
-			fmt.Fprintf(os.Stderr, err.Error())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(-6)
 		}
 	case "apply":

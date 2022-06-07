@@ -13,7 +13,7 @@ ENV USER_GROUP_ID ${USER_GROUP_ID}
 
 RUN apt-get -y update
 
-RUN apt-get -y install git software-properties-common wget openssl ssh curl jq apt-utils unzip python-pip sudo && \
+RUN apt-get -y install git software-properties-common wget openssl ssh curl jq apt-utils unzip python-pip sudo goreleaser && \
     apt-get clean && \
     apt-get autoremove && \
     pip install awscli --upgrade && \
@@ -51,4 +51,4 @@ USER ${USER}
 VOLUME /project
 WORKDIR /project/src/github.com/karlmutch/duat
 
-CMD go mod vendor ; go test -v ./... ; go run ./build.go -dirs cmd,example -r
+CMD go mod vendor ; go test -v ./... ; gorelease --rm-dist

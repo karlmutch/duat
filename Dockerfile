@@ -7,7 +7,7 @@ ENV LANG C.UTF-8
 RUN apt-get -y update
 
 RUN \
-    apt-get -y install git software-properties-common wget openssl ssh curl jq apt-utils unzip python-pip sudo && \
+    apt-get -y install git software-properties-common wget openssl ssh curl jq apt-utils unzip python-pip sudo goreleaser && \
     apt-get clean && \
     apt-get autoremove && \
     pip install awscli --upgrade
@@ -22,6 +22,7 @@ RUN cd /home/${USER} && \
     wget -O /tmp/go.tgz https://storage.googleapis.com/golang/go${GO_VERSION}.linux-amd64.tar.gz && \
     tar xzf /tmp/go.tgz && \
     rm /tmp/go.tgz
+
 ENV GOPATH=/project
 
 RUN mkdir -p /project/src/github.com/karlmutch/duat && \
@@ -30,4 +31,4 @@ RUN mkdir -p /project/src/github.com/karlmutch/duat && \
 
 WORKDIR /project/src/github.com/karlmutch/duat
 
-CMD go mod vendor ; go run ./build.go -dirs cmd,example -r
+CMD go mod vendor ; goreleaser release --rm-dist
