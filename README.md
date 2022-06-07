@@ -1,6 +1,6 @@
 # Developer utilities and tools (duat) Beta
 
-Version : <repo-version>v0.17.0-rc.3</repo-version>
+Version : <repo-version>0.17.0-rc.4</repo-version>
 
 duat is a set of tools useful for automating the bootstrapping of containerized workflows.  duat includes tools for working with software artifacts such as git branches and tags, semantic versioning, and docker image delivery.  duat is a work in progress experiment in using Go, and Kubernetes to manage portions of container centric software lifecycles, helping to remove proprietary tooling, scripting, and other DSLs typically used for building, releasing, and deploying software.
 
@@ -10,7 +10,7 @@ duat is opinionated about naming of docker images, and semantic versioning.  dua
 
 # About
 
-This project was started as a means of experimenting with continuous integration using go as the primary implemention language also as my primary means of automatting build and release processes.  Other projects such as mage, https://magefile.org/, also do the same.  This project was started with the intention of working with go libraries primarily for handling versioning, git source control, and containerization.  Mage in contrast leverages a strategy of wrapping shell commands to achieve this.
+This project was started as a means of experimenting with continuous integration using go as the primary implemention language also as my primary means of automatting build and release processes.  Other projects such as mage, https://magefile.org/, also do the same.  This project was started with the intention of working with go libraries primarily for handling versioning, git source control, and containerization.  Mage in contrast leverages a strategy of wrapping shell commands to achieve this.  After some experimentation many of the features were deprecated via a tool called GoReleaser, and also github released GitHub Actions, therefore the decision was made to adopt these tools for some parts of this repository.  Some tools do still remain.
 
 Over time the objective of duat has changed from being used across the entire workflow to filling in the gaps for existing containerized CI/CD solutions in relation to deployments that wish to avoid hard dependencies on vulnerable public infrastructure.
 
@@ -35,10 +35,15 @@ Many existing cloud based platforms exist today to address requirements such as 
 For example the following workflow might be used to compile duat itself:
 
 ```shell
-go run ./build.go -r cmd > /tmp/compiled.lst
-go test ./...
 # test is run and passes
-go run ./cmd/github-release/github-release.go `cat /tmp/compiled.lst`
+go test ./...
+goreleaser release --snapshot --rm-dist
+```
+
+When a release is deemed useful then a tag should be created after the semantic version has been updated and testing is completed.  Once this is done the goreleaser tool will perform a full release when the snapshot option is not used.
+
+```shell
+goreleaser release --rm-dist
 ```
 
 # Conventions assumptions
@@ -59,9 +64,11 @@ The tools and packages within this project rely on a couple of conventions and a
 
 3. semantic versioning
 
-    using prefix characters are not semver compliant and are not used
+    using prefix characters are not semver compliant and are not use unless a user specified option is employed
 
     semver pre-release versions are sortable, are ordered, are reversable for a time stamp, and obey DNS character rules
+
+    semver release candidates are supported with query capabilities back to the 'origin' repo when incrementing
 
 4. containerization and Kubernetes
 
@@ -131,8 +138,6 @@ A decision is made to release and PR is approved
 ```
 $ image-promote
 0.0.2
-$ github-release
-0.0.2
 ```
 
 # Python environments
@@ -163,14 +168,13 @@ The general idea is to produce both libraries for development artifact handling 
 
 duat has regular releases of the stable head of the git repo.  The release consists at this time of precompiled Linux x86\_64 binaries that can be found at https://github.com/karlmutch/duat/releases.
 
-# Installation using go get
+# Installation using go install
 
-duat is go gettable with the command tools compiled using the go tools.  The following commands will suffice for most Go environments.
+duat is go installable with the command tools compiled using the go tools.  The following commands will suffice for most Go developer environments.
 
 ```
 go get github.com/karlmutch/duat
 go install github.com/karlmutch/duat/cmd/semver
-go install github.com/karlmutch/duat/cmd/github-release
 go install github.com/karlmutch/duat/cmd/stencil
 ```
 
@@ -192,20 +196,19 @@ If you have the environment variable GITHUB\_TOKEN defined then this will be imp
 
 ### Development builds
 
-Using build.go
+Using goreleaser.
 
 ```
-go run ./build.go -r cmd > /tmp/compiled.lst
 go test -v ./...
+goreleaser release --rm-dist --snapshot
 ```
 
 ### Perfoming a release
 
 ```
-semver [patch|minor|major|pre|rc]
+semver (-p v) [patch|minor|major|pre|rc]
 go test -v ./...
-go run ./build.go -r cmd > /tmp/compiled.lst
-cat /tmp/compiled.lst | go run ./cmd/github-release/github-release.go -
+goreleaser release --rm-dist --snapshot
 ```
 
 # duat utilities and tools
@@ -237,7 +240,7 @@ The command has the following usage:
 
 <doc-opt><code>
 semver
-usage:  semver [options] [arguments]      Semantic Version tool (semver)       unknown      unknown
+usage:  semver [options] [arguments]      Semantic Version tool (semver)
 
 Options:
 
@@ -271,10 +274,6 @@ options can also be extracted from environment variables by changing dashes '-' 
 log levels are handled by the LOGXI env variables, these are documented at https://github.com/mgutz/logxi
 </code></doc-opt>
 
-## github-release
-
-This tool can be used to push binaries and other files upto github using the current version as the tag for the release.
-
 ## stencil
 
 This tool is a general purpose template processing utility that reads template files and substitutes values from the software integration envirionment and runs functions specified within the template.
@@ -297,10 +296,6 @@ stencil support go templating for substitution of variables inside the input fil
 ```
 
 Templates also support functions from masterminds.github.io/sprig.  Please refer to that github website for more information.
-
-## git-watch
-
-git-watch has been retired.  The preferred method to deal with git driven builds and file watch based builds is to make use of tilt.dev.
 
 ## license-detector
 
@@ -378,4 +373,4 @@ log levels are handled by the LOGXI env variables, these are documented at https
 
 
 
-Copyright © 2018-2021 The duat authors. All rights reserved. Issued under the MIT license.
+Copyright © 2018-2022 The duat authors. All rights reserved. Issued under the MIT license.
