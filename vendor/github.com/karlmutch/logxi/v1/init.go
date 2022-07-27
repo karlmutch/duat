@@ -151,10 +151,10 @@ func setDefaults(isTerminal bool) {
 		defaultLevel = LevelWarn
 		defaultTimeFormat = "15:04:05.000000"
 	} else {
-		defaultLogxiEnv = "*=ERR"
+		defaultLogxiEnv = "*=WRN"
 		defaultLogxiFormatEnv = "JSON,t=2006-01-02T15:04:05-0700"
 		defaultFormat = FormatJSON
-		defaultLevel = LevelError
+		defaultLevel = LevelWarn
 		defaultTimeFormat = "2006-01-02T15:04:05-0700"
 		disableColors = true
 	}

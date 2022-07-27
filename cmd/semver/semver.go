@@ -13,7 +13,9 @@ import (
 
 	"github.com/jjeffery/kv"
 	"github.com/karlmutch/duat"
+	duatgit "github.com/karlmutch/duat/pkg/git"
 	"github.com/karlmutch/duat/version"
+
 	colorable "github.com/mattn/go-colorable"
 
 	// The following packages are forked to retain copies in the event github accounts are shutdown
@@ -31,34 +33,38 @@ import (
 var (
 	logger = logxi.NewLogger(logxi.NewConcurrentWriter(colorable.NewColorableStderr()), "semver")
 
-	verFn   = flag.String("f", "README.md,README.adoc", "A list of files from which the first match will be used as the source of truth for the existing, and any new, version")
-	applyFn = flag.String("t", "", "The files to which the version data will be propagated")
-	verbose = flag.Bool("v", false, "When enabled will print internal logging for this tool")
-	prefix  = flag.String("p", "", "Decorate semver output with a user specified prefix")
+	verFn      = flag.String("f", "README.md,README.adoc", "A list of files from which the first match will be used as the source of truth for the existing, and any new, version")
+	applyFn    = flag.String("t", "", "The files to which the version data will be propagated")
+	verbose    = flag.Bool("v", false, "When enabled will print internal logging for this tool")
+	prefix     = flag.String("p", "", "Decorate semver output with a user specified prefix")
+	useGitTags = flag.Bool("g", false, "Use the latest Git repository tag as the input version")
 
 	gitRepo = flag.String("git", ".", "The top level of the git repo to be used for the dev version")
 )
 
 func usage() {
 	fmt.Fprintln(os.Stderr, path.Base(os.Args[0]))
-	fmt.Fprintln(os.Stderr, "usage: ", os.Args[0], "[options] [arguments]      Semantic Version tool (semver)      ", version.GitHash, "    ", version.BuildTime)
+	fmt.Fprintln(os.Stderr, "usage: ", os.Args[0], "[options] [command]      Semantic Version tool (semver)      ", version.GitHash, "    ", version.BuildTime)
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Options:")
 	fmt.Fprintln(os.Stderr, "")
 	flag.PrintDefaults()
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "Arguments:")
+	fmt.Fprintln(os.Stderr, "Commands:")
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "    major                Increments the major version inside the input file")
-	fmt.Fprintln(os.Stderr, "    minor                Increments the minor version inside the input file")
-	fmt.Fprintln(os.Stderr, "    patch                Increments the patch version inside the input file")
-	fmt.Fprintln(os.Stderr, "    pre, prerelease      Updates the pre-release version inside the input file")
-	fmt.Fprintln(os.Stderr, "    rc, releasecandidate Updates the version inside the input file to reflect the latest release candidate for the plain semver, uses the origin tags to determine the new value")
-	fmt.Fprintln(os.Stderr, "    apply                Propogate the version from the input file to the target files")
-	fmt.Fprintln(os.Stderr, "    extract              Retrives the version tag string from the file")
+	fmt.Fprintln(os.Stderr, "    major                Increments the major version")
+	fmt.Fprintln(os.Stderr, "    minor                Increments the minor version")
+	fmt.Fprintln(os.Stderr, "    patch                Increments the patch version")
+	fmt.Fprintln(os.Stderr, "    pre, prerelease      Updates the pre-release version")
+	fmt.Fprintln(os.Stderr, "    rc, releasecandidate Updates the version to reflect the latest release candidate for the plain semver, uses the origin tags to determine the new value")
+	fmt.Fprintln(os.Stderr, "    apply                Propogate the version from the version to the target files")
+	fmt.Fprintln(os.Stderr, "    extract              Retrives the version tag string")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "When using pre the branch name will be injected into the pre-release data along with the commit sequence number for that branch and then the commit-id.")
 	fmt.Fprintln(os.Stderr, "It is possible that when using 'pre' the precedence between different developers might not be in commit strict order, but in the order that the files were processed.")
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "If the -g option is specified then the git repository will be searched for semver tags and these will be used to determine the starting version ")
+	fmt.Fprintln(os.Stderr, "prior to applying the commands")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Environment Variables:")
 	fmt.Fprintln(os.Stderr, "")
@@ -91,29 +97,44 @@ func main() {
 		os.Exit(-1)
 	}
 
+	md := &duat.MetaData{}
+
+	// Look for tags using the git tag history and load them if found into the project metadata
+	history, err := duatgit.TagHistory()
+	if *useGitTags && err != nil {
+		fmt.Fprintln(os.Stderr, "no input file was found, using git tags also failed (", err.Error(), ")")
+		os.Exit(-2)
+	}
+	if *useGitTags {
+		// Use the latest tags in sorted semver order
+		md.SemVer = history.Tags[len(history.Tags)-1].Tag
+	}
+
 	verFile := ""
 	candidates := strings.Split(*verFn, ",")
 	for _, verFile = range candidates {
-
 		if _, err := os.Stat(verFile); err == nil {
 			break
 		}
 	}
 
-	if len(verFile) == 0 {
+	if len(verFile) == 0 && !*useGitTags {
 		fmt.Fprintln(os.Stderr, "no input file was found")
 		os.Exit(-2)
 	}
 
-	md := &duat.MetaData{}
-	_, err := md.LoadVer(verFile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "the input file version string that is currently in %s is not valid due to '%v'\n", verFile, err)
-		os.Exit(-2)
+	if md.SemVer == nil {
+		_, err = md.LoadVer(verFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "the input file version string that is currently in %s is not valid due to '%v'\n", verFile, err)
+			os.Exit(-2)
+		}
 	}
-	ver := md.SemVer.String()
 
 	gitErr := md.LoadGit(*gitRepo, true)
+
+	// Save the original version to determine if it needs to be applied
+	ver := md.SemVer.String()
 
 	switch flag.Arg(0) {
 	case "major":
@@ -161,15 +182,13 @@ func main() {
 
 	// Check for prefix processing and if there is any then reconstruct the version with the prefix so that
 	// the Original returns the non semver 2 variant, if not use proper semver 2.0
-	semVer, errGo := semver.NewVersion(md.SemVer.String())
 	if len(*prefix) != 0 {
-		md.SemVer, errGo = semver.NewVersion(*prefix + md.SemVer.String())
-	} else {
+		semVer, errGo := semver.NewVersion(*prefix + md.SemVer.String())
+		if errGo != nil {
+			fmt.Fprintf(os.Stderr, "the updated file version string generated by this tooling is not valid due to '%v'\n", errGo)
+			os.Exit(-2)
+		}
 		md.SemVer = semVer
-	}
-	if errGo != nil {
-		fmt.Fprintf(os.Stderr, "the updated file version string generated by this tooling is not valid due to '%v'\n", errGo)
-		os.Exit(-2)
 	}
 
 	// Having generated or extracted a version string if it is different as a result of processing we need
@@ -182,5 +201,4 @@ func main() {
 	}
 
 	fmt.Fprintf(os.Stdout, "%s\n", md.SemVer.Original())
-
 }
