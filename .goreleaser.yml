@@ -121,9 +121,7 @@ universal_binaries:
     replace: true
 
 archives:
-  - replacements:
-      darwin: Darwin
-      linux: Linux
+- format: binary
 
 gomod:
   proxy: true
