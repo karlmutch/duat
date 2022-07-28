@@ -125,7 +125,8 @@ archives:
       darwin: Darwin
       linux: Linux
     files:
-      none*
+        - none*
+    format: binary
 
 gomod:
   proxy: true
