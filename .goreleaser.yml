@@ -120,6 +120,13 @@ universal_binaries:
     name_template: 'artifact'
     replace: true
 
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+    files:
+      none*
+
 gomod:
   proxy: true
   mod: mod
