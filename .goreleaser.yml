@@ -103,12 +103,25 @@ builds:
       - arm64
 
 archives:
-  - replacements:
-      darwin: Darwin
-      linux: Linux
-    files:
-        - none*
-    format: gz
+- format: binary
+
+# macOS can combine multiple architectures into single Fat Binaries for a single exe file
+universal_binaries:
+  - id: github-release
+    name_template: 'github-release'
+    replace: true
+  - id: license-detector
+    name_template: 'license-detector'
+    replace: true
+  - id: semver
+    name_template: 'semver'
+    replace: true
+  - id: stencil
+    name_template: 'stencil'
+    replace: true
+  - id: artifact
+    name_template: 'artifact'
+    replace: true
 
 gomod:
   proxy: true
