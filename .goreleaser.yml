@@ -126,7 +126,7 @@ archives:
       linux: Linux
     files:
         - none*
-    format: binary
+    format: gz
 
 gomod:
   proxy: true
