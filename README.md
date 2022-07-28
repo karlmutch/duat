@@ -43,6 +43,10 @@ goreleaser release --snapshot --rm-dist
 When a release is deemed useful then a tag should be created after the semantic version has been updated and testing is completed.  Once this is done the goreleaser tool will perform a full release when the snapshot option is not used.
 
 ```shell
+go run ./cmd/semver -g patch
+git commit README.md -m "Updated release version in the docs"
+git push
+git tag `go run ./cmd/semver -g`
 goreleaser release --rm-dist
 ```
 

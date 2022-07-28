@@ -120,9 +120,6 @@ universal_binaries:
     name_template: 'artifact'
     replace: true
 
-archives:
-- format: binary
-
 gomod:
   proxy: true
   mod: mod

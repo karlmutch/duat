@@ -244,6 +244,11 @@ func (md *MetaData) IncRC() (result *semver.Version, err kv.Error, warnings []kv
 			warnings = append(warnings, kv.Wrap(errGo).With("semver", tag, "stack", stack.Trace().TrimRuntime()))
 			return nil
 		}
+		// Ensure the main version portion is the version for which we want an incremented rc version number
+		if ver.Major() != md.SemVer.Major() || ver.Minor() != md.SemVer.Minor() || ver.Patch() != md.SemVer.Patch() {
+			return nil
+		}
+
 		tag = ver.Prerelease()
 		if strings.HasPrefix(tag, "rc.") {
 			parts := strings.Split(tag, ".")
