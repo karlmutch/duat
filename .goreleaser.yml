@@ -8,7 +8,7 @@ release:
 
 builds:
   - id: github-release
-    main: cmd/github-release
+    main: ./cmd/github-release
     binary: github-release
     tags:
     - osusergo
@@ -27,7 +27,7 @@ builds:
       - arm64
 
   - id: license-detector
-    main: cmd/license-detector
+    main: ./cmd/license-detector
     binary: license-detector
     tags:
     - osusergo
@@ -46,7 +46,7 @@ builds:
       - arm64
 
   - id: semver
-    main: cmd/semver
+    main: ./cmd/semver
     binary: semver
     tags:
     - osusergo
@@ -65,7 +65,7 @@ builds:
       - arm64
 
   - id: stencil
-    main: cmd/stencil
+    main: ./cmd/stencil
     binary: stencil
     tags:
     - osusergo
@@ -84,7 +84,7 @@ builds:
       - arm64
 
   - id: artifact
-    main: example/artifact
+    main: ./example/artifact
     binary: artifact
     tags:
     - osusergo
