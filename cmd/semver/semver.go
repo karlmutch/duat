@@ -174,6 +174,10 @@ func main() {
 	case "", "extract":
 		break
 	case "sort":
+		if len(*prefix) != 0 {
+			fmt.Fprintln(os.Stderr, "the -p flag cannot be used when sorting tags, the original git tag name is always used")
+			os.Exit(-9)
+		}
 		if !*useGitTags {
 			fmt.Fprintln(os.Stderr, "the -g flag must be used when sorting tags")
 			os.Exit(-8)
@@ -182,7 +186,7 @@ func main() {
 			if !*useRCTags && len(aTag.Tag.Prerelease()) != 0 {
 				continue
 			}
-			fmt.Println(aTag.Tag.String())
+			fmt.Println(aTag.Tag.Original())
 		}
 		os.Exit(0)
 		break
