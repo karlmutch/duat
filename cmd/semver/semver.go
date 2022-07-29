@@ -37,7 +37,8 @@ var (
 	applyFn    = flag.String("t", "", "The files to which the version data will be propagated")
 	verbose    = flag.Bool("v", false, "When enabled will print internal logging for this tool")
 	prefix     = flag.String("p", "", "Decorate semver output with a user specified prefix")
-	useGitTags = flag.Bool("g", false, "Use the latest Git repository tag as the input version")
+	useGitTags = flag.Bool("g", false, "Use the latest Git repository tag as the input for version(s) information")
+	useRCTags  = flag.Bool("rc", false, "Do not use release candidate tags when sorting, only applies to sorting")
 
 	gitRepo = flag.String("git", ".", "The top level of the git repo to be used for the dev version")
 )
@@ -59,6 +60,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    rc, releasecandidate Updates the version to reflect the latest release candidate for the plain semver, uses the origin tags to determine the new value")
 	fmt.Fprintln(os.Stderr, "    apply                Propogate the version from the version to the target files")
 	fmt.Fprintln(os.Stderr, "    extract              Retrives the version tag string")
+	fmt.Fprintln(os.Stderr, "    sort                 Retrives all known git tags and sorts them in semver order, ascending, and outputs them to stdout")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "When using pre the branch name will be injected into the pre-release data along with the commit sequence number for that branch and then the commit-id.")
 	fmt.Fprintln(os.Stderr, "It is possible that when using 'pre' the precedence between different developers might not be in commit strict order, but in the order that the files were processed.")
@@ -164,12 +166,25 @@ func main() {
 			newVer, errGo := semver.NewVersion(*prefix + md.SemVer.String())
 			if errGo != nil {
 				fmt.Fprintf(os.Stderr, "the attempt to write the incremented version back failed due to %v\n", err)
-				os.Exit(-5)
+				os.Exit(-8)
 			}
 			md.SemVer = newVer
 		}
 		err = md.Apply(strings.Split(*applyFn, ","))
 	case "", "extract":
+		break
+	case "sort":
+		if !*useGitTags {
+			fmt.Fprintln(os.Stderr, "the -g flag must be used when sorting tags")
+			os.Exit(-8)
+		}
+		for _, aTag := range history.Tags {
+			if !*useRCTags && len(aTag.Tag.Prerelease()) != 0 {
+				continue
+			}
+			fmt.Println(aTag.Tag.String())
+		}
+		os.Exit(0)
 		break
 	default:
 		fmt.Fprintf(os.Stderr, "invalid command, you must specify one of the commands [major|minor|patch|pre|extract|apply], '%s' is not a valid command\n", os.Args[1])
